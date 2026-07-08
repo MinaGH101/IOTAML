@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nocodeml-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nocodeml}
+      POSTGRES_USER: ${POSTGRES_USER:-nocodeml}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nocodeml}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nocodeml} -d ${POSTGRES_DB:-nocodeml}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: nocodeml-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+    container_name: nocodeml-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-nocodeml}:${POSTGRES_PASSWORD:-nocodeml}@postgres:5432/${POSTGRES_DB:-nocodeml}
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_DIR: /app/storage
+      CORS_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
+      AUTH_SECRET: ${AUTH_SECRET:-change-this-secret-in-production}
+      USER_FILE: ${USER_FILE:-/app/app/data/user.json}
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+    container_name: nocodeml-worker
+    command: python worker.py
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-nocodeml}:${POSTGRES_PASSWORD:-nocodeml}@postgres:5432/${POSTGRES_DB:-nocodeml}
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_DIR: /app/storage
+    volumes:
+      - ./backend:/app
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: nocodeml-frontend
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      VITE_API_URL: http://localhost:8001
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  backend_storage:
