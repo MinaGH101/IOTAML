@@ -32,6 +32,7 @@ class ScatterPlotNode(BaseNode):
         setting('scatter_blocks', 'Scatter Plot Blocks', 'scatter_blocks', [], help='Add multiple X/Y scatter plot blocks in one node.'),
         setting('x_column', 'X Column', 'column', ''),
         setting('y_column', 'Y Column', 'column', ''),
+        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
 
     def run(self, node, inputs, settings, context):
@@ -45,6 +46,7 @@ class ScatterPlotNode(BaseNode):
                 'x_column': settings.get('x_column') or (nums[0] if nums else None),
                 'y_column': settings.get('y_column') or (nums[1] if len(nums) > 1 else None),
                 'max_points': 1000,
+                'color': settings.get('color') or '#31cde3',
             }]
 
         plots: list[dict[str, Any]] = []
@@ -74,7 +76,7 @@ class ScatterPlotNode(BaseNode):
                 points=points_df.to_dict(orient='records'),
                 x=str(x),
                 y=str(y),
-                color=block.get('color') or '',
+                color=block.get('color') or settings.get('color') or '#31cde3',
                 x_min=_num(block.get('x_min')),
                 x_max=_num(block.get('x_max')),
                 y_min=_num(block.get('y_min')),

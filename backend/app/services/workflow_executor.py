@@ -775,9 +775,9 @@ def analysis_to_output(title: str, node_id: str, analysis: Any, params: dict[str
         return {"kind": "scatter", "title": title, **analysis, **chart_params(params)}
     if node_id == "analysis_boxplot":
         if isinstance(analysis, dict) and isinstance(analysis.get("plots"), list):
-            plots = [{"kind": "boxplot", "title": f"{title} · {item.get('column')}", **item} for item in analysis.get("plots", [])]
+            plots = [{"kind": "boxplot", "title": f"{title} · {item.get('column')}", **item, **chart_params(params)} for item in analysis.get("plots", [])]
             return {"kind": "plot_group", "title": title, "plots": plots, "count": len(plots), "layout": "vertical"}
-        return {"kind": "boxplot", "title": title, **analysis}
+        return {"kind": "boxplot", "title": title, **analysis, **chart_params(params)}
     return json_output(title, analysis)
 
 
@@ -851,9 +851,9 @@ def model_analysis_to_output(title: str, node_id: str, analysis: Any, params: di
         return {"kind": "matrix", "title": title, **analysis}
     if node_id in {"model_feature_importance", "model_permutation_importance", "model_shap_summary"} and isinstance(analysis, list):
         cols = list(analysis[0].keys()) if analysis else []
-        return {"kind": "bar", "title": title, "columns": cols, "rows": analysis, "xKey": cols[0] if cols else "feature", "yKey": cols[1] if len(cols) > 1 else "importance"}
+        return {"kind": "bar", "title": title, "columns": cols, "rows": analysis, "xKey": cols[0] if cols else "feature", "yKey": cols[1] if len(cols) > 1 else "importance", **chart_params(params)}
     if node_id == "model_learning_curve" and isinstance(analysis, dict):
-        return {"kind": "line", "title": title, **analysis}
+        return {"kind": "line", "title": title, **analysis, **chart_params(params)}
     params = params or {}
     if node_id in {"model_residual_plot", "model_prediction_plot"} and isinstance(analysis, list):
         return {"kind": "scatter", "title": title, "x": "y_true" if node_id == "model_prediction_plot" else "y_pred", "y": "y_pred" if node_id == "model_prediction_plot" else "residual", "points": analysis, **chart_params(params)}

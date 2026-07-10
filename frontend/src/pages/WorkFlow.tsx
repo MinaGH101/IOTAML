@@ -23,6 +23,7 @@ import { NodeModal } from '../components/NodeModal';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { normalizeOutputs, type Output } from '../components/ResultsPanel';
 import { NodeMenu } from './NodeMenu';
+import { WorkflowNodesList } from './WorkflowNodesList';
 import { RightPanel } from './RightPanel';
 import { MlNode } from '../nodes/MlNode';
 import type { Dataset, Project, RegistryNode, Run, UserProfile, Workflow } from '../types';
@@ -579,6 +580,14 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
     setNodes((items) => items.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, pinned } } : node)));
   }, []);
 
+  const selectWorkflowNode = useCallback((nodeId: string) => {
+    setSelectedId(nodeId);
+    setSelectedIds([nodeId]);
+    setSelectedEdgeId(null);
+    setSelectedEdgeIds([]);
+    setResultsCollapsed(false);
+  }, []);
+
   const addOutputToBoard = useCallback((output: Output, visibleIndex: number) => {
     const nodeId = output.node_id ? String(output.node_id) : selectedId;
     const nodeOutputs = allRunOutputs.filter((item) => String(item.node_id || '') === String(nodeId || ''));
@@ -963,12 +972,23 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
       </header>
 
       <main className={`workspace ${paletteCollapsed ? 'palette-collapsed' : ''} ${resultsCollapsed ? 'results-collapsed' : ''}`} style={floatingWorkspaceStyle}>
-        <NodeMenu
-          registry={registry}
-          paletteCollapsed={paletteCollapsed}
-          setPaletteCollapsed={setPaletteCollapsed}
-          floatingLeftStyle={floatingLeftStyle}
-        />
+        {analysisBoardOpen ? (
+          <WorkflowNodesList
+            nodes={nodes}
+            selectedId={selectedId}
+            collapsed={paletteCollapsed}
+            setCollapsed={setPaletteCollapsed}
+            floatingLeftStyle={floatingLeftStyle}
+            onSelectNode={selectWorkflowNode}
+          />
+        ) : (
+          <NodeMenu
+            registry={registry}
+            paletteCollapsed={paletteCollapsed}
+            setPaletteCollapsed={setPaletteCollapsed}
+            floatingLeftStyle={floatingLeftStyle}
+          />
+        )}
         <section className="board" onDrop={onDrop} onDragOver={onDragOver} style={floatingBoardStyle}>
           {message && <div className="toast">{message}</div>}
           <div className={`workflow-flow-layer ${analysisBoardOpen ? 'is-hidden' : ''}`}>
@@ -1023,7 +1043,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
           onAddOutputToBoard={addOutputToBoard}
         />
       </main>
-      {modalNode && <NodeModal node={modalNode} edges={edges} registry={registry} datasets={datasets} availableColumns={availableColumns} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onClose={() => setModalNodeId(null)} />}
+      {modalNode && <NodeModal node={modalNode} edges={edges} registry={registry} datasets={datasets} availableColumns={availableColumns} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onAddOutputToBoard={addOutputToBoard} onClose={() => setModalNodeId(null)} />}
     </div>
   );
 }

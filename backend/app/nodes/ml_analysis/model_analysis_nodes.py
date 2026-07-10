@@ -115,6 +115,7 @@ class PredictionPreviewNode(BaseNode):
         setting('x_max', 'X Max', 'number', None, required=False),
         setting('y_min', 'Y Min', 'number', None, required=False),
         setting('y_max', 'Y Max', 'number', None, required=False),
+        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
 
     def run(self, node, inputs, settings, context):
@@ -155,6 +156,7 @@ class PredictionPreviewNode(BaseNode):
             y_min=settings.get('y_min'),
             y_max=settings.get('y_max'),
             source_label=key,
+            color=settings.get('color') or '#31cde3',
         )
         table = table_output(str(node['id']), f'{node_label(node)} · Prediction Table', pd.DataFrame(rows), 200)
         return {'json': {'data_pair': key, 'predictions': rows}, 'output': scatter, 'outputs': [scatter, table]}
@@ -215,6 +217,7 @@ class FeatureImportanceNode(BaseNode):
     description = 'Displays feature importances or linear coefficients when available.'
     inputs = [port('model', 'Model', 'model')]
     outputs = [port('importance', 'Feature Importance', 'json')]
+    settings_schema = [setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False)]
 
     def run(self, node, inputs, settings, context):
         payload = first_model_payload(inputs)
@@ -229,4 +232,4 @@ class FeatureImportanceNode(BaseNode):
             return {'json': {'message': 'This model does not expose feature importance.'}, 'output': json_output(str(node['id']), node_label(node), {'message': 'This model does not expose feature importance.'})}
         rows = [{'feature': names[i] if i < len(names) else f'feature_{i}', 'importance': float(v)} for i, v in enumerate(np.ravel(values))]
         rows = sorted(rows, key=lambda item: abs(item['importance']), reverse=True)
-        return {'json': {'features': rows}, 'output': output(str(node['id']), node_label(node), 'bar', rows=rows, xKey='feature', yKey='importance')}
+        return {'json': {'features': rows}, 'output': output(str(node['id']), node_label(node), 'bar', rows=rows, xKey='feature', yKey='importance', color=settings.get('color') or '#31cde3')}

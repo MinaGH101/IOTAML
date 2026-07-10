@@ -25,6 +25,7 @@ class HistogramNode(BaseNode):
     settings_schema = [
         setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.'),
         setting('bins', 'Bins', 'integer', 20),
+        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
 
     def run(self, node, inputs, settings, context):
@@ -39,13 +40,14 @@ class HistogramNode(BaseNode):
             raise ValueError('Select at least one numeric column for histogram.')
 
         bins = int(settings.get('bins') or 20)
+        color = str(settings.get('color') or '#31cde3')
         plots: list[dict[str, Any]] = []
         for col in selected:
             values = coerce_numeric_series(df, str(col)).dropna()
             if values.empty:
                 continue
             counts, edges = np.histogram(values, bins=bins)
-            plots.append(output(str(node['id']), f'{node_label(node)} · {col}', 'histogram', column=str(col), counts=counts, edges=edges))
+            plots.append(output(str(node['id']), f'{node_label(node)} · {col}', 'histogram', column=str(col), counts=counts, edges=edges, color=color))
 
         if not plots:
             raise ValueError('Selected columns have no numeric values for histogram.')

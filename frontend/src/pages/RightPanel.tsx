@@ -1,7 +1,7 @@
 import type { CSSProperties, Dispatch, SetStateAction, PointerEvent as ReactPointerEvent } from 'react';
 import { useState } from 'react';
 import type { Edge, Node } from '@xyflow/react';
-import { BarChart3, History, PanelRightClose, PanelRightOpen, RefreshCw, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, ChevronLeft, ChevronRight, History, RefreshCw, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../components/Inspector';
 import { ResultsPanel, type Output } from '../components/ResultsPanel';
 import type { Dataset, RegistryNode, Run } from '../types';
@@ -130,7 +130,7 @@ export function RightPanel({
             title={resultsCollapsed ? 'باز کردن پنل راست' : 'بستن پنل راست'}
             aria-label={resultsCollapsed ? 'باز کردن پنل راست' : 'بستن پنل راست'}
           >
-            {resultsCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
+            {resultsCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
 
           <div className="workflow-right-tab-buttons" aria-label="بخش‌های پنل راست">

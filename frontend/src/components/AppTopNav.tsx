@@ -30,13 +30,15 @@ export function AppTopNav({
           </button>
         )}
         <button className="iota-brand-mark" type="button" onClick={onProjects} title="IOTA">
-          <span className="iota-brand-symbol"><Cpu size={17} /></span>
-          <span className="iota-brand-text">IOTA</span>
+                      <div className="workflow-logo-title">
+              <img src="/iota.png" alt="IOTA" />
+              <h2>IOTA ML</h2>
+            </div>
         </button>
         <span className="iota-nav-divider" />
         <div className="brand-block app-brand-with-back iota-page-title-block">
           <h1>{title}</h1>
-          {subtitle && <p>{subtitle}</p>}
+          {/* {subtitle && <p>{subtitle}</p>} */}
         </div>
       </div>
 

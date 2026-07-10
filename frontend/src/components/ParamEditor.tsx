@@ -360,12 +360,16 @@ export function ParamEditor({ selectedNode, registry, datasets, availableColumns
   const registryNode = registry.find((item) => item.id === registryId);
   const baseSchema = registryNode?.settingsSchema?.length ? registryNode.settingsSchema : registryNode?.params || [];
   const params = (selectedNode.data.params || {}) as Record<string, unknown>;
-  const schema = baseSchema.map((param) => {
+  const normalizedSchema = baseSchema.map((param) => {
     if ((registryId === 'VZ-002' || registryId === 'VZ-004') && param.name === 'column') {
       return { ...param, name: 'columns', label: 'Columns', type: 'columns', default: [] } as NodeParam;
     }
     return param;
   });
+  const hasPlotOutput = Boolean(registryNode?.outputs?.some((port) => ['plot', 'metrics'].includes(String(port.type)))) || ['VZ-002', 'VZ-003', 'VZ-004', 'MA-001', 'MA-006'].includes(registryId);
+  const schema = hasPlotOutput && !normalizedSchema.some((param) => param.name === 'color')
+    ? [...normalizedSchema, { name: 'color', label: 'Color', type: 'color', default: '#31cde3', required: false, options: [], supportsDynamic: false, help: 'Plot color.' } as NodeParam]
+    : normalizedSchema;
   const isCsvNode = registryId === 'DI-002';
   const selectedDatasetId = Number(params.dataset_id || 0);
   const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId);

@@ -1,10 +1,15 @@
 import { Download, Maximize2, PanelRightClose, PanelRightOpen, Pin, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { BarChart } from '@mui/x-charts/BarChart';
+import { LineChart } from '@mui/x-charts/LineChart';
+import { ScatterChart } from '@mui/x-charts/ScatterChart';
 import type { Run } from '../types';
 
 export type Output = Record<string, unknown> & { kind?: string; title?: string; node_id?: string; source_label?: string; branch?: string };
-type EChartsType = any;
+
+type ChartPoint = { id: string | number; x: number; y: number };
 
 function fmt(value: unknown): string {
   if (typeof value === 'number') return Number.isInteger(value) ? value.toLocaleString('fa-IR') : value.toFixed(4);
@@ -36,6 +41,7 @@ export function downloadOutput(output: Output, index: number) {
   const columns = output.columns as string[] | undefined;
   if (Array.isArray(rows)) return downloadText(`${title}.csv`, rowsToCsv(rows, columns), 'text/csv;charset=utf-8');
   if (Array.isArray(output.points)) return downloadText(`${title}.csv`, rowsToCsv(output.points as Record<string, unknown>[]), 'text/csv;charset=utf-8');
+  if (Array.isArray(output.plots)) return downloadText(`${title}.json`, JSON.stringify(output.plots, null, 2), 'application/json;charset=utf-8');
   downloadText(`${title}.json`, JSON.stringify(output, null, 2), 'application/json;charset=utf-8');
 }
 
@@ -48,53 +54,24 @@ export function normalizeOutputs(run: Run | null, selectedNodeId: string | null)
   return selectedNodeId ? clean.filter((output) => String(output.node_id || '') === selectedNodeId) : clean;
 }
 
+function cssVar(name: string, fallback: string) {
+  if (typeof window === 'undefined') return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
 function plotColors() {
-  const styles = getComputedStyle(document.documentElement);
   return {
-    text: styles.getPropertyValue('--text').trim() || '#eaf2ff',
-    muted: styles.getPropertyValue('--muted').trim() || '#94a3b8',
-    purple: styles.getPropertyValue('--iota-purple').trim() || '#7257f2',
-    blue: styles.getPropertyValue('--iota-blue').trim() || '#4c8df7',
-    cyan: styles.getPropertyValue('--iota-cyan').trim() || '#31cde3',
-    panel: styles.getPropertyValue('--panel').trim() || 'rgba(255,255,255,.04)',
-    line: styles.getPropertyValue('--line-strong').trim() || 'rgba(49,205,227,.32)'
+    text: cssVar('--text', '#eaf2ff'),
+    muted: cssVar('--muted', '#94a3b8'),
+    purple: cssVar('--iota-purple', '#7257f2'),
+    blue: cssVar('--iota-blue', '#4c8df7'),
+    cyan: cssVar('--iota-cyan', '#31cde3'),
+    panel: cssVar('--panel-solid', '#11182a'),
+    line: cssVar('--line', 'rgba(148,163,184,.24)'),
+    lineStrong: cssVar('--line-strong', 'rgba(49,205,227,.32)'),
+    bg: cssVar('--iota-popup-bg', cssVar('--panel-solid', '#11182a'))
   };
 }
-
-function loadECharts(): Promise<EChartsType> {
-  const w = window as unknown as { echarts?: EChartsType };
-  if (w.echarts) return Promise.resolve(w.echarts);
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[data-echarts="true"]') as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => resolve(w.echarts));
-      existing.addEventListener('error', reject);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js';
-    script.async = true;
-    script.dataset.echarts = 'true';
-    script.onload = () => resolve(w.echarts);
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-function baseChartOption() {
-  const c = plotColors();
-  return {
-    backgroundColor: 'transparent',
-    color: [c.cyan, c.blue, c.purple],
-    textStyle: { fontFamily: 'Tahoma, sans-serif', fontSize: 11, color: c.text },
-    tooltip: { trigger: 'item', backgroundColor: c.panel, borderColor: c.line, textStyle: { color: c.text } },
-    legend: { top: 0, textStyle: { color: c.muted, fontSize: 10 } },
-    grid: { left: 48, right: 18, top: 42, bottom: 42, containLabel: true },
-    xAxis: { axisLine: { lineStyle: { color: c.line } }, splitLine: { lineStyle: { color: c.line } }, axisLabel: { color: c.muted, fontSize: 10 }, nameTextStyle: { color: c.muted } },
-    yAxis: { axisLine: { lineStyle: { color: c.line } }, splitLine: { lineStyle: { color: c.line } }, axisLabel: { color: c.muted, fontSize: 10 }, nameTextStyle: { color: c.muted } }
-  };
-}
-
 
 function axisValue(value: unknown) {
   if (value === null || value === undefined || value === '') return undefined;
@@ -102,75 +79,75 @@ function axisValue(value: unknown) {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function chartSettings(output: Output) {
+function chartColor(output: Output, fallbackIndex = 0) {
+  const c = plotColors();
+  const palette = [c.cyan, c.blue, c.purple];
+  const color = String(output.color || '').trim();
+  return color || palette[fallbackIndex % palette.length];
+}
+
+function chartSx() {
+  const c = plotColors();
   return {
-    color: String(output.color || ''),
-    xMin: axisValue(output.x_min),
-    xMax: axisValue(output.x_max),
-    yMin: axisValue(output.y_min),
-    yMax: axisValue(output.y_max)
+    direction: 'ltr',
+    color: c.text,
+    '& .MuiChartsAxis-line, & .MuiChartsAxis-tick': { stroke: c.lineStrong },
+    '& .MuiChartsAxis-tickLabel, & .MuiChartsAxis-label, & .MuiChartsLegend-label': { fill: c.muted, color: c.muted, fontSize: 11 },
+    '& .MuiChartsGrid-line': { stroke: c.line, strokeDasharray: '3 3' },
+    '& .MuiChartsTooltip-paper': { background: c.panel, color: c.text, border: `1px solid ${c.lineStrong}` }
   };
 }
 
-function applyAxisSettings(option: Record<string, any>, output: Output) {
-  const settings = chartSettings(output);
-  if (settings.color) option.color = [settings.color, ...(Array.isArray(option.color) ? option.color : [])];
-  option.xAxis = { ...(option.xAxis || {}), ...(settings.xMin !== undefined ? { min: settings.xMin } : {}), ...(settings.xMax !== undefined ? { max: settings.xMax } : {}) };
-  option.yAxis = { ...(option.yAxis || {}), ...(settings.yMin !== undefined ? { min: settings.yMin } : {}), ...(settings.yMax !== undefined ? { max: settings.yMax } : {}) };
-  return option;
+function chartMargin() {
+  return { left: 64, right: 22, top: 32, bottom: 58 };
 }
 
-function EChart({ option, height = 260 }: { option: Record<string, unknown>; height?: number }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<EChartsType | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    let resizeObserver: ResizeObserver | null = null;
-    let frame = 0;
-    setFailed(false);
-
-    loadECharts()
-      .then((echarts) => {
-        if (!alive || !ref.current || !echarts) return;
-        chartRef.current = echarts.init(ref.current, undefined, { renderer: 'canvas' });
-        setReady(true);
-        resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
-          window.cancelAnimationFrame(frame);
-          frame = window.requestAnimationFrame(() => chartRef.current?.resize());
-        }) : null;
-        if (resizeObserver && ref.current) resizeObserver.observe(ref.current);
-      })
-      .catch(() => setFailed(true));
-
-    return () => {
-      alive = false;
-      window.cancelAnimationFrame(frame);
-      resizeObserver?.disconnect();
-      chartRef.current?.dispose();
-      chartRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !chartRef.current) return;
-    chartRef.current.setOption(option, { notMerge: true, lazyUpdate: true });
-    window.requestAnimationFrame(() => chartRef.current?.resize());
-  }, [ready, option]);
-
-  if (failed) return <div className="empty-state">بارگذاری نمودار ناموفق بود. اتصال اینترنت را بررسی کنید.</div>;
-  return <div className="echarts-box" style={{ height }} ref={ref} />;
+function MuiChartShell({ children, height = 280 }: { children: React.ReactNode; height?: number }) {
+  return <div className="mui-chart-wrap" style={{ height }}>{children}</div>;
 }
 
 function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns?: string[] }) {
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
+  const c = plotColors();
+  const gridRows = rows.map((row, index) => ({ __iota_row_id: index, ...row }));
+  const gridColumns: GridColDef[] = cols.map((field) => ({
+    field,
+    headerName: field,
+    minWidth: 130,
+    flex: 1,
+    sortable: true,
+    valueGetter: (_value, row) => (row as Record<string, unknown>)[field],
+    valueFormatter: (value: unknown) => fmt(value)
+  }));
+
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr>{cols.map((key) => <th key={key}>{key}</th>)}</tr></thead>
-        <tbody>{rows.map((row, index) => <tr key={index}>{cols.map((key) => <td key={key}>{fmt(row[key])}</td>)}</tr>)}</tbody>
-      </table>
+    <div className="mui-table-wrap">
+      <DataGrid
+        rows={gridRows}
+        columns={gridColumns}
+        getRowId={(row) => row.__iota_row_id as number}
+        density="compact"
+        disableRowSelectionOnClick
+        pageSizeOptions={[25, 50, 100]}
+        initialState={{ pagination: { paginationModel: { pageSize: Math.min(25, Math.max(5, rows.length || 5)), page: 0 } } }}
+        sx={{
+          border: 0,
+          color: c.text,
+          fontFamily: 'inherit',
+          fontSize: 11,
+          direction: 'ltr',
+          backgroundColor: 'transparent',
+          '--DataGrid-containerBackground': 'transparent',
+          '& .MuiDataGrid-columnHeaders': { borderBottom: `1px solid ${c.lineStrong}`, color: c.text, backgroundColor: 'transparent' },
+          '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 800 },
+          '& .MuiDataGrid-row': { borderBottom: `1px solid ${c.line}` },
+          '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: 'color-mix(in srgb, var(--text) 4%, transparent)' },
+          '& .MuiDataGrid-row:hover': { backgroundColor: 'color-mix(in srgb, var(--iota-cyan) 7%, transparent)' },
+          '& .MuiDataGrid-cell': { borderBottom: 0, outline: 'none !important' },
+          '& .MuiTablePagination-root, & .MuiDataGrid-footerContainer': { color: c.muted, borderTop: `1px solid ${c.line}` },
+          '& .MuiSvgIcon-root': { color: c.muted }
+        }}
+      />
     </div>
   );
 }
@@ -180,67 +157,93 @@ function MetricsView({ metrics }: { metrics: Record<string, unknown> }) {
 }
 
 function ScatterView({ output, points, xKey, yKey, label }: { output: Output; points: Record<string, unknown>[]; xKey: string; yKey: string; label?: string }) {
-  const clean = points.map((p) => ({ x: Number(p[xKey]), y: Number(p[yKey]) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+  const clean: ChartPoint[] = points
+    .map((p, index) => ({ id: index, x: Number(p[xKey]), y: Number(p[yKey]) }))
+    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (clean.length === 0) return <div className="empty-state">داده‌ای برای رسم نمودار وجود ندارد.</div>;
-  const option = {
-    ...baseChartOption(),
-    tooltip: { ...baseChartOption().tooltip, trigger: 'axis' },
-    xAxis: { ...baseChartOption().xAxis, type: 'value', name: xKey },
-    yAxis: { ...baseChartOption().yAxis, type: 'value', name: yKey },
-    series: [{ type: 'scatter', name: label || yKey, data: clean.map((p) => [p.x, p.y]), symbolSize: Number(output.point_size || 7), emphasis: { focus: 'series' } }]
-  };
-  return <EChart option={applyAxisSettings(option, output)} />;
+
+  return (
+    <MuiChartShell>
+      <ScatterChart
+        series={[{ label: label || yKey, data: clean, color: chartColor(output), markerSize: Number(output.point_size || 7) } as any]}
+        xAxis={[{ label: xKey, min: axisValue(output.x_min), max: axisValue(output.x_max) } as any]}
+        yAxis={[{ label: yKey, min: axisValue(output.y_min), max: axisValue(output.y_max) } as any]}
+        margin={chartMargin()}
+        grid={{ vertical: true, horizontal: true }}
+        sx={chartSx()}
+      />
+    </MuiChartShell>
+  );
 }
 
 function BarView({ output, rows, xKey, yKey }: { output: Output; rows: Record<string, unknown>[]; xKey: string; yKey: string }) {
   const limited = rows.slice(0, 35);
   if (limited.length === 0) return <div className="empty-state">داده‌ای برای نمایش وجود ندارد.</div>;
-  const option = {
-    ...baseChartOption(),
-    grid: { left: 130, right: 18, top: 24, bottom: 32, containLabel: true },
-    tooltip: { ...baseChartOption().tooltip, trigger: 'axis' },
-    xAxis: { ...baseChartOption().xAxis, type: 'value' },
-    yAxis: { ...baseChartOption().yAxis, type: 'category', data: limited.map((r) => String(r[xKey])) },
-    series: [{ type: 'bar', name: yKey, data: limited.map((r) => Number(r[yKey] ?? 0)), barMaxWidth: 18 }]
-  };
-  return <EChart option={applyAxisSettings(option, output)} height={Math.max(260, Math.min(520, limited.length * 22 + 70))} />;
+  const labels = limited.map((r) => String(r[xKey]));
+  const values = limited.map((r) => Number(r[yKey] ?? 0));
+  const height = Math.max(280, Math.min(620, labels.length * 24 + 120));
+
+  return (
+    <MuiChartShell height={height}>
+      <BarChart
+        layout="horizontal"
+        yAxis={[{ scaleType: 'band', data: labels, label: xKey } as any]}
+        xAxis={[{ label: yKey } as any]}
+        series={[{ label: yKey, data: values, color: chartColor(output) }]}
+        margin={{ left: 132, right: 24, top: 28, bottom: 44 }}
+        grid={{ vertical: true }}
+        sx={chartSx()}
+      />
+    </MuiChartShell>
+  );
 }
 
 function HistogramView({ output }: { output: Output }) {
   const counts = (output.counts as number[] | undefined) || [];
   const edges = (output.edges as number[] | undefined) || [];
   const labels = counts.map((_, index) => edges.length > index + 1 ? `${fmt(edges[index])} - ${fmt(edges[index + 1])}` : String(index + 1));
-  const option = {
-    ...baseChartOption(),
-    tooltip: { ...baseChartOption().tooltip, trigger: 'axis' },
-    xAxis: { ...baseChartOption().xAxis, type: 'category', name: String(output.column || 'bin'), data: labels, axisLabel: { ...baseChartOption().xAxis.axisLabel, rotate: 35 } },
-    yAxis: { ...baseChartOption().yAxis, type: 'value', name: 'count' },
-    series: [{ type: 'bar', name: String(output.column || 'histogram'), data: counts, barMaxWidth: 22 }]
-  };
-  return <EChart option={applyAxisSettings(option, output)} />;
+  if (!counts.length) return <div className="empty-state">داده‌ای برای رسم Histogram وجود ندارد.</div>;
+
+  return (
+    <MuiChartShell>
+      <BarChart
+        xAxis={[{ scaleType: 'band', data: labels, label: String(output.column || 'bin'), tickLabelStyle: { angle: 35, textAnchor: 'start', fontSize: 10 } } as any]}
+        yAxis={[{ label: 'count' } as any]}
+        series={[{ label: String(output.column || 'histogram'), data: counts, color: chartColor(output) }]}
+        margin={chartMargin()}
+        grid={{ horizontal: true }}
+        sx={chartSx()}
+      />
+    </MuiChartShell>
+  );
 }
 
 function LineView({ output }: { output: Output }) {
   const xs = (output.train_sizes as number[] | undefined) || [];
   const train = (output.train_score_mean as number[] | undefined) || [];
   const test = (output.test_score_mean as number[] | undefined) || [];
-  const option = {
-    ...baseChartOption(),
-    tooltip: { ...baseChartOption().tooltip, trigger: 'axis' },
-    xAxis: { ...baseChartOption().xAxis, type: 'category', name: 'train size', data: xs.map(String) },
-    yAxis: { ...baseChartOption().yAxis, type: 'value', name: 'score' },
-    series: [
-      { type: 'line', name: 'train', data: train, smooth: true, symbolSize: 7 },
-      { type: 'line', name: 'test', data: test, smooth: true, symbolSize: 7 }
-    ]
-  };
-  return <EChart option={applyAxisSettings(option, output)} />;
+  if (!xs.length) return <div className="empty-state">داده‌ای برای رسم Line chart وجود ندارد.</div>;
+  const c = plotColors();
+  return (
+    <MuiChartShell>
+      <LineChart
+        xAxis={[{ scaleType: 'point', data: xs.map(String), label: 'train size' } as any]}
+        yAxis={[{ label: 'score', min: axisValue(output.y_min), max: axisValue(output.y_max) } as any]}
+        series={[
+          { label: 'train', data: train, color: chartColor(output, 0), curve: 'linear' },
+          { label: 'test', data: test, color: String(output.color_secondary || '') || c.purple, curve: 'linear' }
+        ] as any}
+        margin={chartMargin()}
+        grid={{ vertical: true, horizontal: true }}
+        sx={chartSx()}
+      />
+    </MuiChartShell>
+  );
 }
 
 function MatrixView({ output }: { output: Output }) {
   const rawMatrix = output.matrix as unknown;
   const rawRows = output.rows as unknown;
-
   let labels = ((output.labels as unknown[] | undefined) || []).map(String);
   let matrix: number[][] = [];
 
@@ -253,85 +256,15 @@ function MatrixView({ output }: { output: Output }) {
         : Array.isArray(rawRows) && rawRows.every((row) => row && typeof row === 'object' && !Array.isArray(row))
           ? rawRows as Record<string, unknown>[]
           : [];
-
-    if (!labels.length && objectRows.length) {
-      labels = Object.keys(objectRows[0]).filter((key) => key !== 'column' && key !== 'index');
-    }
-
+    if (!labels.length && objectRows.length) labels = Object.keys(objectRows[0]).filter((key) => key !== 'column' && key !== 'index');
     matrix = objectRows.map((row) => labels.map((label) => Number(row[label])));
   }
 
-  if (!labels.length && matrix.length) {
-    labels = matrix.map((_, index) => String(index));
-  }
+  if (!labels.length && matrix.length) labels = matrix.map((_, index) => String(index));
+  if (!labels.length || !matrix.length) return <div className="empty-state">داده‌ای برای نمایش ماتریس وجود ندارد.</div>;
 
-  const data = matrix.flatMap((row, y) =>
-    row.map((value, x) => [x, y, Number.isFinite(value) ? value : 0])
-  );
-
-  if (!labels.length || data.length === 0) {
-    return <div className="empty-state">داده‌ای برای نمایش ماتریس وجود ندارد.</div>;
-  }
-
-  const values = data.map((item) => Number(item[2])).filter(Number.isFinite);
-  const min = Math.min(...values, -1);
-  const max = Math.max(...values, 1);
-  const crowded = labels.length > 12;
-  const c = plotColors();
-
-  const option = {
-    ...baseChartOption(),
-    tooltip: {
-      ...baseChartOption().tooltip,
-      position: 'top',
-      formatter: (params: any) => {
-        const value = params?.value || [];
-        return `${labels[value[0]]} × ${labels[value[1]]}<br/>${fmt(value[2])}`;
-      }
-    },
-    grid: { left: 110, right: 24, top: 36, bottom: crowded ? 112 : 82, containLabel: true },
-    xAxis: {
-      ...baseChartOption().xAxis,
-      type: 'category',
-      name: 'columns',
-      data: labels,
-      axisLabel: { ...baseChartOption().xAxis.axisLabel, interval: 0, rotate: crowded ? 50 : 35, fontSize: crowded ? 8 : 10 },
-    },
-    yAxis: {
-      ...baseChartOption().yAxis,
-      type: 'category',
-      name: 'columns',
-      data: labels,
-      axisLabel: { ...baseChartOption().yAxis.axisLabel, fontSize: crowded ? 8 : 10 },
-    },
-    dataZoom: crowded ? [
-      { type: 'slider', xAxisIndex: 0, bottom: 42, height: 18, textStyle: { color: c.muted } },
-      { type: 'slider', yAxisIndex: 0, right: 0, width: 16, textStyle: { color: c.muted } },
-      { type: 'inside', xAxisIndex: 0 },
-      { type: 'inside', yAxisIndex: 0 },
-    ] : [],
-    visualMap: {
-      min,
-      max,
-      calculable: true,
-      orient: 'horizontal',
-      left: 'center',
-      bottom: 0,
-      textStyle: { color: c.muted },
-      inRange: { color: [c.purple, c.blue, c.cyan] },
-    },
-    series: [
-      {
-        type: 'heatmap',
-        name: 'matrix',
-        data,
-        label: { show: labels.length <= 10, color: c.text, fontSize: 9 },
-        emphasis: { itemStyle: { shadowBlur: 10 } },
-      },
-    ],
-  };
-
-  return <EChart option={option} height={Math.max(340, Math.min(720, labels.length * 28 + 150))} />;
+  const rows = matrix.map((values, index) => ({ column: labels[index] || String(index), ...Object.fromEntries(labels.map((label, colIndex) => [label, values[colIndex]])) }));
+  return <TableView rows={rows} columns={['column', ...labels]} />;
 }
 
 function BoxView({ output }: { output: Output }) {
@@ -347,9 +280,25 @@ function BoxView({ output }: { output: Output }) {
       ].filter((row) => row.value !== undefined);
 
   if (rows.length === 0) return <div className="empty-state">داده‌ای برای نمایش باکس‌پلات وجود ندارد.</div>;
+
+  const values = rows.map((row) => Number(row.value));
+  if (values.every(Number.isFinite)) {
+    return (
+      <MuiChartShell height={240}>
+        <BarChart
+          xAxis={[{ scaleType: 'band', data: rows.map((row) => row.stat) } as any]}
+          yAxis={[{} as any]}
+          series={[{ label: String(output.column || 'boxplot'), data: values, color: chartColor(output) }]}
+          margin={{ left: 54, right: 18, top: 24, bottom: 38 }}
+          grid={{ horizontal: true }}
+          sx={chartSx()}
+        />
+      </MuiChartShell>
+    );
+  }
+
   return <TableView rows={rows} columns={['stat', 'value']} />;
 }
-
 
 function plotSubtitle(plot: Output) {
   const kind = String(plot.kind || 'plot');

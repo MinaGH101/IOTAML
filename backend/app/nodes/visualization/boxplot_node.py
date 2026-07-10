@@ -21,7 +21,10 @@ class BoxPlotNode(BaseNode):
     description = 'Creates one or more box plot statistic panels for selected numeric columns.'
     inputs = [port('data', 'DataFrame', 'dataframe')]
     outputs = [port('plot', 'Box Plot', 'plot')]
-    settings_schema = [setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.')]
+    settings_schema = [
+        setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.'),
+        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
+    ]
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -34,12 +37,13 @@ class BoxPlotNode(BaseNode):
         if not selected:
             raise ValueError('Select at least one numeric column for box plot.')
 
+        color = str(settings.get('color') or '#31cde3')
         plots: list[dict[str, Any]] = []
         for col in selected:
             s = coerce_numeric_series(df, str(col)).dropna()
             if s.empty:
                 continue
-            plots.append(output(str(node['id']), f'{node_label(node)} · {col}', 'boxplot', column=str(col), min=s.min(), q1=s.quantile(.25), median=s.median(), q3=s.quantile(.75), max=s.max()))
+            plots.append(output(str(node['id']), f'{node_label(node)} · {col}', 'boxplot', column=str(col), min=s.min(), q1=s.quantile(.25), median=s.median(), q3=s.quantile(.75), max=s.max(), color=color))
 
         if not plots:
             raise ValueError('Selected columns have no numeric values for box plot.')

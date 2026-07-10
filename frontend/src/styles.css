@@ -4958,14 +4958,14 @@ button.primary:hover {
   place-items: center;
   padding: 0 !important;
   border-radius: 999px !important;
-  border: 1px solid var(--workflow-shell-border) !important;
+  border: 0px solid var(--workflow-shell-border) !important;
   background: color-mix(in srgb, var(--workflow-shell-surface) 96%, transparent) !important;
   color: color-mix(in srgb, var(--iota-cyan) 74%, var(--soft)) !important;
   z-index: 4;
 }
 .workflow-float-toggle:hover {
-  border-color: color-mix(in srgb, var(--iota-cyan) 38%, var(--workflow-shell-border)) !important;
-  background: color-mix(in srgb, var(--iota-cyan) 8%, var(--workflow-shell-surface)) !important;
+  border-color: color-mix(in srgb, var(--iota-cyan) 0%, var(--workflow-shell-border)) !important;
+  background: color-mix(in srgb, var(--iota-cyan) 0%, var(--workflow-shell-surface)) !important;
 }
 .workflow-float-toggle-left {
   right: 12px;
@@ -5755,7 +5755,7 @@ button.primary:hover {
 :root[data-theme="dark"] .node-palette .flyout-node-card,
 :root[data-theme="dark"] .palette-flyout .palette-node-card,
 :root[data-theme="dark"] .node-palette-item.palette-node-card {
-  background: #000 !important;
+  background: #1a1a1a !important;
   background-image: none !important;
 }
 :root[data-theme="light"] .node-palette .palette-node-card,
@@ -6520,8 +6520,8 @@ button.primary:hover {
 .iota-minimal-page .workflows-reference-card,
 .iota-minimal-page .project-create-card-reference {
   border-radius: 18px !important;
-  border: 1px solid var(--minimal-line) !important;
-  background: var(--minimal-panel-bg) !important;
+  border: 0px solid var(--minimal-line) !important;
+  background: #00000000 !important;
   box-shadow: none !important;
   backdrop-filter: blur(14px) !important;
   overflow: hidden;
@@ -6694,7 +6694,7 @@ button.primary:hover {
 .iota-minimal-page .workflow-name-reference label {
   color: var(--minimal-text) !important;
   font-size: 12px !important;
-  font-weight: 750 !important;
+  font-weight: 400 !important;
 }
 .iota-minimal-page input,
 .iota-minimal-page select,
@@ -8390,3 +8390,439 @@ body.n8n-resizing-columns .n8n-column-resizer::after,
 .node-modal .plot-group-window { min-height: 0; }
 .node-modal .plot-group-scroll { max-height: calc(91vh - 245px); }
 .results-panel .plot-group-scroll { max-height: calc(100dvh - 300px); }
+
+
+
+/* FINAL login split layout override */
+.auth-page.auth-page-ai.auth-page-minimal {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  direction: ltr !important;
+}
+
+.auth-page.auth-page-ai.auth-page-minimal::before {
+  display: none !important;
+}
+
+.auth-split-shell {
+  width: 1120px !important;
+  height: 600px !important;
+  min-height: 600px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: 420px 600px !important;
+  gap: 100px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  direction: ltr !important;
+}
+
+.auth-left-panel {
+  grid-column: 1 !important;
+  width: 420px !important;
+  height: 600px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  direction: rtl !important;
+}
+
+.auth-cubes-panel {
+  grid-column: 2 !important;
+  width: 600px !important;
+  height: 600px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.auth-cubes-wrap {
+  width: 600px !important;
+  height: 600px !important;
+  position: relative !important;
+}
+
+.auth-cubes-wrap > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.auth-form-clean {
+  width: 380px !important;
+  max-width: 380px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.auth-form-clean label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  position: static !important;
+  background: transparent !important;
+}
+
+.auth-form-clean .auth-card-head {
+  justify-content: flex-start !important;
+}
+
+.auth-form-clean .auth-input-wrap {
+  width: 100% !important;
+}
+
+.auth-form-clean input {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+@media (max-width: 1200px) {
+  .auth-split-shell {
+    width: 960px !important;
+    grid-template-columns: 360px 520px !important;
+    gap: 80px !important;
+  }
+
+  .auth-left-panel {
+    width: 360px !important;
+  }
+
+  .auth-form-clean {
+    width: 340px !important;
+  }
+
+  .auth-cubes-panel,
+  .auth-cubes-wrap {
+    width: 520px !important;
+  }
+}
+
+
+/* Smaller login Cubes visual */
+.auth-split-shell {
+  grid-template-columns: 420px 420px !important;
+  gap: 90px !important;
+  width: 930px !important;
+}
+
+.auth-cubes-panel,
+.auth-cubes-wrap {
+  width: 420px !important;
+  height: 420px !important;
+}
+
+/* Project list cleanup: standalone separator line, no panel/card borders */
+.projects-reference-page .projects-reference-layout {
+  position: relative !important;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) !important;
+  gap: 28px !important;
+  align-items: start !important;
+}
+
+.projects-reference-page .projects-reference-layout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(320px + 14px);
+  width: 1px;
+  background: color-mix(in srgb, var(--line-strong) 58%, transparent);
+  pointer-events: none;
+}
+
+.projects-reference-page .manager-panel.project-filter-panel.project-filter-panel-reference,
+.projects-reference-page .manager-panel.projects-list-panel.projects-list-reference {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.projects-reference-page .project-filter-panel-reference {
+  padding-inline-start: 0 !important;
+  padding-inline-end: 20px !important;
+}
+
+.projects-reference-page .projects-list-reference {
+  padding-inline-start: 20px !important;
+  padding-inline-end: 0 !important;
+}
+
+.projects-reference-page .project-card.project-card-reference {
+  border: 0 !important;
+  outline: 0 !important;
+  background: color-mix(in srgb, var(--project-color, var(--iota-cyan)) 7%, transparent) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  transition: background .16s ease, color .16s ease !important;
+}
+
+.projects-reference-page .project-card.project-card-reference:hover {
+  border: 0 !important;
+  outline: 0 !important;
+  background: color-mix(in srgb, var(--project-color, var(--iota-cyan)) 16%, transparent) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  transform: none !important;
+}
+
+.projects-reference-page .project-card.project-card-reference:hover h3 {
+  color: var(--project-color, var(--iota-cyan)) !important;
+}
+
+.projects-reference-page .project-card.project-card-reference::before,
+.projects-reference-page .project-card.project-card-reference::after {
+  display: none !important;
+}
+
+.projects-reference-page .project-card-icon-reference,
+.projects-reference-page .project-stats-reference span {
+  border: 0 !important;
+  background: color-mix(in srgb, var(--project-color, var(--iota-cyan)) 10%, transparent) !important;
+}
+
+@media (max-width: 1180px) {
+  .projects-reference-page .projects-reference-layout {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+
+  .projects-reference-page .projects-reference-layout::before {
+    display: none !important;
+  }
+
+  .projects-reference-page .project-filter-panel-reference,
+  .projects-reference-page .projects-list-reference {
+    padding-inline: 0 !important;
+  }
+}
+
+
+/* MUI X result rendering */
+.mui-table-wrap {
+  width: 100%;
+  height: min(390px, 42vh);
+  min-height: 230px;
+  direction: ltr;
+  padding: 6px;
+}
+.output-fullscreen-body .mui-table-wrap,
+.analysis-board-card-body .mui-table-wrap {
+  height: 100%;
+  min-height: 240px;
+}
+.mui-chart-wrap {
+  width: 100%;
+  min-height: 240px;
+  direction: ltr;
+  padding: 6px 6px 2px;
+  overflow: hidden;
+}
+.analysis-board-card-body .mui-chart-wrap,
+.output-fullscreen-body .mui-chart-wrap {
+  height: 100% !important;
+  min-height: 260px;
+}
+.MuiDataGrid-root,
+.MuiChartsSurface-root {
+  direction: ltr !important;
+  font-family: inherit !important;
+}
+.MuiDataGrid-root {
+  --DataGrid-rowBorderColor: var(--line) !important;
+  border-radius: 10px !important;
+}
+.MuiDataGrid-cell,
+.MuiDataGrid-columnHeader {
+  outline: none !important;
+}
+.output-body,
+.analysis-board-card-body,
+.output-fullscreen-body {
+  min-height: 0;
+}
+.plot-group-window {
+  height: min(620px, calc(100dvh - 230px));
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-group-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+.plot-group-item {
+  min-height: 320px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-solid) 46%, transparent);
+  overflow: hidden;
+}
+.plot-group-item-head {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.plot-group-item-head b {
+  margin-inline-end: auto;
+  color: var(--text);
+  font-size: 11px;
+}
+.plot-group-item-head span {
+  color: var(--muted);
+  font-size: 10px;
+  direction: ltr;
+}
+
+/* Board mode left workflow-node list */
+.workflow-nodes-list-panel {
+  background: var(--workflow-shell-surface) !important;
+  border: 1px solid var(--workflow-shell-border) !important;
+  box-shadow: none !important;
+}
+.workflow-node-list-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 42px;
+}
+.workflow-node-list-head {
+  flex: 0 0 auto;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.workflow-node-list-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 850;
+}
+.workflow-node-list-head small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.workflow-node-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px;
+}
+.workflow-node-list-item {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  text-align: right;
+  direction: rtl;
+  padding: 8px;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 5%, transparent) !important;
+  color: var(--text) !important;
+}
+.workflow-node-list-item:hover,
+.workflow-node-list-item.active {
+  background: color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 34%, transparent) !important;
+  color: var(--cat-color, var(--iota-cyan)) !important;
+}
+.workflow-node-list-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--cat-color, var(--iota-cyan));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 10%, transparent);
+}
+.workflow-node-list-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.workflow-node-list-main b,
+.workflow-node-list-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workflow-node-list-main b {
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 850;
+  direction: ltr;
+  text-align: left;
+}
+.workflow-node-list-main small {
+  color: var(--muted);
+  font-size: 10px;
+  direction: ltr;
+  text-align: left;
+}
+.workflow-node-mini-list {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 52px 6px 10px;
+}
+.workflow-node-mini-item {
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--cat-color, var(--iota-cyan)) !important;
+}
+.workflow-node-mini-item:hover,
+.workflow-node-mini-item.active {
+  background: var(--cat-color-soft, color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 14%, transparent)) !important;
+  border-color: color-mix(in srgb, var(--cat-color, var(--iota-cyan)) 28%, transparent) !important;
+}
+.workflow-float-toggle,
+.workflow-right-collapse-button {
+  color: var(--soft) !important;
+}
+.workflow-float-toggle:hover,
+.workflow-right-collapse-button:hover {
+  color: var(--iota-cyan) !important;
+}

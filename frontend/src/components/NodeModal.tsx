@@ -4,7 +4,7 @@ import { Pin, PinOff, Play, RefreshCw, X } from 'lucide-react';
 import type { Dataset, RegistryNode, Run } from '../types';
 import { categoryClassName, categoryLabel, nodeIcon } from './NodePalette';
 import { ParamEditor } from './ParamEditor';
-import { OutputCard, normalizeOutputs } from './ResultsPanel';
+import { OutputCard, normalizeOutputs, type Output } from './ResultsPanel';
 
 type Props = {
   node: Node;
@@ -18,6 +18,7 @@ type Props = {
   onParamsChange: (nodeId: string, params: Record<string, unknown>) => void;
   onRename: (nodeId: string, label: string) => void;
   onPinnedChange: (nodeId: string, pinned: { enabled?: boolean; sample?: string }) => void;
+  onAddOutputToBoard?: (output: Output, index: number) => void;
   onClose: () => void;
 };
 
@@ -94,7 +95,7 @@ function translateRegistryLabels<T>(value: T): T {
   return result as T;
 }
 
-export function NodeModal({ node, edges, registry, datasets, availableColumns, run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onClose }: Props) {
+export function NodeModal({ node, edges, registry, datasets, availableColumns, run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onClose }: Props) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState<ColumnWidths>({ output: 32, settings: 36, input: 32 });
 
@@ -174,7 +175,7 @@ export function NodeModal({ node, edges, registry, datasets, availableColumns, r
               {!run && <div className="empty-state n8n-empty-state">داده خروجی وجود ندارد<br /><small>نود را اجرا کنید تا خروجی نمایش داده شود</small></div>}
               {run && currentOutputs.length === 0 && <div className="empty-state n8n-empty-state">داده خروجی پیدا نشد.</div>}
               {currentOutputs.map((output, index) => (
-                <OutputCard output={output} index={index} variant="modal" key={`result-${index}-${output.node_id}-${output.path_index}`} />
+                <OutputCard output={output} index={index} variant="modal" onAddToBoard={onAddOutputToBoard} key={`result-${index}-${output.node_id}-${output.path_index}`} />
               ))}
             </div>
           </section>
@@ -207,7 +208,7 @@ export function NodeModal({ node, edges, registry, datasets, availableColumns, r
               {incoming.length > 0 && !run && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نودهای قبلی را اجرا کنید تا داده ورودی نمایش داده شود</small></div>}
               {incoming.length > 0 && run && inputOutputs.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی پیدا نشد.</div>}
               {inputOutputs.map((output, index) => (
-                <OutputCard output={output} index={index} variant="modal" key={`input-${index}-${output.node_id}-${output.path_index}`} />
+                <OutputCard output={output} index={index} variant="modal" onAddToBoard={onAddOutputToBoard} key={`input-${index}-${output.node_id}-${output.path_index}`} />
               ))}
             </div>
           </section>
