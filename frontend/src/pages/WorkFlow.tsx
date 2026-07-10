@@ -1,3 +1,4 @@
+import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   Background,
@@ -5,6 +6,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  ReactFlowProvider,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -15,9 +17,10 @@ import {
   type Node,
   type NodeChange
 } from '@xyflow/react';
-import { ArrowRight, LayoutDashboard, LayoutGrid, LogOut, MoreHorizontal, Play, PlusCircle, RefreshCw, Save, Trash2, UserCircle } from 'lucide-react';
+import { ArrowRight, Download, LayoutDashboard, LayoutGrid, LogOut, MoreHorizontal, Play, PlusCircle, RefreshCw, Save, Trash2, UserCircle } from 'lucide-react';
 import { api } from '../api';
 import { CustomSelect } from '../components/CustomSelect';
+import { CustomNodeBuilder } from '../components/CustomNodeBuilder';
 import { AnalysisBoard, type AnalysisBoardItem } from '../components/AnalysisBoard';
 import { NodeModal } from '../components/NodeModal';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -26,8 +29,23 @@ import { NodeMenu } from './NodeMenu';
 import { WorkflowNodesList } from './WorkflowNodesList';
 import { RightPanel } from './RightPanel';
 import { MlNode } from '../nodes/MlNode';
-import type { Dataset, Project, RegistryNode, Run, UserProfile, Workflow } from '../types';
+import type { CustomNodeDefinition, CustomNodePayload, Dataset, NodeCatalogResponse, Project, RegistryNode, Run, UserProfile, Workflow } from '../types';
 import { sameStringArray } from '../utils/appShared';
+import { exportWorkflowJson } from '../utils/workflowJson';
+import { compatiblePorts, portTypeFor } from '../features/workflow/catalog';
+import {
+  boardOutputTitle,
+  connectedGraph,
+  defaultGraph,
+  inputColumnsForNode,
+  isTextInput,
+  makeNode,
+  normalizeFlowNodes,
+  restoreAnalysisBoardItems,
+  serializeAnalysisBoardItems,
+  workflowOutputSignature,
+  type FlowGraph,
+} from '../features/workflow/graph';
 
 const nodeTypes = { mlNode: MlNode };
 const multiSelectionKeys = ['Meta', 'Control', 'Shift'];
@@ -45,330 +63,6 @@ function BoardIcon({ size = 14 }: { size?: number }) {
   );
 }
 type PinnedNodeData = { enabled?: boolean; sample?: string };
-type FlowGraph = { nodes: Node[]; edges: Edge[]; meta?: { datasetId?: number | null; targetColumn?: string; taskType?: string; analysisBoard?: AnalysisBoardItem[] } };
-const COMPATIBLE_PORTS: Record<string, string[]> = {
-  any: ['any','dataframe','json','json_items','series','columns','model','metrics','plot','file','report','artifact','artifact_ref','text','schema','trigger','stream'],
-  dataframe: ['dataframe','any','json','artifact_ref','report'],
-  json_items: ['json_items','json','any','artifact_ref','report','dataframe'],
-  json: ['json','json_items','any','metrics','report'],
-  metrics: ['metrics','json','any','report'],
-  plot: ['plot','artifact','artifact_ref','report','any'],
-  artifact_ref: ['artifact_ref','artifact','file','report','any'],
-  artifact: ['artifact','artifact_ref','file','report','any'],
-  file: ['file','artifact_ref','artifact','any'],
-  model: ['model','artifact_ref','artifact','any'],
-  schema: ['schema','json','any'],
-  series: ['series','columns','json','any'],
-  columns: ['columns','json','any'],
-  text: ['text','json','any'],
-  trigger: ['trigger','any'],
-  stream: ['stream','json_items','any']
-};
-
-const DEMO_COLUMNS: Record<string, string[]> = {
-  data_demo_iris: ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)', 'target'],
-  data_demo_wine: ['alcohol', 'malic_acid', 'ash', 'alcalinity_of_ash', 'magnesium', 'total_phenols', 'flavanoids', 'nonflavanoid_phenols', 'proanthocyanins', 'color_intensity', 'hue', 'od280/od315_of_diluted_wines', 'proline', 'target'],
-  data_demo_breast_cancer: ['mean radius', 'mean texture', 'mean perimeter', 'mean area', 'mean smoothness', 'mean compactness', 'mean concavity', 'mean concave points', 'mean symmetry', 'mean fractal dimension', 'target']
-};
-
-const LEGACY_NODE_ALIASES: Record<string, string> = {
-  data_csv: 'DI-002',
-  data_demo: 'DI-002',
-  data_demo_iris: 'DI-002',
-  data_demo_wine: 'DI-002',
-  data_demo_breast_cancer: 'DI-002',
-  data_select_target_features: 'MP-002',
-  data_select_features: 'MP-002',
-  data_select_target: 'MP-002',
-  data_train_test_split: 'MP-001',
-  data_kfold_split: 'MP-004',
-  data_filter_rows: 'CL-007',
-  data_sort_rows: 'CL-007',
-  data_sample_rows: 'CL-006',
-  transform_drop_columns: 'CL-006',
-  transform_simple_imputer: 'CL-001',
-  transform_replace_values: 'CL-008',
-  transform_standard_scaler: 'TR-003',
-  transform_minmax_scaler: 'TR-001',
-  transform_robust_scaler: 'TR-004',
-  transform_one_hot: 'MP-005',
-  transform_ordinal: 'MP-005',
-  transform_pca: 'TR-010',
-  transform_select_k_best: 'MP-001',
-  transform_variance_threshold: 'MP-001',
-  analysis_summary: 'IN-003',
-  analysis_missing: 'IN-004',
-  analysis_correlation: 'IN-006',
-  analysis_histogram: 'VZ-002',
-  analysis_scatter: 'VZ-003',
-  analysis_boxplot: 'VZ-004',
-  analysis_class_balance: 'IN-003',
-  analysis_outliers: 'AD-001',
-  analysis_feature_distribution: 'VZ-002',
-  analysis_pairwise_sample: 'VZ-003',
-  analysis_only: 'IN-003',
-  model_logistic_regression: 'MT-004',
-  model_random_forest_classifier: 'MT-005',
-  model_gradient_boosting_classifier: 'MT-007',
-  model_svc: 'MT-006',
-  model_knn_classifier: 'MT-008',
-  model_decision_tree_classifier: 'MT-006',
-  model_linear_regression: 'MT-004',
-  model_ridge: 'MT-004',
-  model_random_forest_regressor: 'MT-005',
-  model_gradient_boosting_regressor: 'MT-007',
-  model_extra_trees_classifier: 'MT-005',
-  model_adaboost_classifier: 'MT-005',
-  model_hist_gradient_boosting_classifier: 'MT-005',
-  model_gaussian_nb: 'MT-004',
-  model_mlp_classifier: 'MT-009',
-  model_decision_tree_regressor: 'MT-006',
-  model_knn_regressor: 'MT-008',
-  model_svr: 'MT-006',
-  model_extra_trees_regressor: 'MT-005',
-  model_adaboost_regressor: 'MT-005',
-  model_hist_gradient_boosting_regressor: 'MT-005',
-  model_lasso: 'MT-004',
-  model_elastic_net: 'MT-004',
-  model_mlp_regressor: 'MT-009',
-  model_metrics: 'MA-003',
-  model_confusion_matrix: 'MA-004',
-  model_roc_auc: 'MA-003',
-  model_feature_importance: 'MA-006',
-  model_permutation_importance: 'MA-007',
-  model_shap_summary: 'MA-007',
-  model_learning_curve: 'MA-009',
-  model_residual_plot: 'MA-005',
-  model_prediction_preview: 'MA-001',
-  model_prediction_plot: 'MA-001',
-  model_compare: 'MA-010'
-};
-
-function resolveRegistryId(id: string) {
-  return LEGACY_NODE_ALIASES[id] || id;
-}
-
-function paramsFromRegistry(node: RegistryNode) {
-  const schema = node.settingsSchema?.length ? node.settingsSchema : node.params || [];
-  return Object.fromEntries(schema.map((param) => [param.name, param.default]));
-}
-
-function makeNode(registryNode: RegistryNode, index: number, position?: { x: number; y: number }): Node {
-  return {
-    id: `${registryNode.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    type: 'mlNode',
-    position: position ?? { x: 120 + (index % 4) * 260, y: 100 + Math.floor(index / 4) * 180 },
-    data: { registryId: registryNode.id, typeLabel: registryNode.label, label: `Node ${index + 1}`, category: registryNode.category, description: registryNode.description, inputs: registryNode.inputs || [], outputs: registryNode.outputs || [], executionMode: registryNode.executionMode, comingSoon: registryNode.comingSoon, params: paramsFromRegistry(registryNode) }
-  };
-}
-
-function normalizeFlowNodes(items: Node[], registry: RegistryNode[]) {
-  const byId = Object.fromEntries(registry.map((item) => [item.id, item]));
-  const sectionTitles = new Set(['Data Input','Data Inspection','Data Cleaning','Anomaly Detection','Transformation','Visualizations','ML Data Processing','ML Model Design and Training','ML Model Analysis','Export or Report','Utilities / Advanced','ورود داده','تبدیل داده','تحلیل و نمودار','آموزش مدل','تحلیل مدل']);
-  return items.map((node, index) => {
-    const registryId = String(node.data?.registryId || '');
-    const catalogId = resolveRegistryId(registryId);
-    const registryNode = byId[registryId] || byId[catalogId];
-    const storedTypeLabel = String(node.data?.typeLabel || '').trim();
-    const typeLabel = !storedTypeLabel || sectionTitles.has(storedTypeLabel) ? String(registryNode?.label || node.data?.label || 'Node Type') : storedTypeLabel;
-    const currentLabel = String(node.data?.label || '').trim();
-    const label = !currentLabel || currentLabel === typeLabel || sectionTitles.has(currentLabel) ? `Node ${index + 1}` : currentLabel;
-    return { ...node, data: { ...node.data, catalogId, typeLabel, label, category: node.data?.category || registryNode?.category, description: node.data?.description || registryNode?.description, inputs: registryNode?.inputs || node.data?.inputs || [], outputs: registryNode?.outputs || node.data?.outputs || [], executionMode: registryNode?.executionMode || node.data?.executionMode || 'instant', comingSoon: registryNode?.comingSoon ?? node.data?.comingSoon ?? false } };
-  });
-}
-
-function defaultGraph(registry: RegistryNode[]): FlowGraph {
-  const byId = Object.fromEntries(registry.map((item) => [item.id, item]));
-  const ids = ['DI-002', 'IN-004', 'CL-007', 'VZ-002'];
-  const positions = [{ x: 90, y: 230 }, { x: 350, y: 230 }, { x: 610, y: 230 }, { x: 870, y: 230 }];
-  const nodes = ids.filter((id) => byId[id]).map((id, index) => {
-    const node = makeNode(byId[id], index, positions[index]);
-    node.id = `${id}-${index}`;
-    if (id === 'DI-002') node.data = { ...node.data, params: { ...(node.data.params as Record<string, unknown>), dataset_id: null } };
-    return node;
-  });
-  const edges: Edge[] = [];
-  for (let i = 0; i < nodes.length - 1; i++) edges.push({ id: `e${i}`, source: nodes[i].id, target: nodes[i + 1].id, animated: true });
-  return { nodes: normalizeFlowNodes(nodes, registry), edges, meta: { targetColumn: 'target', taskType: 'auto', datasetId: null } };
-}
-
-function connectedGraph(allNodes: Node[], allEdges: Edge[], selectedNodeId: string | null) {
-  if (!selectedNodeId || !allNodes.some((node) => node.id === selectedNodeId)) return { nodes: allNodes, edges: allEdges, mode: 'all' as const };
-  const adjacent = new Map<string, Set<string>>();
-  allNodes.forEach((node) => adjacent.set(node.id, new Set()));
-  allEdges.forEach((edge) => { adjacent.get(edge.source)?.add(edge.target); adjacent.get(edge.target)?.add(edge.source); });
-  const keep = new Set<string>();
-  const queue = [selectedNodeId];
-  while (queue.length) {
-    const current = queue.shift()!;
-    if (keep.has(current)) continue;
-    keep.add(current);
-    adjacent.get(current)?.forEach((next) => !keep.has(next) && queue.push(next));
-  }
-  return { nodes: allNodes.filter((node) => keep.has(node.id)), edges: allEdges.filter((edge) => keep.has(edge.source) && keep.has(edge.target)), mode: 'selected' as const };
-}
-
-function isTextInput(target: EventTarget | null) { return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement; }
-
-function upstreamIds(nodes: Node[], edges: Edge[], selectedId: string | null) {
-  if (!selectedId) return new Set(nodes.map((n) => n.id));
-  const parents = new Map<string, string[]>();
-  nodes.forEach((n) => parents.set(n.id, []));
-  edges.forEach((e) => parents.get(e.target)?.push(e.source));
-  const found = new Set<string>();
-  const stack = [selectedId];
-  while (stack.length) {
-    const id = stack.pop()!;
-    if (found.has(id)) continue;
-    found.add(id);
-    parents.get(id)?.forEach((p) => stack.push(p));
-  }
-  return found;
-}
-
-function parseColumnParam(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value !== 'string') return [];
-  const text = value.trim();
-  if (!text) return [];
-  try {
-    const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
-  } catch {
-    // Fall back to comma-separated text.
-  }
-  return text.split(',').map((item) => item.trim()).filter(Boolean);
-}
-
-function uniqColumns(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
-function flowNodeRegistryId(node: Node | undefined) {
-  const raw = String(node?.data?.registryId || node?.data?.catalogId || '');
-  return resolveRegistryId(raw);
-}
-
-function parentNodeIds(edges: Edge[], nodeId: string) {
-  return edges.filter((edge) => edge.target === nodeId).map((edge) => edge.source);
-}
-
-function datasetColumnsForFlowNode(node: Node, datasets: Dataset[], workflowDatasetId: number | null) {
-  const rid = String(node.data.registryId || '');
-  if (DEMO_COLUMNS[rid]) return DEMO_COLUMNS[rid];
-  const catalogId = flowNodeRegistryId(node);
-  if (catalogId !== 'DI-002') return [];
-  const params = (node.data.params || {}) as Record<string, unknown>;
-  const dsId = Number(params.dataset_id || workflowDatasetId || 0);
-  const ds = datasets.find((item) => item.id === dsId);
-  return ds ? ds.columns.map((column) => column.name) : [];
-}
-
-function outputColumnsForNode(nodeId: string, nodes: Node[], edges: Edge[], datasets: Dataset[], workflowDatasetId: number | null, visiting = new Set<string>()): string[] {
-  if (visiting.has(nodeId)) return [];
-  visiting.add(nodeId);
-
-  const node = nodes.find((item) => item.id === nodeId);
-  if (!node) return [];
-
-  const catalogId = flowNodeRegistryId(node);
-  const params = (node.data.params || {}) as Record<string, unknown>;
-  const sourceCols = datasetColumnsForFlowNode(node, datasets, workflowDatasetId);
-  if (sourceCols.length) return uniqColumns(sourceCols);
-
-  const parentCols = uniqColumns(
-    parentNodeIds(edges, nodeId).flatMap((parentId) => outputColumnsForNode(parentId, nodes, edges, datasets, workflowDatasetId, new Set(visiting)))
-  );
-
-  if (catalogId === 'CL-006') {
-    const selected = parseColumnParam(params.columns);
-    const idColumn = String(params.id_column || '');
-    const mode = String(params.mode || 'select');
-    let next = parentCols;
-    if (mode === 'drop' && selected.length) next = parentCols.filter((column) => !selected.includes(column));
-    if (mode !== 'drop' && selected.length) next = selected.filter((column) => parentCols.includes(column));
-    if (idColumn && parentCols.includes(idColumn) && !next.includes(idColumn)) next = [idColumn, ...next];
-    return uniqColumns(next);
-  }
-
-  if (catalogId === 'MP-002') {
-    const target = String(params.target_column || '');
-    const features = parseColumnParam(params.columns).filter((column) => column !== target && parentCols.includes(column));
-    return uniqColumns([...features, ...(target && parentCols.includes(target) ? [target] : [])]);
-  }
-
-  return parentCols;
-}
-
-function inputColumnsForNode(nodeId: string | null, nodes: Node[], edges: Edge[], datasets: Dataset[], workflowDatasetId: number | null) {
-  if (!nodeId) return [];
-  const node = nodes.find((item) => item.id === nodeId);
-  if (!node) return [];
-  if (flowNodeRegistryId(node) === 'DI-002') return datasetColumnsForFlowNode(node, datasets, workflowDatasetId);
-  return uniqColumns(parentNodeIds(edges, nodeId).flatMap((parentId) => outputColumnsForNode(parentId, nodes, edges, datasets, workflowDatasetId)));
-}
-
-function registryForFlowNode(node: Node | undefined, registry: RegistryNode[]) {
-  if (!node) return null;
-  const registryId = String(node.data?.catalogId || node.data?.registryId || '');
-  const catalogId = resolveRegistryId(registryId);
-  return registry.find((item) => item.id === registryId) || registry.find((item) => item.id === catalogId) || null;
-}
-
-function portTypeFor(node: Node | undefined, registry: RegistryNode[], handle: string | null | undefined, side: 'source' | 'target') {
-  const def = registryForFlowNode(node, registry);
-  const ports = side === 'source' ? def?.outputs : def?.inputs;
-  if (!ports?.length) return 'any';
-  const port = handle ? ports.find((item) => item.id === handle) : ports[0];
-  return String((port || ports[0]).type || 'any');
-}
-
-function compatiblePorts(sourceType: string, targetType: string) {
-  if (sourceType === targetType || sourceType === 'any' || targetType === 'any') return true;
-  return (COMPATIBLE_PORTS[sourceType] || []).includes(targetType);
-}
-
-function boardOutputTitle(output: Output, index: number) {
-  const base = String(output.title || `خروجی ${index + 1}`);
-  const source = String(output.source_label || output.branch || '').trim();
-  return source ? `${base} · ${source}` : base;
-}
-
-function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is Partial<AnalysisBoardItem> => Boolean(item && typeof item === 'object' && !Array.isArray(item)))
-    .map((item, index) => ({
-      id: String(item.id || `board-${Date.now()}-${index}`),
-      nodeId: item.nodeId ? String(item.nodeId) : null,
-      outputIndex: Number(item.outputIndex || 0),
-      outputTitle: String(item.outputTitle || `خروجی ${index + 1}`),
-      outputKind: String(item.outputKind || 'json'),
-      sourceLabel: item.sourceLabel ? String(item.sourceLabel) : undefined,
-      x: Number.isFinite(Number(item.x)) ? Number(item.x) : 32 + index * 28,
-      y: Number.isFinite(Number(item.y)) ? Number(item.y) : 32 + index * 28,
-      w: Number.isFinite(Number(item.w)) ? Number(item.w) : 430,
-      h: Number.isFinite(Number(item.h)) ? Number(item.h) : 320,
-      runId: item.runId === undefined ? null : Number(item.runId) || null,
-      snapshot: item.snapshot,
-      createdAt: String(item.createdAt || new Date().toISOString())
-    }));
-}
-
-function serializeAnalysisBoardItems(items: AnalysisBoardItem[]) {
-  return items.map(({ snapshot: _snapshot, ...item }) => item);
-}
-
-function workflowOutputSignature(nodes: Node[], edges: Edge[], datasetId: number | null, targetColumn: string, taskType: string) {
-  return JSON.stringify({
-    nodes: nodes.map((node) => ({ id: node.id, registryId: node.data?.registryId, catalogId: node.data?.catalogId, params: node.data?.params })),
-    edges: edges.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle })),
-    datasetId,
-    targetColumn,
-    taskType
-  });
-}
-
 type WorkflowPageProps = {
   project: Project;
   user: UserProfile;
@@ -378,10 +72,11 @@ type WorkflowPageProps = {
   onLogout: () => void;
   onProjects: () => void;
 };
-export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfile, onLogout, onProjects }: WorkflowPageProps) {
+function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, onLogout, onProjects }: WorkflowPageProps) {
   const { screenToFlowPosition, fitView } = useReactFlow();
   const projectId = project.id;
-  const [registry, setRegistry] = useState<RegistryNode[]>([]);
+  const [catalog, setCatalog] = useState<NodeCatalogResponse>({ version: 0, nodes: [], aliases: {}, categories: [], compatiblePorts: {} });
+  const registry = catalog.nodes;
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [currentWorkflowId, setCurrentWorkflowId] = useState<number | null>(null);
@@ -409,7 +104,11 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
   const [analysisBoardOpen, setAnalysisBoardOpen] = useState(false);
   const [analysisBoardItems, setAnalysisBoardItems] = useState<AnalysisBoardItem[]>([]);
   const [lastRunSignature, setLastRunSignature] = useState('');
+  const [customBuilderDefinition, setCustomBuilderDefinition] = useState<CustomNodeDefinition | null>(null);
+  const [customBuilderOpen, setCustomBuilderOpen] = useState(false);
+  const [customBuilderBusy, setCustomBuilderBusy] = useState(false);
 
+  const refreshRegistry = useCallback(async () => setCatalog(await api.nodeCatalog()), []);
   const refreshWorkflows = useCallback(async () => setWorkflows(await api.workflows(projectId)), [projectId]);
   const refreshRunHistory = useCallback(async () => setRunHistory(await api.listRuns(projectId)), [projectId]);
 
@@ -426,10 +125,11 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
 
   useEffect(() => {
     let alive = true;
-    Promise.all([api.nodes(), api.datasets(projectId), api.workflows(projectId), api.listRuns(projectId)])
-      .then(async ([nodeRegistry, datasetList, workflowList, runList]) => {
+    Promise.all([api.nodeCatalog(), api.datasets(projectId), api.workflows(projectId), api.listRuns(projectId)])
+      .then(async ([catalogData, datasetList, workflowList, runList]) => {
+        const nodeRegistry = catalogData.nodes;
         if (!alive) return;
-        setRegistry(nodeRegistry);
+        setCatalog(catalogData);
         setDatasets(datasetList);
         setWorkflows(workflowList);
         setRunHistory(runList);
@@ -441,7 +141,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
           const graph = workflow.graph as unknown as FlowGraph;
           setCurrentWorkflowId(workflow.id);
           setWorkflowName(workflow.name);
-          setNodes(normalizeFlowNodes(graph.nodes || [], nodeRegistry));
+          setNodes(normalizeFlowNodes(graph.nodes || [], nodeRegistry, catalogData.aliases));
           setEdges(graph.edges || []);
           setDatasetId(graph.meta?.datasetId ?? datasetList[0]?.id ?? null);
           setTargetColumn(graph.meta?.targetColumn || 'target');
@@ -453,7 +153,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
           return;
         }
 
-        const graph = defaultGraph(nodeRegistry);
+        const graph = defaultGraph(nodeRegistry, catalogData.aliases);
         setNodes(graph.nodes); setEdges(graph.edges);
         setAnalysisBoardItems([]);
         setAnalysisBoardOpen(false);
@@ -473,8 +173,8 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
 
   const availableColumns = useMemo(() => {
     const editorNodeId = modalNodeId || selectedId;
-    return inputColumnsForNode(editorNodeId, nodes, edges, datasets, datasetId);
-  }, [nodes, edges, selectedId, modalNodeId, datasets, datasetId]);
+    return inputColumnsForNode(editorNodeId, nodes, edges, datasets, datasetId, catalog.aliases);
+  }, [nodes, edges, selectedId, modalNodeId, datasets, datasetId, catalog.aliases]);
 
   const allRunOutputs = useMemo(() => normalizeOutputs(currentRun, null), [currentRun]);
   const currentOutputSignature = useMemo(() => workflowOutputSignature(nodes, edges, datasetId, targetColumn, taskType), [nodes, edges, datasetId, targetColumn, taskType]);
@@ -485,14 +185,14 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
   const onConnect = useCallback((connection: Connection) => {
     const sourceNode = nodes.find((node) => node.id === connection.source);
     const targetNode = nodes.find((node) => node.id === connection.target);
-    const sourceType = portTypeFor(sourceNode, registry, connection.sourceHandle, 'source');
-    const targetType = portTypeFor(targetNode, registry, connection.targetHandle, 'target');
-    if (!compatiblePorts(sourceType, targetType)) {
+    const sourceType = portTypeFor(sourceNode, registry, catalog.aliases, connection.sourceHandle, 'source');
+    const targetType = portTypeFor(targetNode, registry, catalog.aliases, connection.targetHandle, 'target');
+    if (!compatiblePorts(sourceType, targetType, catalog.compatiblePorts)) {
       setMessage(`اتصال نامعتبر است: ${sourceType} → ${targetType}`);
       return;
     }
     setEdges((items) => addEdge({ ...connection, animated: true }, items));
-  }, [nodes, registry]);
+  }, [nodes, registry, catalog.aliases, catalog.compatiblePorts]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const nextNodeIds = selectedNodes.map((node) => node.id);
@@ -626,6 +326,54 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
     setAnalysisBoardItems((items) => [...items, { ...item, id: `board-${Date.now()}-${Math.random().toString(16).slice(2)}`, x: item.x + 26, y: item.y + 26, createdAt: new Date().toISOString() }]);
   }, []);
 
+  const openCustomNodeBuilder = useCallback(() => {
+    setCustomBuilderDefinition(null);
+    setCustomBuilderOpen(true);
+  }, []);
+
+  const editCustomNode = useCallback(async (node: RegistryNode) => {
+    if (!node.isCustom) return;
+    setCustomBuilderBusy(true);
+    try {
+      const definition = await api.customNode(node.id);
+      setCustomBuilderDefinition(definition);
+      setCustomBuilderOpen(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'بارگذاری نود سفارشی ناموفق بود');
+    } finally {
+      setCustomBuilderBusy(false);
+    }
+  }, []);
+
+  const saveCustomNode = useCallback(async (payload: CustomNodePayload) => {
+    setCustomBuilderBusy(true);
+    try {
+      if (customBuilderDefinition) await api.updateCustomNode(customBuilderDefinition.id, payload);
+      else await api.createCustomNode(payload);
+      await refreshRegistry();
+      setCustomBuilderOpen(false);
+      setCustomBuilderDefinition(null);
+      setMessage('نود سفارشی ذخیره شد و در User Nodes قرار گرفت');
+    } finally {
+      setCustomBuilderBusy(false);
+    }
+  }, [customBuilderDefinition, refreshRegistry]);
+
+  const deleteCustomNode = useCallback(async () => {
+    if (!customBuilderDefinition) return;
+    if (!window.confirm(`نود «${customBuilderDefinition.label}» حذف شود؟`)) return;
+    setCustomBuilderBusy(true);
+    try {
+      await api.deleteCustomNode(customBuilderDefinition.id);
+      await refreshRegistry();
+      setCustomBuilderOpen(false);
+      setCustomBuilderDefinition(null);
+      setMessage('نود سفارشی حذف شد');
+    } finally {
+      setCustomBuilderBusy(false);
+    }
+  }, [customBuilderDefinition, refreshRegistry]);
+
   const uploadDataset = async (file: File) => {
     setMessage('در حال آپلود دیتاست...');
     try { const dataset = await api.uploadDataset(file, projectId); const next = await api.datasets(projectId); setDatasets(next); setDatasetId(dataset.id); setMessage(`دیتاست ${dataset.name} آپلود شد`); }
@@ -721,6 +469,11 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
 
   const graphPayload = (): FlowGraph => ({ nodes, edges, meta: { datasetId, targetColumn, taskType, analysisBoard: serializeAnalysisBoardItems(analysisBoardItems) } });
 
+  const exportCurrentWorkflow = () => {
+    exportWorkflowJson(workflowName, graphPayload());
+    setMessage('فایل JSON جریان دانلود شد');
+  };
+
   const saveWorkflow = async () => {
     if (!workflowName.trim()) { setMessage('نام جریان را وارد کنید'); return; }
     setBusy(true);
@@ -740,7 +493,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
       const workflow = await api.getWorkflow(id);
       const graph = workflow.graph as unknown as FlowGraph;
       setWorkflowName(workflow.name);
-      setNodes(normalizeFlowNodes(graph.nodes || [], registry)); setEdges(graph.edges || []);
+      setNodes(normalizeFlowNodes(graph.nodes || [], registry, catalog.aliases)); setEdges(graph.edges || []);
       setDatasetId(graph.meta?.datasetId ?? null); setTargetColumn(graph.meta?.targetColumn || 'target'); setTaskType(graph.meta?.taskType || 'auto');
       setAnalysisBoardItems(restoreAnalysisBoardItems(graph.meta?.analysisBoard));
       setAnalysisBoardOpen(false);
@@ -750,7 +503,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
   };
 
   const newWorkflow = () => {
-    const graph = defaultGraph(registry);
+    const graph = defaultGraph(registry, catalog.aliases);
     setCurrentWorkflowId(null); setWorkflowName('جریان IOTA ML'); setNodes(graph.nodes); setEdges(graph.edges); setTargetColumn('target'); setTaskType('auto'); setAnalysisBoardItems([]); setAnalysisBoardOpen(false); setLastRunSignature(''); setCurrentRun(null); setSelectedId(null); setSelectedEdgeId(null);
   };
 
@@ -950,6 +703,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
         <div className="workflow-topbar-center" style={topbarCenterStyle}>
           <button className="primary icon-only" title={selectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={busy || nodes.length === 0} onClick={runWorkflow}>{busy ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}</button>
           <button className="primary icon-only" type="button" disabled={busy} onClick={saveWorkflow} title="ذخیره" aria-label="ذخیره"><Save size={14} /></button>
+          <button className="icon-button" type="button" onClick={exportCurrentWorkflow} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={14} /></button>
           <button className={`icon-button ${analysisBoardOpen ? 'active' : ''}`} type="button" onClick={() => setAnalysisBoardOpen((value) => !value)} title={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><BoardIcon size={14} /></button>
           <button className="icon-button" type="button" onClick={prettyLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={14} /></button>
           <button className="danger icon-only" title="حذف" aria-label="حذف" type="button" disabled={!selectedId && !selectedEdgeId && selectedIds.length === 0 && selectedEdgeIds.length === 0} onClick={deleteSelected}><Trash2 size={14} /></button>
@@ -987,6 +741,8 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
             paletteCollapsed={paletteCollapsed}
             setPaletteCollapsed={setPaletteCollapsed}
             floatingLeftStyle={floatingLeftStyle}
+            onCreateCustomNode={openCustomNodeBuilder}
+            onEditCustomNode={editCustomNode}
           />
         )}
         <section className="board" onDrop={onDrop} onDragOver={onDragOver} style={floatingBoardStyle}>
@@ -1030,6 +786,7 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
           selectedNode={selectedNode}
           selectedEdge={selectedEdge}
           registry={registry}
+          aliases={catalog.aliases}
           datasets={datasets}
           availableColumns={availableColumns}
           updateNodeParams={updateNodeParams}
@@ -1043,9 +800,16 @@ export function WorkflowPage({ project, user, initialWorkflowId, onBack, onProfi
           onAddOutputToBoard={addOutputToBoard}
         />
       </main>
-      {modalNode && <NodeModal node={modalNode} edges={edges} registry={registry} datasets={datasets} availableColumns={availableColumns} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onAddOutputToBoard={addOutputToBoard} onClose={() => setModalNodeId(null)} />}
+      {modalNode && <NodeModal node={modalNode} edges={edges} registry={registry} aliases={catalog.aliases} datasets={datasets} availableColumns={availableColumns} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onAddOutputToBoard={addOutputToBoard} onClose={() => setModalNodeId(null)} />}
+      {customBuilderOpen && <CustomNodeBuilder definition={customBuilderDefinition} workflowNodes={nodes} registry={registry} busy={customBuilderBusy} onSave={saveCustomNode} onDelete={customBuilderDefinition ? deleteCustomNode : undefined} onClose={() => { if (!customBuilderBusy) { setCustomBuilderOpen(false); setCustomBuilderDefinition(null); } }} />}
     </div>
   );
 }
 
-
+export function WorkflowPage(props: WorkflowPageProps) {
+  return (
+    <ReactFlowProvider>
+      <WorkflowEditor {...props} />
+    </ReactFlowProvider>
+  );
+}

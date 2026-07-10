@@ -1,0 +1,1322 @@
+.loading-page {
+display:grid;
+place-items:center;
+gap:10px;
+font-size:13px;
+color:var(--soft)
+}
+
+.auth-page,.manager-shell {
+min-height:100vh;
+background:radial-gradient(circle at 14% 10%,color-mix(in srgb,var(--iota-cyan) 10%,transparent),transparent 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--iota-purple) 12%,transparent),transparent 28%),var(--bg)
+}
+
+.auth-page {
+display:grid;
+place-items:center;
+padding:28px;
+color:var(--text)
+}
+
+.auth-card,.manager-panel {
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:var(--radius-panel,11px);
+box-shadow:var(--shadow);
+backdrop-filter:blur(14px)
+}
+
+.auth-card {
+width:min(420px,94vw);
+display:grid;
+gap:13px;
+padding:26px;
+direction:rtl
+}
+
+.auth-logo {
+width:58px;
+height:58px;
+display:grid;
+place-items:center;
+color:#fff;
+font-weight:950;
+letter-spacing:.04em;
+border-radius:17px;
+background:linear-gradient(135deg,var(--iota-purple),var(--iota-blue),var(--iota-cyan))
+}
+
+.auth-card h1 {
+margin:2px 0 0;
+font-size:24px
+}
+
+.auth-card p {
+margin:0 0 4px;
+color:var(--muted);
+line-height:1.75;
+font-size:11.5px
+}
+
+.auth-card label,.project-form label,.profile-card-main label {
+display:grid;
+gap:6px;
+color:var(--soft);
+font-size:11px;
+font-weight:800
+}
+
+.auth-card input,.project-form input,.project-form select,.project-form textarea,.manager-list-head input,.profile-card-main input {
+width:100%;
+min-width:0;
+color:var(--text);
+background:color-mix(in srgb,var(--input) 92%,transparent);
+border:1px solid color-mix(in srgb,var(--line-strong) 72%,transparent);
+border-radius:var(--radius-control,8px);
+padding:8px 10px;
+outline:none;
+font-size:11.5px
+}
+
+.project-form textarea {
+resize:vertical;
+min-height:82px;
+line-height:1.65
+}
+
+.auth-card input:focus,.project-form input:focus,.project-form select:focus,.project-form textarea:focus,.manager-list-head input:focus,.profile-card-main input:focus {
+border-color:color-mix(in srgb,var(--iota-cyan) 42%,transparent)!important;
+background:color-mix(in srgb,var(--panel-solid) 80%,transparent)!important
+}
+
+.auth-error,.manager-toast {
+border:1px solid color-mix(in srgb,var(--danger) 26%,transparent);
+background:color-mix(in srgb,var(--danger) 10%,transparent);
+color:color-mix(in srgb,var(--danger) 82%,var(--text));
+padding:8px 10px;
+border-radius:10px;
+font-size:11px
+}
+
+.auth-submit,.full-width {
+width:100%;
+min-height:34px
+}
+
+.app-main-topbar .brand-block,.app-brand-with-back {
+display:flex;
+align-items:center;
+gap:9px
+}
+
+.profile-controls .profile-button span {
+max-width:130px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.manager-page {
+flex:1;
+min-height:0
+}
+
+.manager-grid {
+display:grid;
+grid-template-columns:340px minmax(0,1fr);
+gap:12px;
+max-width:1500px;
+margin:0 auto
+}
+
+.manager-panel {
+padding:14px
+}
+
+.panel-heading,.manager-list-head,.detail-actions-card,.project-card-top,.project-stats,.workflow-card,.notification-row {
+display:flex;
+align-items:center;
+gap:9px
+}
+
+.panel-heading {
+margin-bottom:13px;
+color:var(--iota-cyan)
+}
+
+.panel-heading b,.manager-list-head b,.detail-actions-card b {
+display:block
+}
+
+.panel-heading span,.manager-list-head span,.detail-actions-card span {
+display:block;
+color:var(--muted);
+font-size:10.5px;
+margin-top:3px
+}
+
+.project-form {
+display:grid;
+gap:10px
+}
+
+.project-form.compact {
+gap:9px
+}
+
+.form-grid-2 {
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:9px
+}
+
+.projects-list-panel {
+min-height:calc(100vh - 98px)
+}
+
+.manager-list-head {
+justify-content:space-between;
+margin-bottom:14px
+}
+
+.manager-list-head input {
+max-width:240px
+}
+
+.project-card-grid {
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+gap:10px
+}
+
+.project-card,.workflow-card {
+text-align:right;
+color:var(--text);
+border-radius:12px!important;
+padding:13px;
+box-shadow:none!important
+}
+
+.project-card {
+display:grid;
+gap:10px
+}
+
+.project-card-top {
+justify-content:space-between
+}
+
+.project-state {
+border-radius:999px;
+padding:4px 8px;
+font-size:10px;
+color:var(--iota-cyan);
+background:color-mix(in srgb,var(--iota-cyan) 12%,transparent);
+border:1px solid color-mix(in srgb,var(--iota-cyan) 24%,transparent)
+}
+
+.project-state.closed {
+color:var(--muted);
+background:color-mix(in srgb,var(--muted) 12%,transparent);
+border-color:color-mix(in srgb,var(--muted) 22%,transparent)
+}
+
+.project-card h3 {
+margin:0
+}
+
+.project-card p {
+margin:0;
+color:var(--muted);
+font-size:11px;
+line-height:1.65;
+min-height:36px
+}
+
+.project-meta {
+display:grid;
+gap:5px;
+color:var(--soft);
+font-size:10.5px
+}
+
+.project-meta span {
+display:inline-flex;
+align-items:center;
+gap:5px
+}
+
+.project-stats {
+justify-content:space-between;
+margin-top:auto
+}
+
+.project-stats span {
+flex:1;
+text-align:center;
+padding:7px;
+border-radius:9px;
+color:var(--soft)
+}
+
+.empty-manager {
+color:var(--muted);
+border:1px dashed var(--line-strong);
+border-radius:12px;
+padding:20px;
+text-align:center;
+grid-column:1 / -1
+}
+
+.project-detail-grid {
+display:grid;
+grid-template-columns:360px minmax(0,1fr);
+gap:12px;
+max-width:1500px;
+margin:0 auto
+}
+
+.project-info-panel {
+align-self:start
+}
+
+.detail-main-stack {
+display:grid;
+gap:12px;
+min-width:0
+}
+
+.detail-actions-card {
+justify-content:space-between
+}
+
+.workflow-card-grid {
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+gap:10px
+}
+
+.workflow-card {
+min-height:76px;
+justify-content:flex-start
+}
+
+.workflow-card b {
+display:block;
+direction:ltr;
+text-align:left;
+font-size:12.5px
+}
+
+.workflow-card span {
+display:block;
+color:var(--muted);
+font-size:10px;
+margin-top:3px
+}
+
+.workflow-icon {
+width:34px;
+height:34px;
+display:grid;
+place-items:center;
+border-radius:10px;
+color:var(--iota-cyan);
+background:color-mix(in srgb,var(--iota-cyan) 10%,transparent);
+border:1px solid color-mix(in srgb,var(--iota-cyan) 18%,transparent)
+}
+
+.project-data-card .dataset-card {
+box-shadow:none;
+background:transparent;
+border:0;
+padding:0
+}
+
+.project-data-card .dataset-card .panel-title {
+display:none
+}
+
+.project-data-card .datasets-mini {
+padding:0
+}
+
+.project-data-card .upload-zone {
+margin:0 0 12px
+}
+
+.project-data-card .dataset-mini-main {
+min-width:0
+}
+
+.project-data-card .dataset-mini-row {
+align-items:center;
+padding:9px;
+border:1px solid var(--line);
+border-radius:10px!important;
+background:color-mix(in srgb,var(--panel-solid) 78%,transparent)
+}
+
+.profile-grid {
+display:grid;
+grid-template-columns:380px minmax(0,1fr);
+gap:12px;
+max-width:1300px;
+margin:0 auto
+}
+
+.profile-card-main {
+display:grid;
+gap:11px;
+align-self:start
+}
+
+.profile-avatar {
+margin:4px auto;
+display:grid;
+place-items:center;
+color:var(--iota-cyan);
+border:1px solid color-mix(in srgb,var(--iota-cyan) 25%,transparent);
+overflow:hidden
+}
+
+.profile-avatar img {
+width:100%;
+height:100%;
+object-fit:cover
+}
+
+.profile-name {
+text-align:center;
+display:grid;
+gap:4px
+}
+
+.profile-name b {
+font-size:16px;
+color:var(--text)
+}
+
+.profile-name span {
+color:var(--iota-cyan);
+font-size:11px
+}
+
+.profile-side-stack {
+display:grid;
+gap:12px
+}
+
+.activity-bars {
+display:flex;
+align-items:end;
+direction:ltr
+}
+
+.activity-bar {
+height:100%;
+display:grid;
+grid-template-rows:1fr auto;
+gap:8px;
+align-items:end;
+text-align:center;
+color:var(--muted);
+font-size:10px
+}
+
+.activity-bar span {
+min-height:8px
+}
+
+.notification-list {
+display:grid;
+gap:8px
+}
+
+.notification-row {
+align-items:flex-start;
+flex-direction:column;
+padding:10px;
+border:1px solid var(--line)
+}
+
+.notification-row b {
+color:var(--text)
+}
+
+.notification-row span,.notification-row small {
+color:var(--muted);
+font-size:10.5px;
+line-height:1.6
+}
+
+.notification-row.alarm {
+border-color:color-mix(in srgb,var(--iota-cyan) 22%,var(--line))
+}
+
+.notification-row.alarm.warning {
+border-color:color-mix(in srgb,#f59e0b 30%,var(--line))
+}
+
+.manager-toast {
+position:sticky;
+top:0;
+z-index:12;
+margin:0 auto 12px;
+max-width:1500px
+}
+
+@media (width <= 1060px) {
+.manager-grid,.project-detail-grid,.profile-grid {
+grid-template-columns:1fr
+}
+
+.projects-list-panel {
+min-height:auto
+}
+}
+
+.manager-shell {
+background:radial-gradient(circle at 14% 4%,color-mix(in srgb,var(--iota-cyan) 12%,transparent),transparent 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--iota-purple) 16%,transparent),transparent 30%),var(--bg)
+}
+
+.manager-page {
+position:relative
+}
+
+.manager-panel {
+position:relative;
+overflow:hidden;
+border-color:color-mix(in srgb,var(--line-strong) 55%,transparent)
+}
+
+.manager-panel::before {
+content:'';
+position:absolute;
+inset-inline:14px;
+top:0;
+height:2px;
+border-radius:99px;
+background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--iota-cyan) 64%,transparent),transparent);
+pointer-events:none
+}
+
+.create-project-panel .full-width {
+margin-top:8px
+}
+
+.manager-toast {
+border-color:color-mix(in srgb,var(--muted) 24%,transparent);
+background:color-mix(in srgb,var(--panel-solid) 88%,transparent);
+color:var(--soft);
+box-shadow:0 12px 28px color-mix(in srgb,#000 12%,transparent)
+}
+
+.manager-toast.success {
+border-color:color-mix(in srgb,#22c55e 34%,transparent);
+background:color-mix(in srgb,#22c55e 12%,var(--panel-solid));
+color:color-mix(in srgb,#22c55e 84%,var(--text))
+}
+
+.manager-toast.error {
+border-color:color-mix(in srgb,var(--danger) 30%,transparent);
+background:color-mix(in srgb,var(--danger) 10%,var(--panel-solid));
+color:color-mix(in srgb,var(--danger) 82%,var(--text))
+}
+
+.manager-toast.info {
+border-color:color-mix(in srgb,var(--iota-cyan) 32%,transparent);
+background:color-mix(in srgb,var(--iota-cyan) 10%,var(--panel-solid));
+color:color-mix(in srgb,var(--iota-cyan) 84%,var(--text))
+}
+
+.project-state-color-row {
+align-items:end
+}
+
+.project-card {
+position:relative;
+isolation:isolate;
+min-height:178px;
+padding:14px
+}
+
+.project-card::before {
+content:'';
+position:absolute;
+inset-inline-start:0;
+border-radius:0 99px 99px 0;
+background:var(--project-color,var(--iota-cyan))
+}
+
+.project-card:hover {
+transform:translateY(-1px)
+}
+
+.project-card-top {
+color:var(--project-color,var(--iota-cyan))
+}
+
+.project-card h3 {
+font-size:15.5px;
+letter-spacing:-.01em
+}
+
+.project-stats span {
+border:1px solid color-mix(in srgb,var(--project-color,var(--iota-cyan)) 14%,transparent);
+background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 8%,var(--input))
+}
+
+.workflow-card:hover {
+transform:translateY(-1px)
+}
+
+.profile-image-picker input {
+display:none
+}
+
+.profile-image-picker > span {
+min-height:35px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+gap:7px;
+border-radius:var(--radius-control,8px);
+color:var(--iota-cyan);
+border:1px dashed color-mix(in srgb,var(--iota-cyan) 38%,transparent);
+background:color-mix(in srgb,var(--iota-cyan) 8%,transparent)
+}
+
+.profile-avatar {
+width:104px;
+height:104px;
+border-radius:32px;
+box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--iota-cyan) 18%,transparent)
+}
+
+.activity-bars {
+justify-content:flex-start;
+padding:12px 8px 4px
+}
+
+.notification-row {
+border-radius:12px
+}
+
+.profile-side-stack .manager-panel {
+min-height:0
+}
+
+.auth-theme-control {
+position:fixed;
+z-index:20
+}
+
+.app-main-topbar .brand-block,.workflow-brand {
+padding:4px 7px;
+border:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+border-radius:12px;
+background:color-mix(in srgb,var(--panel-solid) 54%,transparent)
+}
+
+.topbar h1 {
+font-size:16px!important;
+letter-spacing:-.01em!important;
+background:none!important;
+background-clip:initial!important;
+color:var(--text)!important
+}
+
+.topbar p {
+margin-top:3px!important;
+font-size:10px!important
+}
+
+.workflow-nav-actions {
+display:flex;
+align-items:center;
+gap:6px
+}
+
+.workflow-brand {
+direction:rtl;
+max-width:340px
+}
+
+.icon-button,.tiny-action,.output-head button,.modal-close {
+min-height:31px
+}
+
+.manager-panel {
+border-radius:12px!important;
+background:color-mix(in srgb,var(--panel-solid) 88%,transparent)!important;
+box-shadow:0 14px 36px color-mix(in srgb,#000 10%,transparent)!important
+}
+
+.manager-panel::before {
+display:none!important
+}
+
+.project-card {
+background:transparent!important;
+border-width:1.5px!important;
+border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 46%,var(--line))!important;
+box-shadow:none!important
+}
+
+.project-card::before {
+top:12px!important;
+bottom:12px!important;
+width:5px!important
+}
+
+.project-card:hover {
+background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 6%,transparent)!important;
+border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 68%,transparent)!important
+}
+
+.project-data-card {
+order:-1
+}
+
+.project-data-card .upload-zone {
+min-height:48px;
+border-radius:10px!important;
+background:color-mix(in srgb,var(--iota-cyan) 6%,transparent)!important
+}
+
+.activity-bars {
+gap:10px!important
+}
+
+.activity-bar {
+min-width:0
+}
+
+.activity-bar span {
+justify-self:center
+}
+
+.run-history-panel {
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:10px!important;
+box-shadow:var(--shadow);
+overflow:hidden
+}
+
+.run-history-title {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+padding:9px 10px 6px!important
+}
+
+.run-history-title span {
+display:inline-flex;
+align-items:center;
+gap:6px
+}
+
+.run-history-list {
+display:grid;
+gap:6px;
+max-height:182px;
+overflow:auto;
+padding:0 9px 9px
+}
+
+.run-history-row {
+display:grid;
+grid-template-columns:minmax(0,1fr) auto;
+align-items:center;
+gap:6px;
+border:1px solid var(--line);
+border-radius:9px;
+background:color-mix(in srgb,var(--panel-solid) 74%,transparent);
+padding:6px
+}
+
+.run-history-row.active {
+border-color:color-mix(in srgb,var(--iota-cyan) 48%,transparent);
+background:color-mix(in srgb,var(--iota-cyan) 7%,var(--panel-solid))
+}
+
+.run-history-main {
+min-width:0;
+display:grid;
+grid-template-columns:auto minmax(0,1fr);
+gap:4px 7px;
+text-align:right;
+border:0;
+background:transparent;
+color:var(--text);
+padding:0
+}
+
+.run-history-main b {
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+font-size:10.5px
+}
+
+.run-history-main small {
+grid-column:2;
+color:var(--muted);
+direction:ltr;
+text-align:left;
+font-size:9.5px
+}
+
+.run-dot {
+width:8px;
+height:8px;
+border-radius:99px;
+align-self:center;
+background:var(--muted)
+}
+
+.run-dot.succeeded {
+background:#22c55e
+}
+
+.run-dot.failed {
+background:var(--danger)
+}
+
+.run-dot.running,.run-dot.queued {
+background:var(--iota-blue)
+}
+
+.pinned-data-box {
+margin:12px;
+padding:10px;
+display:grid;
+gap:8px;
+border:1px dashed color-mix(in srgb,var(--iota-cyan) 36%,transparent);
+border-radius:10px;
+background:color-mix(in srgb,var(--iota-cyan) 6%,transparent)
+}
+
+.pinned-data-head {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px
+}
+
+.pinned-data-head b {
+display:block;
+direction:ltr;
+text-align:left;
+color:var(--text);
+font-size:11px
+}
+
+.pinned-data-head span,.pinned-data-box small {
+display:block;
+color:var(--muted);
+font-size:10px;
+line-height:1.6
+}
+
+.pinned-data-box textarea {
+min-height:96px;
+resize:vertical;
+direction:ltr;
+text-align:left;
+color:var(--text);
+background:color-mix(in srgb,var(--input) 94%,transparent);
+border:1px solid color-mix(in srgb,var(--line-strong) 58%,transparent);
+border-radius:9px;
+padding:8px;
+outline:none;
+font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+font-size:10.5px
+}
+
+.pinned-data-box textarea:focus {
+border-color:color-mix(in srgb,var(--iota-cyan) 42%,transparent);
+background:color-mix(in srgb,var(--panel-solid) 80%,transparent)
+}
+
+.topbar,.app-main-topbar,.workflow-topbar {
+padding:0 14px!important
+}
+
+.app-main-topbar {
+display:flex!important;
+direction:rtl
+}
+
+.workflow-topbar {
+display:grid!important;
+direction:ltr;
+grid-template-columns:minmax(170px,auto) minmax(180px,1fr) minmax(520px,auto)!important;
+align-items:stretch!important;
+gap:0!important
+}
+
+.app-main-topbar .brand-block,.app-brand-with-back,.workflow-brand {
+min-height:56px;
+padding:0 12px!important;
+border:0!important;
+border-radius:0!important;
+background:transparent!important;
+box-shadow:none!important
+}
+
+.workflow-brand {
+justify-self:stretch!important;
+justify-content:center
+}
+
+.workflow-nav-actions,.workflow-run-controls,.profile-controls {
+min-height:56px;
+display:flex!important;
+align-items:center!important;
+gap:6px!important;
+padding:0 10px!important
+}
+
+.workflow-nav-actions {
+justify-self:start!important;
+justify-content:flex-start!important;
+direction:ltr!important
+}
+
+.workflow-run-controls {
+justify-self:end!important;
+justify-content:flex-end!important;
+direction:rtl!important
+}
+
+.profile-controls {
+margin-inline-start:auto!important
+}
+
+.icon-button,.tiny-action,.output-head button,.modal-close {
+border-radius:0!important;
+box-shadow:none!important;
+background:transparent!important;
+border-color:transparent!important
+}
+
+.icon-button:hover,.tiny-action:hover,.output-head button:hover,.modal-close:hover {
+background:color-mix(in srgb,var(--iota-cyan) 9%,transparent)!important;
+border-color:color-mix(in srgb,var(--iota-cyan) 36%,transparent)!important
+}
+
+.manager-shell,.auth-page {
+background:var(--bg)!important
+}
+
+.manager-page {
+background:radial-gradient(circle,color-mix(in srgb,var(--iota-cyan) 10%,transparent) 1px,transparent 1.2px),var(--workspace-back)!important;
+background-size:26px 26px,auto!important
+}
+
+.auth-card,.manager-panel,.project-card,.workflow-card,.notification-row,.project-data-card .dataset-mini-row,.run-history-panel,.upload-zone,.project-color-control,.profile-image-picker > span,.empty-manager {
+border-radius:0!important;
+box-shadow:none!important
+}
+
+.manager-panel,.auth-card {
+background:color-mix(in srgb,var(--panel-solid) 94%,transparent)!important;
+border:1px solid var(--line)!important
+}
+
+.manager-panel::before,.project-card::before {
+display:none!important
+}
+
+.manager-grid,.project-detail-grid,.profile-grid,.detail-main-stack,.profile-side-stack {
+gap:10px!important
+}
+
+.project-card,.workflow-card {
+background:transparent!important;
+border:1px solid color-mix(in srgb,var(--project-color,var(--iota-cyan)) 42%,var(--line))!important;
+transform:none!important
+}
+
+.project-card:hover,.workflow-card:hover {
+background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 5%,transparent)!important;
+transform:none!important
+}
+
+.project-stats span,.workflow-icon,.project-state,.profile-avatar,.notification-row,.project-data-card .dataset-mini-row {
+border-radius:0!important;
+box-shadow:none!important
+}
+
+.profile-avatar {
+background:transparent!important;
+border-color:var(--line)!important
+}
+
+.activity-bars {
+height:132px!important
+}
+
+.activity-bar {
+flex:0 0 22px!important
+}
+
+.activity-bar span {
+width:12px!important;
+border-radius:0!important
+}
+
+.workflow-card-grid,.project-card-grid {
+gap:10px!important
+}
+
+.create-project-panel .full-width,.project-info-panel .full-width,.profile-card-main .full-width {
+margin-top:18px!important
+}
+
+@media (width <= 1280px) {
+.workflow-topbar {
+grid-template-columns:auto minmax(160px,1fr) minmax(420px,auto)!important
+}
+
+.workflow-run-controls input {
+width:130px
+}
+}
+
+:root {
+--radius-panel:4px;
+--radius-control:4px;
+--shadow:none
+}
+
+*,::before,::after {
+box-shadow:none!important
+}
+
+.app-shell,.auth-page,.manager-shell,.manager-page,.workspace,.board,.node-modal-grid,.node-modal-header {
+background-image:none!important;
+box-shadow:none!important
+}
+
+.app-shell,.auth-page,.manager-shell {
+background:var(--bg)!important
+}
+
+.board {
+border-color:var(--line)!important
+}
+
+.topbar p,.auth-card p,.panel-heading span,.manager-list-head span,.detail-actions-card span {
+display:none!important
+}
+
+.palette,.inspector,.results-panel,.dataset-card,.flow-chip,.auth-card,.manager-panel,.project-card,.workflow-card,.notification-row,.run-history-panel,.output-card,.metric-card,.checkbox-grid,.node-modal-section,.modal-output-card,.pinned-data-box,.project-data-card .dataset-mini-row,.empty-manager {
+background:transparent!important;
+background-image:none!important;
+border:1px solid var(--line)!important;
+border-radius:14px!important;
+box-shadow:none!important;
+backdrop-filter:none!important;
+padding:auto
+}
+
+.manager-panel {
+border:0!important
+}
+
+.modal-card,.node-modal,.palette-flyout,.iota-select-menu {
+background:var(--bg)!important;
+background-image:none!important;
+border:1px solid var(--line-strong)!important;
+border-radius:4px!important;
+box-shadow:none!important;
+backdrop-filter:none!important
+}
+
+.topbar,.app-main-topbar,.workflow-topbar {
+min-height:54px!important;
+border:0!important;
+border-bottom:1px solid var(--line)!important;
+border-radius:0!important;
+box-shadow:none!important;
+backdrop-filter:none!important
+}
+
+.workflow-brand {
+border-inline:0!important
+}
+
+.profile-controls {
+border-inline-start:0!important
+}
+
+.workflow-nav-actions,.workflow-run-controls,.profile-controls,.app-main-topbar .brand-block,.app-brand-with-back,.workflow-brand {
+border-radius:0!important;
+background:transparent!important;
+box-shadow:none!important
+}
+
+button,input,select,textarea,.collapse-button,.tiny-icon,.icon-button,.tiny-action,.output-head button,.modal-close,.palette-node-card,.flyout-node-card,.palette-node-icon,.upload-zone,.dataset-mini-row,.project-state,.project-stats span,.workflow-icon,.profile-avatar,.profile-image-picker > span,.project-color-control,.iota-select-trigger,.iota-select-option,.choice-pill,.pretty-checkbox .checkmark,.node-title-input,.node-modal-name,.pinned-data-box textarea,.manager-toast,.auth-error,.toast {
+border-radius:4px!important;
+box-shadow:none!important
+}
+
+button,.icon-button,.tiny-action,.output-head button,.modal-close,.collapse-button,.tiny-icon,.primary,.danger,.upload-zone,.profile-image-picker > span,.palette-node-card,.flyout-node-card,.iota-select-trigger,.iota-select-option,.choice-pill,.group-toggle,.run-history-row,.run-history-main {
+background:transparent!important;
+background-image:none!important;
+box-shadow:none!important;
+transition:color .14s ease,border-color .14s ease!important
+}
+
+.primary,.icon-button,.tiny-action,.output-head button,.modal-close,.collapse-button,.tiny-icon,.upload-zone,.profile-image-picker > span,.choice-pill {
+border:1px solid var(--line)!important;
+color:var(--soft)!important
+}
+
+.primary,.run-controls .primary.icon-only,.node-modal-actions .primary.icon-only,.auth-submit {
+color:var(--iota-cyan)!important;
+border-color:color-mix(in srgb,var(--iota-cyan) 46%,var(--line))!important;
+background:transparent!important
+}
+
+.danger,.danger.full,.compact-danger {
+color:var(--danger)!important;
+border-color:color-mix(in srgb,var(--danger) 42%,var(--line))!important;
+background:transparent!important
+}
+
+button:hover,button:focus-visible,.primary:hover,.primary:focus-visible,.danger:hover,.danger:focus-visible,.upload-zone:hover,.profile-image-picker > span:hover,.palette-node-card:hover,.flyout-node-card:hover,.choice-pill:hover,.choice-pill.active,.iota-select-trigger:hover,.iota-select.open .iota-select-trigger,.iota-select-option:hover,.iota-select-option.active,.group-toggle:hover,.run-history-row:hover,.run-history-row.active,.project-card:hover,.workflow-card:hover,.notification-row:hover,.dataset-mini-row:hover {
+background:transparent!important;
+background-image:none!important;
+border-color:color-mix(in srgb,var(--iota-cyan) 64%,var(--line-strong))!important;
+color:var(--iota-cyan)!important;
+transform:none!important
+}
+
+.topbar .icon-button,.workflow-topbar .icon-button,.app-main-topbar .icon-button,.topbar .primary.icon-only,.topbar .danger.icon-only,.topbar .theme-toggle,.workflow-topbar .theme-toggle,.app-main-topbar .theme-toggle {
+background:transparent!important;
+border-color:transparent!important;
+color:var(--soft)!important
+}
+
+.topbar .icon-button:hover,.workflow-topbar .icon-button:hover,.app-main-topbar .icon-button:hover,.topbar .primary.icon-only:hover,.topbar .danger.icon-only:hover,.topbar .theme-toggle:hover,.workflow-topbar .theme-toggle:hover,.app-main-topbar .theme-toggle:hover {
+background:transparent!important;
+border-color:transparent!important;
+color:var(--iota-cyan)!important
+}
+
+.run-controls input,.run-controls select,.field input,.field select,.field textarea,.searchbox,.searchbox input,.auth-card input,.project-form input,.project-form select,.project-form textarea,.manager-list-head input,.profile-card-main input,.node-title-input,.node-modal-name,.pinned-data-box textarea {
+background:transparent!important;
+background-image:none!important;
+border-color:var(--line)!important;
+color:var(--text)!important;
+box-shadow:none!important
+}
+
+.run-controls input:hover,.run-controls input:focus,.field input:hover,.field input:focus,.field select:hover,.field select:focus,.field textarea:hover,.field textarea:focus,.searchbox:hover,.searchbox:focus-within,.auth-card input:hover,.auth-card input:focus,.project-form input:hover,.project-form input:focus,.project-form select:hover,.project-form select:focus,.project-form textarea:hover,.project-form textarea:focus,.manager-list-head input:hover,.manager-list-head input:focus,.profile-card-main input:hover,.profile-card-main input:focus,.node-title-input:hover,.node-title-input:focus,.node-modal-name:hover,.node-modal-name:focus,.pinned-data-box textarea:hover,.pinned-data-box textarea:focus {
+background:transparent!important;
+border-color:color-mix(in srgb,var(--iota-cyan) 64%,var(--line-strong))!important;
+color:var(--text)!important
+}
+
+.project-card,.workflow-card {
+border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 52%,var(--line))!important
+}
+
+.project-card:hover,.workflow-card:hover {
+border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 82%,var(--line-strong))!important;
+color:var(--project-color,var(--iota-cyan))!important
+}
+
+.project-card:hover h3,.workflow-card:hover b {
+color:var(--project-color,var(--iota-cyan))!important
+}
+
+.project-stats span,.workflow-icon,.project-state,.profile-avatar,.notification-row,.activity-bar span,.pretty-checkbox input:checked + .checkmark,.status,.status.succeeded,.status.failed,.status.running,.status.queued {
+background:transparent!important;
+background-image:none!important
+}
+
+.activity-bar span {
+border:1px solid color-mix(in srgb,var(--iota-cyan) 58%,var(--line))!important
+}
+
+.ml-node::before,:root[data-theme="light"] .ml-node::before {
+background:transparent!important;
+background-image:none!important;
+border:1px solid color-mix(in srgb,var(--cat-color,var(--iota-cyan)) 48%,var(--line))!important;
+box-shadow:none!important;
+transform:none!important
+}
+
+.ml-node:hover::before,.ml-node.selected::before,:root[data-theme="light"] .ml-node:hover::before,:root[data-theme="light"] .ml-node.selected::before {
+background:transparent!important;
+background-image:none!important;
+border:2px solid color-mix(in srgb,var(--cat-color,var(--iota-cyan)) 82%,var(--line-strong))!important;
+box-shadow:none!important;
+transform:none!important
+}
+
+.ml-node:hover .node-title,.ml-node.selected .node-title,.ml-node:hover .node-title-input,.ml-node.selected .node-title-input,.ml-node:hover .node-type-label,.ml-node.selected .node-type-label {
+color:var(--cat-color,var(--iota-cyan))!important
+}
+
+.ml-node.shape-trapezium::before,.ml-node.shape-hexagon::before {
+border-radius:0!important
+}
+
+.react-flow__controls,.react-flow__minimap {
+box-shadow:none!important;
+border-radius:4px!important
+}
+
+.react-flow__controls-button,.react-flow__minimap {
+background:transparent!important;
+color:var(--text)!important
+}
+
+.palette-node-card:hover span,.flyout-node-card:hover span,.iota-select-option:hover,.iota-select-option.active,.choice-pill:hover,.choice-pill.active,.group-toggle:hover,.run-history-row.active .run-history-main,.run-history-row:hover .run-history-main {
+color:var(--iota-cyan)!important
+}
+
+html,body,#root,.app-shell,.auth-page,.manager-shell {
+background:var(--iota-app-bg)!important;
+background-image:none!important
+}
+
+.topbar,.app-main-topbar,.workflow-topbar {
+background:var(--iota-topbar-bg)!important;
+background-image:none!important
+}
+
+.workspace,.manager-page {
+background:radial-gradient(circle,color-mix(in srgb,var(--line-strong) 0%,transparent) 0,transparent 0),var(--iota-workspace-bg)!important;
+background-size:24px 24px,auto!important
+}
+
+.board {
+background:radial-gradient(circle,color-mix(in srgb,var(--line-strong) 78%,transparent) 1px,transparent 1.2px),var(--iota-board-bg)!important;
+background-size:22px 22px,auto!important
+}
+
+.modal-card,.node-modal,.palette-flyout,.iota-select-menu,.node-modal-backdrop {
+background:var(--iota-popup-bg)!important;
+background-image:none!important
+}
+
+.node-modal-header,.node-modal-grid {
+background-image:none!important
+}
+
+.react-flow__node:has(.ml-node),.react-flow__node.selected:has(.ml-node),.react-flow__node:has(.ml-node):focus,.react-flow__node:has(.ml-node):focus-visible,.react-flow__node:has(.ml-node) > div,.react-flow__node-mlNode,.react-flow__node-mlNode.selected,.react-flow__node-mlNode:focus,.react-flow__node-mlNode:focus-visible,.react-flow__node-mlNode > div {
+background:transparent!important;
+border:0!important;
+outline:0!important;
+box-shadow:none!important
+}
+
+.ml-node,.ml-node:hover,.ml-node.selected {
+position:relative!important;
+isolation:isolate!important;
+overflow:visible!important;
+background:transparent!important;
+background-image:none!important;
+border:0!important;
+outline:0!important;
+box-shadow:none!important
+}
+
+.ml-node::before,.ml-node::after {
+content:""!important;
+position:absolute!important;
+display:block!important;
+pointer-events:none!important;
+border:0!important;
+outline:0!important;
+box-shadow:none!important;
+transform:none!important
+}
+
+.ml-node::before {
+inset:0!important;
+z-index:-2!important
+}
+
+.ml-node::after {
+inset:var(--iota-node-outline-width)!important;
+z-index:-1!important;
+background:var(--iota-node-bg)!important
+}
+
+.ml-node:hover::after,.ml-node.selected::after {
+inset:var(--iota-node-outline-width-active)!important;
+background:var(--iota-node-bg-hover)!important
+}
+
+.ml-node .node-title-input {
+background:var(--iota-node-bg)!important
+}
+
+.ml-node.shape-ellipse .node-title-input,.ml-node.shape-ellipse .node-title-input:hover,.ml-node.shape-ellipse .node-title-input:focus,.ml-node.shape-ellipse .node-title-input:focus-visible {
+background:transparent!important;
+border:0!important;
+outline:0!important;
+box-shadow:none!important
+}
+
+.ml-node.shape-rectangle::before,.ml-node.shape-rectangle::after,.ml-node.shape-square::before,.ml-node.shape-square::after {
+clip-path:none!important;
+border-radius:4px!important
+}
+
+.ml-node.shape-ellipse::before,.ml-node.shape-ellipse::after {
+clip-path:none!important;
+border-radius:999px!important
+}
+
+.ml-node .node-content,.ml-node .react-flow__handle,.ml-node .node-title,.ml-node .node-title-input,.ml-node .node-type-label,.ml-node .node-icon {
+position:relative!important;
+z-index:1!important
+}
+
+.ml-node .react-flow__handle {
+position:absolute!important;
+z-index:20!important;
+width:10px!important;
+height:10px!important;
+min-width:10px!important;
+min-height:10px!important;
+border-radius:999px!important;
+background:var(--cat-color,var(--iota-cyan))!important;
+border:2px solid var(--iota-board-bg,var(--board))!important;
+box-shadow:none!important;
+opacity:1!important
+}
+
+.ml-node .react-flow__handle-left {
+left:-7px!important;
+right:auto!important;
+top:50%!important;
+transform:translateY(-50%)!important
+}
+
+.ml-node .react-flow__handle-right {
+right:-7px!important;
+left:auto!important;
+top:50%!important;
+transform:translateY(-50%)!important
+}
+
+.ml-node.shape-ellipse .react-flow__handle-left {
+left:-6px!important
+}
+
+.ml-node.shape-ellipse .react-flow__handle-right {
+right:-6px!important
+}
+

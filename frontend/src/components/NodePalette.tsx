@@ -18,7 +18,9 @@ import {
   Gauge,
   LineChart,
   ListChecks,
+  Pencil,
   PieChart,
+  Plus,
   Replace,
   Rows3,
   Scaling,
@@ -30,6 +32,7 @@ import {
   Table2,
   Target,
   Trees,
+  UserRoundCog,
   Workflow,
   Zap
 } from 'lucide-react';
@@ -37,7 +40,13 @@ import type { DragEvent, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { NodeCategory, RegistryNode } from '../types';
 
-type Props = { nodes: RegistryNode[]; collapsed: boolean; onToggle: () => void };
+type Props = {
+  nodes: RegistryNode[];
+  collapsed: boolean;
+  onToggle: () => void;
+  onCreateCustomNode?: () => void;
+  onEditCustomNode?: (node: RegistryNode) => void;
+};
 
 export const categoryOrder: NodeCategory[] = [
   'Data Input',
@@ -51,7 +60,8 @@ export const categoryOrder: NodeCategory[] = [
   'ML Classification Models',
   'ML Model Analysis',
   'Export or Report',
-  'Utilities / Advanced'
+  'Utilities / Advanced',
+  'User Nodes'
 ];
 
 const categoryMeta: Record<NodeCategory, { fa: string; icon: ReactNode }> = {
@@ -66,7 +76,8 @@ const categoryMeta: Record<NodeCategory, { fa: string; icon: ReactNode }> = {
   'ML Classification Models': { fa: 'مدل‌های طبقه‌بندی', icon: <BrainCircuit size={15} /> },
   'ML Model Analysis': { fa: 'تحلیل مدل', icon: <SearchCheck size={15} /> },
   'Export or Report': { fa: 'خروجی و گزارش', icon: <Download size={15} /> },
-  'Utilities / Advanced': { fa: 'ابزارهای پیشرفته', icon: <Zap size={15} /> }
+  'Utilities / Advanced': { fa: 'ابزارهای پیشرفته', icon: <Zap size={15} /> },
+  'User Nodes': { fa: 'نودهای سفارشی', icon: <UserRoundCog size={15} /> }
 };
 
 export function categoryLabel(category: string) { return categoryMeta[category as NodeCategory]?.fa ?? category; }
@@ -75,6 +86,7 @@ export function categoryClassName(category: string) { return `cat-${category.toL
 
 export function nodeIcon(node: RegistryNode, size = 15): ReactNode {
   const key = `${node.id} ${node.label} ${node.description}`.toLowerCase();
+  if (node.isCustom) return <UserRoundCog size={size} />;
   if (/python|code/.test(key)) return <Code2 size={size} />;
   if (/csv|excel|file|upload|import/.test(key)) return <FileUp size={size} />;
   if (/json|manual/.test(key)) return <FileSpreadsheet size={size} />;
@@ -106,21 +118,41 @@ function onDragStart(event: DragEvent<HTMLDivElement>, node: RegistryNode) {
   event.dataTransfer.effectAllowed = 'move';
 }
 
-function NodeItem({ node }: { node: RegistryNode }) {
+function NodeItem({ node, onEdit }: { node: RegistryNode; onEdit?: (node: RegistryNode) => void }) {
   return (
     <div
-      className={`palette-node-card node-palette-item workflow-shell-item ${categoryClassName(node.category)} ${node.comingSoon ? 'coming-soon' : ''}`}
+      className={`palette-node-card node-palette-item workflow-shell-item ${categoryClassName(node.category)} ${node.comingSoon ? 'coming-soon' : ''} ${node.isCustom ? 'custom-palette-node' : ''}`}
       draggable
       onDragStart={(event) => onDragStart(event, node)}
       title={`${node.label} · ${node.description}${node.comingSoon ? ' · coming soon' : ''}`}
     >
+      {node.isCustom && onEdit && (
+        <button
+          className="custom-node-edit-button"
+          type="button"
+          title="ویرایش نود سفارشی"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onEdit(node); }}
+        >
+          <Pencil size={11} />
+        </button>
+      )}
       <span className="palette-node-icon">{nodeIcon(node, 17)}</span>
       <span className="palette-node-name">{node.label}</span>
     </div>
   );
 }
 
-export function NodePalette({ nodes, collapsed }: Props) {
+function CreateCustomNodeCard({ onClick }: { onClick?: () => void }) {
+  return (
+    <button className="palette-node-card node-palette-item custom-node-create-card workflow-shell-item cat-user-nodes" type="button" onClick={onClick}>
+      <span className="palette-node-icon"><Plus size={17} /></span>
+      <span className="palette-node-name">ساخت نود</span>
+    </button>
+  );
+}
+
+export function NodePalette({ nodes, collapsed, onCreateCustomNode, onEditCustomNode }: Props) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [flyoutCategory, setFlyoutCategory] = useState<string | null>(null);
@@ -143,7 +175,7 @@ export function NodePalette({ nodes, collapsed }: Props) {
         <div className="collapsed-icons">
           {categoryOrder.map((category) => {
             const items = grouped.get(category) || [];
-            if (items.length === 0) return null;
+            if (items.length === 0 && category !== 'User Nodes') return null;
             const active = flyoutCategory === category;
             return (
               <button
@@ -162,7 +194,8 @@ export function NodePalette({ nodes, collapsed }: Props) {
           <div className={`palette-flyout workflow-shell-popup ${categoryClassName(flyoutCategory)}`}>
             <header><b>{categoryLabel(flyoutCategory)}</b><button type="button" onClick={() => setFlyoutCategory(null)}>×</button></header>
             <div className="palette-flyout-grid">
-              {(grouped.get(flyoutCategory) || []).map((node) => <NodeItem node={node} key={node.id} />)}
+              {flyoutCategory === 'User Nodes' && <CreateCustomNodeCard onClick={onCreateCustomNode} />}
+              {(grouped.get(flyoutCategory) || []).map((node) => <NodeItem node={node} key={node.id} onEdit={onEditCustomNode} />)}
             </div>
           </div>
         )}
@@ -179,7 +212,7 @@ export function NodePalette({ nodes, collapsed }: Props) {
       <div className="palette-groups">
         {categoryOrder.map((category) => {
           const items = grouped.get(category) || [];
-          if (items.length === 0) return null;
+          if (items.length === 0 && category !== 'User Nodes') return null;
           const isOpen = open[category] ?? true;
           return (
             <section className={`palette-group node-group ${categoryClassName(category)}`} key={category}>
@@ -187,7 +220,12 @@ export function NodePalette({ nodes, collapsed }: Props) {
                 <span className="group-title-main">{categoryIcon(category)} {categoryLabel(category)}</span>
                 {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
-              {isOpen && <div className="palette-grid">{items.map((node) => <NodeItem node={node} key={node.id} />)}</div>}
+              {isOpen && (
+                <div className="palette-grid">
+                  {category === 'User Nodes' && <CreateCustomNodeCard onClick={onCreateCustomNode} />}
+                  {items.map((node) => <NodeItem node={node} key={node.id} onEdit={onEditCustomNode} />)}
+                </div>
+              )}
             </section>
           );
         })}

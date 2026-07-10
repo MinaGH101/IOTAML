@@ -51,6 +51,7 @@ type RightPanelProps = {
   selectedNode: Node | null;
   selectedEdge: Edge | null;
   registry: RegistryNode[];
+  aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
   updateNodeParams: (nodeId: string, params: Record<string, unknown>) => void;
@@ -86,6 +87,7 @@ export function RightPanel({
   selectedNode,
   selectedEdge,
   registry,
+  aliases,
   datasets,
   availableColumns,
   updateNodeParams,
@@ -153,7 +155,7 @@ export function RightPanel({
 
             {activeTab === 'settings' && (
               <div className="workflow-right-tab-body workflow-settings-tab">
-                <Inspector embedded selectedNode={selectedNode} selectedEdge={selectedEdge} registry={registry} datasets={datasets} availableColumns={availableColumns} onChange={updateNodeParams} onRename={renameNode} onDelete={deleteSelected} />
+                <Inspector embedded selectedNode={selectedNode} selectedEdge={selectedEdge} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onChange={updateNodeParams} onRename={renameNode} onDelete={deleteSelected} />
               </div>
             )}
 

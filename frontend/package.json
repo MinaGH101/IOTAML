@@ -5,27 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "lint:css": "stylelint \"src/**/*.css\"",
     "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "check": "npm run typecheck && npm run lint:css && npm run check:css-debt && npm run build",
+    "preview": "vite preview --host 0.0.0.0",
+    "css:dedupe": "node scripts/dedupe-css.mjs",
+    "check:css-debt": "node scripts/check-css-debt.mjs"
   },
   "dependencies": {
-    "@babel/runtime": "^7.29.7",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/material": "^9.2.0",
-    "@mui/x-charts": "^9.8.0",
-    "@mui/x-data-grid": "^9.8.0",
-    "@vitejs/plugin-react": "latest",
-    "@xyflow/react": "latest",
-    "gsap": "^3.15.0",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "typescript": "latest",
-    "vite": "latest"
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/material": "9.2.0",
+    "@mui/x-charts": "9.8.0",
+    "@mui/x-data-grid": "9.8.0",
+    "@xyflow/react": "12.11.2",
+    "gsap": "3.15.0",
+    "lucide-react": "1.23.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3"
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "stylelint": "17.14.0",
+    "@vitejs/plugin-react": "6.0.3",
+    "typescript": "7.0.2",
+    "vite": "8.1.4"
   }
 }

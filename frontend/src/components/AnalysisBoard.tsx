@@ -1,5 +1,5 @@
 import { Copy, Download, GripHorizontal, Maximize2, Minus, Move, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
-import { useMemo, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadOutput, normalizeOutputs, OutputBody, type Output } from './ResultsPanel';
 import type { Run } from '../types';
@@ -87,8 +87,8 @@ function startBoardPointerAction(
     }
 
     onUpdateItem(item.id, {
-      w: clamp(start.w + dx, 280, 1400),
-      h: clamp(start.h + dy, 220, 1000)
+      w: Math.max(180, start.w + dx),
+      h: Math.max(140, start.h + dy)
     });
   };
 
@@ -116,6 +116,11 @@ export function AnalysisBoard({ items, run, busy, workflowDirty, onClose, onRun,
   const [pickerOpen, setPickerOpen] = useState(false);
   const [viewport, setViewport] = useState<BoardViewport>({ x: 0, y: 0, scale: 1 });
   const [focusedOutput, setFocusedOutput] = useState<{ output: Output; index: number; title: string } | null>(null);
+  const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setToolbarHost(document.getElementById('analysis-board-controls-host'));
+  }, []);
   const outputs = useMemo(() => normalizeOutputs(run, null), [run]);
   const pinnedKeys = useMemo(() => new Set(items.map((item) => item.snapshot ? outputKey(item.snapshot) : `${item.nodeId}::${item.outputTitle}::${item.outputKind}`)), [items]);
 
@@ -162,47 +167,53 @@ export function AnalysisBoard({ items, run, busy, workflowDirty, onClose, onRun,
 
   return (
     <div className="analysis-board" dir="rtl">
-      <div className="analysis-board-toolbar workflow-shell-card">
-        <div className="analysis-board-title">
-          <b>Analysis Board</b>
-          <span>مقایسه خروجی‌های چند نود</span>
-        </div>
-        <div className="analysis-board-actions">
-          {workflowDirty && <span className="analysis-board-dirty">تنظیمات تغییر کرده؛ نتایج ممکن است قدیمی باشند.</span>}
-          <div className="analysis-board-zoom-pill" title="Board zoom">
-            <button type="button" onClick={() => setZoom(viewport.scale - 0.05)}><Minus size={12} /></button>
-            <span>{Math.round(viewport.scale * 100)}%</span>
-            <button type="button" onClick={() => setZoom(viewport.scale + 0.05)}><Plus size={12} /></button>
-            <button type="button" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })}><RotateCcw size={12} /></button>
+      {toolbarHost && createPortal(
+        <div className="analysis-board-controls-content">
+          <div className="analysis-board-toolbar workflow-shell-card">
+            <div className="analysis-board-title">
+              <b>Analysis Board</b>
+              <span>مقایسه خروجی‌های چند نود</span>
+            </div>
+            <div className="analysis-board-actions">
+              {workflowDirty && <span className="analysis-board-dirty">تنظیمات تغییر کرده؛ نتایج ممکن است قدیمی باشند.</span>}
+              <div className="analysis-board-zoom-pill" title="Board zoom">
+                    <button type="button" onClick={() => setZoom(viewport.scale - 0.05)}><Minus size={12} /></button>
+                    <span>{Math.round(viewport.scale * 100)}%</span>
+                    <button type="button" onClick={() => setZoom(viewport.scale + 0.05)}><Plus size={12} /></button>
+                    <button type="button" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })}><RotateCcw size={12} /></button>
+              </div>
+              <button className="tiny-action" type="button" onClick={() => setPickerOpen((value) => !value)} title="افزودن خروجی"><Plus size={13} />افزودن خروجی</button>
+              <button className="tiny-action" type="button" disabled={busy} onClick={onRun} title="اجرای دوباره"><RefreshCw size={13} className={busy ? 'spin' : ''} />Run</button>
+              <button className="tiny-action" type="button" disabled={items.length === 0} onClick={onClear} title="پاک کردن برد"><Trash2 size={13} />پاک کردن</button>
+              <button className="icon-button" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={14} /></button>
+            </div>
           </div>
-          <button className="tiny-action" type="button" onClick={() => setPickerOpen((value) => !value)} title="افزودن خروجی"><Plus size={13} />افزودن خروجی</button>
-          <button className="tiny-action" type="button" disabled={busy} onClick={onRun} title="اجرای دوباره"><RefreshCw size={13} className={busy ? 'spin' : ''} />Run</button>
-          <button className="tiny-action" type="button" disabled={items.length === 0} onClick={onClear} title="پاک کردن برد"><Trash2 size={13} />پاک کردن</button>
-          <button className="icon-button" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={14} /></button>
-        </div>
-      </div>
 
-      {pickerOpen && (
-        <div className="analysis-output-picker workflow-shell-card">
-          <div className="analysis-output-picker-head">
-            <b>خروجی‌های قابل افزودن</b>
-            <button className="tiny-action" type="button" onClick={() => setPickerOpen(false)}><X size={12} /></button>
-          </div>
-          <div className="analysis-output-picker-list">
-            {!run && <div className="empty-state small">اول Workflow را اجرا کنید تا خروجی‌ها قابل انتخاب باشند.</div>}
-            {run && outputs.length === 0 && <div className="empty-state small">خروجی قابل نمایش پیدا نشد.</div>}
-            {outputs.map((output, index) => {
-              const key = outputKey(output);
-              return (
-                <button className="analysis-output-choice" type="button" key={`${key}-${index}`} onClick={() => onAddOutput(output, index)}>
-                  <span>{outputTitle(output, index)}</span>
-                  <small>{String(output.kind || 'json')} · {String(output.node_id || 'node')}</small>
-                  {pinnedKeys.has(key) && <em>روی برد هست</em>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          {pickerOpen && (
+            <div className="analysis-output-picker workflow-shell-card">
+              <div className="analysis-output-picker-head">
+                    <b>خروجی‌های قابل افزودن</b>
+                    <button className="tiny-action icon-action" type="button" onClick={() => setPickerOpen(false)}><X size={12} /></button>
+              </div>
+              <div className="analysis-output-picker-list">
+                    {!run && <div className="empty-state small">اول Workflow را اجرا کنید تا خروجی‌ها قابل انتخاب باشند.</div>}
+                    {run && outputs.length === 0 && <div className="empty-state small">خروجی قابل نمایش پیدا نشد.</div>}
+                    {outputs.map((output, index) => {
+                      const key = outputKey(output);
+                      return (
+                        <button className="analysis-output-choice" type="button" key={`${key}-${index}`} onClick={() => onAddOutput(output, index)}>
+                              <span>{outputTitle(output, index)}</span>
+                              <small>{String(output.kind || 'json')} · {String(output.node_id || 'node')}</small>
+                              {pinnedKeys.has(key) && <em>روی برد هست</em>}
+                        </button>
+                      );
+                    })}
+              </div>
+            </div>
+          )}
+
+        </div>,
+        toolbarHost
       )}
 
       <div className="analysis-board-canvas" onWheel={onWheel} onPointerDown={startPan}>
@@ -226,12 +237,12 @@ export function AnalysisBoard({ items, run, busy, workflowDirty, onClose, onRun,
                     <b>{item.outputTitle}</b>
                     <span>{item.outputKind} · {item.nodeId || 'node'} {stale ? '· قدیمی/نیازمند Run' : `· Run #${run?.id}`}</span>
                   </div>
-                  {output && <button className="tiny-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => downloadOutput(output, item.outputIndex)} title="Download"><Download size={12} /></button>}
-                  {output && <button className="tiny-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFocusedOutput({ output, index: item.outputIndex, title: item.outputTitle })} title="Maximize"><Maximize2 size={12} /></button>}
-                  <button className="tiny-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onDuplicateItem(item)} title="Duplicate"><Copy size={12} /></button>
-                  <button className="tiny-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onRemoveItem(item.id)} title="Remove"><X size={12} /></button>
+                  {output && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => downloadOutput(output, item.outputIndex)} title="Download"><Download size={12} /></button>}
+                  {output && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFocusedOutput({ output, index: item.outputIndex, title: item.outputTitle })} title="Maximize"><Maximize2 size={12} /></button>}
+                  <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onDuplicateItem(item)} title="Duplicate"><Copy size={12} /></button>
+                  <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onRemoveItem(item.id)} title="Remove"><X size={12} /></button>
                 </div>
-                <div className="analysis-board-card-body">
+                <div className="analysis-board-card-body" onWheel={(event) => event.stopPropagation()}>
                   {output ? <OutputBody output={output} /> : <div className="empty-state small">این خروجی در اجرای فعلی پیدا نشد. Workflow را Run کنید.</div>}
                 </div>
                 <div className="analysis-board-resize" onPointerDown={(event) => startBoardPointerAction(event, item, 'resize', viewport.scale, onUpdateItem)} />
@@ -244,10 +255,12 @@ export function AnalysisBoard({ items, run, busy, workflowDirty, onClose, onRun,
       {focusedOutput && createPortal(
         <div className="modal-backdrop workflow-shell-backdrop output-fullscreen-backdrop" onClick={() => setFocusedOutput(null)}>
           <div className="modal-card workflow-shell-popup output-fullscreen-card" onClick={(event) => event.stopPropagation()}>
-            <button className="modal-close" title="بستن" onClick={() => setFocusedOutput(null)}><X size={16}/></button>
             <div className="output-fullscreen-head">
               <h3>{focusedOutput.title}</h3>
-              <button className="tiny-action" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(focusedOutput.output, focusedOutput.index)}><Download size={13}/></button>
+              <div className="output-fullscreen-actions">
+                <button className="tiny-action icon-action" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(focusedOutput.output, focusedOutput.index)}><Download size={13}/></button>
+                <button className="modal-close" title="بستن" aria-label="بستن" onClick={() => setFocusedOutput(null)}><X size={16}/></button>
+              </div>
             </div>
             <div className="output-fullscreen-body"><OutputBody output={focusedOutput.output} /></div>
           </div>

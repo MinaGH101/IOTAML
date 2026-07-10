@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react';
-import { ArrowRight, Check, CheckCircle2, FolderOpen, GitBranch, Info, PlusCircle, RefreshCw, Save, Upload } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { ArrowRight, Check, CheckCircle2, FileUp, FolderOpen, GitBranch, Info, PlusCircle, RefreshCw, Save, Upload } from 'lucide-react';
 import { api } from '../api';
 import { AppTopNav } from '../components/AppTopNav';
 import { DatasetUploader } from '../components/DatasetUploader';
 import { ProjectForm } from '../components/ProjectForm';
 import type { Dataset, Project, ProjectPayload, UserProfile, Workflow } from '../types';
 import { formatDate, messageFromError, defaultProjectPayload, payloadFromProject, type UiMessage } from '../utils/appShared';
+import { readWorkflowJson } from '../utils/workflowJson';
 
 export function CreateProjectPage({
   user,
@@ -33,6 +34,8 @@ export function CreateProjectPage({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creatingWorkflow, setCreatingWorkflow] = useState(false);
+  const [importingWorkflow, setImportingWorkflow] = useState(false);
+  const workflowImportRef = useRef<HTMLInputElement>(null);
 
   const refreshProjectAssets = useCallback(async (projectId: number) => {
     const [datasetList, workflowList] = await Promise.all([api.datasets(projectId), api.workflows(projectId)]);
@@ -142,6 +145,27 @@ export function CreateProjectPage({
     }
   };
 
+  const importWorkflow = async (file: File) => {
+    setImportingWorkflow(true);
+    setMessage({ text: 'در حال بررسی و وارد کردن Workflow JSON...', tone: 'info' });
+    try {
+      const project = await ensureProject();
+      if (!project) return;
+      const imported = await readWorkflowJson(file);
+      const graph = { ...imported.graph, meta: { ...(imported.graph.meta || {}), datasetId: (imported.graph.meta as Record<string, unknown> | undefined)?.datasetId ?? datasets[0]?.id ?? null } };
+      const validation = await api.validateWorkflow(graph as unknown as Record<string, unknown>);
+      if (!validation.valid) throw new Error(validation.errors.map((item) => item.message).join(' · ') || 'Workflow JSON is not valid.');
+      const workflow = await api.createWorkflow({ name: imported.name || workflowName.trim() || 'Imported Workflow', project_id: project.id, graph: graph as unknown as Record<string, unknown> });
+      await refreshProjectAssets(project.id);
+      setMessage({ text: 'Workflow JSON وارد شد', tone: 'success' });
+      onOpenEditor(project, workflow.id);
+    } catch (error) {
+      setMessage(messageFromError(error, 'Import Workflow ناموفق بود'));
+    } finally {
+      setImportingWorkflow(false);
+    }
+  };
+
   const openWorkflow = (workflow: Workflow) => {
     if (!createdProject) return;
     onOpenEditor(createdProject, workflow.id);
@@ -214,10 +238,16 @@ export function CreateProjectPage({
                   <span className={`step-number-ai ${workflows.length ? 'done' : createdProject ? 'active' : ''}`}>{workflows.length ? <Check size={13} /> : '۳'}</span>
                   <div><b>جریان‌های پروژه</b><span>بعد از ساخت پروژه، یک workflow اولیه بسازید.</span></div>
                 </div>
-                <button className="primary" type="button" disabled={creatingWorkflow} onClick={createWorkflow}>
-                  {creatingWorkflow ? <RefreshCw size={15} className="spin" /> : <PlusCircle size={15} />}
-                  جریان جدید
-                </button>
+                <div className="workflow-create-actions">
+                  <input ref={workflowImportRef} type="file" accept=".json,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importWorkflow(file); event.currentTarget.value = ''; }} />
+                  <button className="icon-button" type="button" disabled={importingWorkflow} onClick={() => workflowImportRef.current?.click()}>
+                    {importingWorkflow ? <RefreshCw size={15} className="spin" /> : <FileUp size={15} />} Import JSON
+                  </button>
+                  <button className="primary" type="button" disabled={creatingWorkflow} onClick={createWorkflow}>
+                    {creatingWorkflow ? <RefreshCw size={15} className="spin" /> : <PlusCircle size={15} />}
+                    جریان جدید
+                  </button>
+                </div>
               </div>
 
               <div className="workflow-name-reference">

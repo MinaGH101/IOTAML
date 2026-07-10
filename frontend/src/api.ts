@@ -1,4 +1,4 @@
-import type { Dataset, LoginResponse, Project, ProjectPayload, RegistryNode, Run, UserProfile, Workflow, WorkflowValidationResult } from './types';
+import type { CustomNodeDefinition, CustomNodePayload, Dataset, LoginResponse, NodeCatalogResponse, Project, ProjectPayload, RegistryNode, Run, UserProfile, Workflow, WorkflowValidationResult } from './types';
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const AUTH_KEY = 'iota-auth-token';
@@ -52,6 +52,11 @@ export const api = {
   deleteProject: (id: number) => request<{ ok: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
 
   nodes: () => request<RegistryNode[]>('/api/nodes'),
+  nodeCatalog: () => request<NodeCatalogResponse>('/api/nodes/catalog'),
+  customNode: (id: string) => request<CustomNodeDefinition>(`/api/nodes/custom/${id}`),
+  createCustomNode: (payload: CustomNodePayload) => request<CustomNodeDefinition>('/api/nodes/custom', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  updateCustomNode: (id: string, payload: CustomNodePayload) => request<CustomNodeDefinition>(`/api/nodes/custom/${id}`, { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  deleteCustomNode: (id: string) => request<{ ok: boolean }>(`/api/nodes/custom/${id}`, { method: 'DELETE' }),
   datasets: (projectId?: number | null) => request<Dataset[]>(`/api/datasets${projectQuery(projectId)}`),
   uploadDataset: async (file: File, projectId?: number | null) => {
     const body = new FormData();

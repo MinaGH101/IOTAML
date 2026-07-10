@@ -10,7 +10,8 @@ export type NodeCategory =
   | 'ML Classification Models'
   | 'ML Model Analysis'
   | 'Export or Report'
-  | 'Utilities / Advanced';
+  | 'Utilities / Advanced'
+  | 'User Nodes';
 
 export type PortType =
   | 'dataframe'
@@ -42,7 +43,7 @@ export type PortDefinition = {
 export type NodeParam = {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'code' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks';
+  type: 'text' | 'textarea' | 'code' | 'file' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks';
   default: unknown;
   required?: boolean;
   options: unknown[];
@@ -69,6 +70,18 @@ export type RegistryNode = {
   comingSoon?: boolean;
   priority?: string;
   validationRules?: string;
+  isCustom?: boolean;
+  owner_username?: string;
+  code?: string;
+  template?: Record<string, unknown> | null;
+};
+
+export type NodeCatalogResponse = {
+  version: number;
+  nodes: RegistryNode[];
+  aliases: Record<string, string>;
+  categories: NodeCategory[];
+  compatiblePorts: Record<string, string[]>;
 };
 
 export type Dataset = {
@@ -172,4 +185,21 @@ export type LoginResponse = {
   access_token: string;
   token_type: 'bearer';
   user: UserProfile;
+};
+
+
+export type CustomNodePayload = {
+  name: string;
+  description: string;
+  inputs: PortDefinition[];
+  outputs: PortDefinition[];
+  code: string;
+  template: Record<string, unknown> | null;
+};
+
+export type CustomNodeDefinition = RegistryNode & CustomNodePayload & {
+  id: string;
+  isCustom: true;
+  created_at?: string;
+  updated_at?: string;
 };

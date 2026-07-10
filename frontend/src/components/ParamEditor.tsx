@@ -2,99 +2,18 @@ import type { Node } from '@xyflow/react';
 import { CheckSquare, Code2, Plus, Trash2, Wand2 } from 'lucide-react';
 import { CustomSelect, type SelectOption } from './CustomSelect';
 import type { Dataset, NodeParam, RegistryNode } from '../types';
+import { resolveRegistryId } from '../features/workflow/catalog';
 
 type ParamEditorProps = {
   selectedNode: Node;
   registry: RegistryNode[];
+  aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
   onParamsChange: (nodeId: string, params: Record<string, unknown>) => void;
   onRename?: (nodeId: string, label: string) => void;
 };
 
-
-const LEGACY_NODE_ALIASES: Record<string, string> = {
-  data_csv: 'DI-002',
-  data_demo: 'DI-002',
-  data_demo_iris: 'DI-002',
-  data_demo_wine: 'DI-002',
-  data_demo_breast_cancer: 'DI-002',
-  data_select_target_features: 'MP-002',
-  data_select_features: 'MP-002',
-  data_select_target: 'MP-002',
-  data_train_test_split: 'MP-001',
-  data_kfold_split: 'MP-004',
-  data_filter_rows: 'CL-007',
-  data_sort_rows: 'CL-007',
-  data_sample_rows: 'CL-006',
-  transform_drop_columns: 'CL-006',
-  transform_simple_imputer: 'CL-009',
-  transform_replace_values: 'CL-008',
-  transform_standard_scaler: 'TR-020',
-  transform_minmax_scaler: 'TR-020',
-  transform_robust_scaler: 'TR-020',
-  transform_scaler: 'TR-020',
-  transform_imputer: 'CL-009',
-  transform_normalization: 'TR-021',
-  feature_mutual_info: 'MP-021',
-  feature_f_regression: 'MP-022',
-  transform_one_hot: 'MP-005',
-  transform_ordinal: 'MP-005',
-  transform_pca: 'TR-010',
-  transform_select_k_best: 'MP-001',
-  transform_variance_threshold: 'MP-001',
-  analysis_summary: 'IN-003',
-  analysis_missing: 'IN-004',
-  analysis_correlation: 'IN-006',
-  analysis_histogram: 'VZ-002',
-  analysis_scatter: 'VZ-003',
-  analysis_boxplot: 'VZ-004',
-  analysis_class_balance: 'IN-003',
-  analysis_outliers: 'AD-001',
-  analysis_feature_distribution: 'VZ-002',
-  analysis_pairwise_sample: 'VZ-003',
-  analysis_only: 'IN-003',
-  model_logistic_regression: 'MC-001',
-  model_random_forest_classifier: 'MC-003',
-  model_gradient_boosting_classifier: 'MC-005',
-  model_svc: 'MC-008',
-  model_knn_classifier: 'MC-007',
-  model_decision_tree_classifier: 'MC-002',
-  model_linear_regression: 'MR-001',
-  model_ridge: 'MR-002',
-  model_random_forest_regressor: 'MR-006',
-  model_gradient_boosting_regressor: 'MR-008',
-  model_extra_trees_classifier: 'MC-004',
-  model_adaboost_classifier: 'MT-005',
-  model_hist_gradient_boosting_classifier: 'MC-006',
-  model_gaussian_nb: 'MC-010',
-  model_mlp_classifier: 'MT-009',
-  model_decision_tree_regressor: 'MR-005',
-  model_knn_regressor: 'MR-010',
-  model_svr: 'MT-006',
-  model_extra_trees_regressor: 'MR-007',
-  model_adaboost_regressor: 'MT-005',
-  model_hist_gradient_boosting_regressor: 'MR-009',
-  model_lasso: 'MR-003',
-  model_elastic_net: 'MR-004',
-  model_mlp_regressor: 'MT-009',
-  model_metrics: 'MA-003',
-  model_confusion_matrix: 'MA-004',
-  model_roc_auc: 'MA-003',
-  model_feature_importance: 'MA-006',
-  model_permutation_importance: 'MA-007',
-  model_shap_summary: 'MA-007',
-  model_learning_curve: 'MA-009',
-  model_residual_plot: 'MA-005',
-  model_prediction_preview: 'MA-001',
-  model_prediction_plot: 'MA-001',
-  model_compare: 'MA-010'
-};
-
-function resolveRegistryId(id: unknown) {
-  const value = String(id || '');
-  return LEGACY_NODE_ALIASES[value] || value;
-}
 
 function uniq(values: string[]) { return [...new Set(values.filter(Boolean))]; }
 function parseArray(value: unknown): string[] { return Array.isArray(value) ? value.map(String) : String(value || '').split(',').map((v) => v.trim()).filter(Boolean); }
@@ -355,8 +274,8 @@ function DynamicToggle({ enabled, active, onMode }: { enabled: boolean; active: 
   );
 }
 
-export function ParamEditor({ selectedNode, registry, datasets, availableColumns, onParamsChange, onRename }: ParamEditorProps) {
-  const registryId = resolveRegistryId(selectedNode.data.catalogId || selectedNode.data.registryId);
+export function ParamEditor({ selectedNode, registry, aliases, datasets, availableColumns, onParamsChange, onRename }: ParamEditorProps) {
+  const registryId = resolveRegistryId(selectedNode.data.catalogId || selectedNode.data.registryId, aliases);
   const registryNode = registry.find((item) => item.id === registryId);
   const baseSchema = registryNode?.settingsSchema?.length ? registryNode.settingsSchema : registryNode?.params || [];
   const params = (selectedNode.data.params || {}) as Record<string, unknown>;
@@ -405,6 +324,28 @@ export function ParamEditor({ selectedNode, registry, datasets, availableColumns
 
         const label = <div className="field-row"><span>{param.label}</span><DynamicToggle enabled={supportsDynamic} active={dyn} onMode={(mode) => setMode(param, mode)} /></div>;
         if (dyn) return <div className="field dynamic-field" key={param.name}>{label}{dynamicEditor}<small>{param.help || 'Examples: {{ $json.X }}, {{ $node.LoadData.output.row_count }}, {{ $execution.id }}'}</small></div>;
+
+        if (param.type === 'file') {
+          return (
+            <label className="field" key={param.name}>
+              {label}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+
+                  const reader = new FileReader();
+                  reader.onload = () => update(param.name, String(reader.result || ''));
+                  reader.readAsText(file);
+                }}
+              />
+              {value ? <small>CSV file loaded.</small> : <small>Select the detection-limit CSV file.</small>}
+            </label>
+          );
+        }
+
 
         if (param.type === 'boolean') {
           return <div className="field" key={param.name}>{label}<CustomSelect value={Boolean(value) ? 'true' : 'false'} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(next) => update(param.name, next === 'true')} ariaLabel={param.label} /></div>;

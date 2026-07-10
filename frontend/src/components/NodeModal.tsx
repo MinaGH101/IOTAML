@@ -10,6 +10,7 @@ type Props = {
   node: Node;
   edges: Edge[];
   registry: RegistryNode[];
+  aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
   run: Run | null;
@@ -95,7 +96,7 @@ function translateRegistryLabels<T>(value: T): T {
   return result as T;
 }
 
-export function NodeModal({ node, edges, registry, datasets, availableColumns, run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onClose }: Props) {
+export function NodeModal({ node, edges, registry, aliases, datasets, availableColumns, run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onClose }: Props) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState<ColumnWidths>({ output: 32, settings: 36, input: 32 });
 
@@ -185,7 +186,7 @@ export function NodeModal({ node, edges, registry, datasets, availableColumns, r
           <section className="node-modal-section settings-section workflow-shell-card n8n-node-panel n8n-params-panel">
             <div className="section-title n8n-panel-title n8n-settings-title">پارامترها</div>
             <div className="n8n-panel-body n8n-params-body">
-              <ParamEditor selectedNode={node} registry={translatedRegistry} datasets={datasets} availableColumns={availableColumns} onParamsChange={onParamsChange} onRename={onRename} />
+              <ParamEditor selectedNode={node} registry={translatedRegistry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onParamsChange} onRename={onRename} />
               <div className="pinned-data-box workflow-shell-card n8n-pinned-box">
                 <div className="pinned-data-head">
                   <div><b>داده نمونه ثابت‌شده</b><span>برای تست مرحله‌های بعدی، خروجی نمونه این نود را ثابت نگه دارید.</span></div>

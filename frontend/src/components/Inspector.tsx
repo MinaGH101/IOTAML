@@ -9,6 +9,7 @@ type Props = {
   selectedNode: Node | null;
   selectedEdge: Edge | null;
   registry: RegistryNode[];
+  aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
   onChange: (nodeId: string, params: Record<string, unknown>) => void;
@@ -17,7 +18,7 @@ type Props = {
   embedded?: boolean;
 };
 
-export function Inspector({ selectedNode, selectedEdge, registry, datasets, availableColumns, onChange, onRename, onDelete, embedded = false }: Props) {
+export function Inspector({ selectedNode, selectedEdge, registry, aliases, datasets, availableColumns, onChange, onRename, onDelete, embedded = false }: Props) {
   const [collapsed, setCollapsed] = useState(true);
 
   const edgeBody = selectedEdge ? (
@@ -43,7 +44,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, datasets, avai
         </div>
         <p>برای پنجره کامل شبیه n8n روی نود دابل‌کلیک کنید.</p>
       </div>
-      <ParamEditor selectedNode={selectedNode} registry={registry} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
+      <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
     </>
   ) : null;
 
@@ -90,7 +91,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, datasets, avai
           </div>
           <p>برای پنجره کامل شبیه n8n روی نود دابل‌کلیک کنید.</p>
         </div>
-        <ParamEditor selectedNode={selectedNode} registry={registry} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
+        <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
       </>}
     </aside>
   );

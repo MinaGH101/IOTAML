@@ -54,22 +54,19 @@ export function normalizeOutputs(run: Run | null, selectedNodeId: string | null)
   return selectedNodeId ? clean.filter((output) => String(output.node_id || '') === selectedNodeId) : clean;
 }
 
-function cssVar(name: string, fallback: string) {
-  if (typeof window === 'undefined') return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-}
-
 function plotColors() {
+  // Keep MUI X colors bound to CSS variables so theme changes and page refreshes
+  // cannot leave charts/tables with colors captured from the previous theme.
   return {
-    text: cssVar('--text', '#eaf2ff'),
-    muted: cssVar('--muted', '#94a3b8'),
-    purple: cssVar('--iota-purple', '#7257f2'),
-    blue: cssVar('--iota-blue', '#4c8df7'),
-    cyan: cssVar('--iota-cyan', '#31cde3'),
-    panel: cssVar('--panel-solid', '#11182a'),
-    line: cssVar('--line', 'rgba(148,163,184,.24)'),
-    lineStrong: cssVar('--line-strong', 'rgba(49,205,227,.32)'),
-    bg: cssVar('--iota-popup-bg', cssVar('--panel-solid', '#11182a'))
+    text: 'var(--text)',
+    muted: 'var(--muted)',
+    purple: 'var(--iota-purple)',
+    blue: 'var(--iota-blue)',
+    cyan: 'var(--iota-cyan)',
+    panel: 'var(--results-surface-strong, var(--panel-solid))',
+    line: 'var(--line)',
+    lineStrong: 'var(--line-strong)',
+    bg: 'var(--iota-popup-bg, var(--panel-solid))'
   };
 }
 
@@ -91,8 +88,13 @@ function chartSx() {
   return {
     direction: 'ltr',
     color: c.text,
+    backgroundColor: 'transparent',
     '& .MuiChartsAxis-line, & .MuiChartsAxis-tick': { stroke: c.lineStrong },
-    '& .MuiChartsAxis-tickLabel, & .MuiChartsAxis-label, & .MuiChartsLegend-label': { fill: c.muted, color: c.muted, fontSize: 11 },
+    '& .MuiChartsAxis-root text, & .MuiChartsAxis-tickLabel, & .MuiChartsAxis-label, & .MuiChartsLegend-label': {
+      fill: `${c.muted} !important`,
+      color: `${c.muted} !important`,
+      fontSize: '12px !important'
+    },
     '& .MuiChartsGrid-line': { stroke: c.line, strokeDasharray: '3 3' },
     '& .MuiChartsTooltip-paper': { background: c.panel, color: c.text, border: `1px solid ${c.lineStrong}` }
   };
@@ -136,16 +138,41 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
           fontFamily: 'inherit',
           fontSize: 11,
           direction: 'ltr',
-          backgroundColor: 'transparent',
-          '--DataGrid-containerBackground': 'transparent',
-          '& .MuiDataGrid-columnHeaders': { borderBottom: `1px solid ${c.lineStrong}`, color: c.text, backgroundColor: 'transparent' },
-          '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 800 },
-          '& .MuiDataGrid-row': { borderBottom: `1px solid ${c.line}` },
-          '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: 'color-mix(in srgb, var(--text) 4%, transparent)' },
-          '& .MuiDataGrid-row:hover': { backgroundColor: 'color-mix(in srgb, var(--iota-cyan) 7%, transparent)' },
-          '& .MuiDataGrid-cell': { borderBottom: 0, outline: 'none !important' },
-          '& .MuiTablePagination-root, & .MuiDataGrid-footerContainer': { color: c.muted, borderTop: `1px solid ${c.line}` },
-          '& .MuiSvgIcon-root': { color: c.muted }
+          backgroundColor: 'var(--results-surface, transparent)',
+          '--DataGrid-containerBackground': 'var(--results-header-bg, transparent)',
+          '--DataGrid-t-header-background-base': 'var(--results-header-bg, transparent)',
+          '--DataGrid-rowBorderColor': c.line,
+          '& .MuiDataGrid-main, & .MuiDataGrid-virtualScroller, & .MuiDataGrid-virtualScrollerContent': {
+            backgroundColor: 'var(--results-surface, transparent)',
+            color: `${c.text} !important`
+          },
+          '& .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader': {
+            borderBottom: `1px solid ${c.lineStrong}`,
+            color: `${c.text} !important`,
+            backgroundColor: 'var(--results-header-bg, transparent) !important'
+          },
+          '& .MuiDataGrid-columnHeaderTitle, & .MuiDataGrid-columnHeaderTitleContainer': {
+            color: `${c.text} !important`,
+            fontWeight: 800
+          },
+          '& .MuiDataGrid-row': {
+            color: `${c.text} !important`,
+            borderBottom: `1px solid ${c.line}`,
+            backgroundColor: 'var(--results-row-bg, transparent)'
+          },
+          '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: 'var(--results-row-alt-bg, color-mix(in srgb, var(--text) 4%, transparent))' },
+          '& .MuiDataGrid-row:hover': { backgroundColor: 'var(--results-row-hover-bg, color-mix(in srgb, var(--iota-cyan) 7%, transparent))' },
+          '& .MuiDataGrid-cell, & .MuiDataGrid-cellContent': {
+            color: `${c.text} !important`,
+            borderBottom: 0,
+            outline: 'none !important'
+          },
+          '& .MuiTablePagination-root, & .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiDataGrid-footerContainer': {
+            color: `${c.muted} !important`,
+            borderTop: `1px solid ${c.line}`,
+            backgroundColor: 'var(--results-footer-bg, var(--results-header-bg, transparent))'
+          },
+          '& .MuiSvgIcon-root': { color: `${c.muted} !important` }
         }}
       />
     </div>
@@ -322,8 +349,8 @@ function PlotGroupView({ output, onAddToBoard }: { output: Output; onAddToBoard?
             <div className="plot-group-item-head">
               <b>{String(plot.title || `Plot ${index + 1}`)}</b>
               <span>{plotSubtitle(plot)}</span>
-              <button className="tiny-action" type="button" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(plot, index)}><Download size={12} /></button>
-              {onAddToBoard && <button className="tiny-action" type="button" title="افزودن همین نمودار به برد" aria-label="افزودن همین نمودار به برد" onClick={() => onAddToBoard(plot, index)}><Pin size={12} /></button>}
+              <button className="tiny-action icon-action" type="button" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(plot, index)}><Download size={12} /></button>
+              {onAddToBoard && <button className="tiny-action icon-action" type="button" title="افزودن همین نمودار به برد" aria-label="افزودن همین نمودار به برد" onClick={() => onAddToBoard(plot, index)}><Pin size={12} /></button>}
             </div>
             <OutputBody output={plot} onAddToBoard={onAddToBoard} />
           </div>
@@ -367,10 +394,12 @@ export function OutputCard({ output, index, variant = 'panel', onAddToBoard }: {
       {focused && createPortal(
         <div className="modal-backdrop workflow-shell-backdrop output-fullscreen-backdrop" onClick={() => setFocused(false)}>
           <div className="modal-card workflow-shell-popup output-fullscreen-card" onClick={(event) => event.stopPropagation()}>
-            <button className="modal-close" title="بستن" onClick={() => setFocused(false)}><X size={16}/></button>
             <div className="output-fullscreen-head">
               <h3>{String(output.title || title || 'نمایش کامل')}</h3>
-              <button className="tiny-action" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(output, index)}><Download size={13}/></button>
+              <div className="output-fullscreen-actions">
+                <button className="tiny-action icon-action" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(output, index)}><Download size={13}/></button>
+                <button className="modal-close" title="بستن" aria-label="بستن" onClick={() => setFocused(false)}><X size={16}/></button>
+              </div>
             </div>
             <div className="output-fullscreen-body"><OutputBody output={output} onAddToBoard={onAddToBoard} /></div>
           </div>
@@ -403,7 +432,7 @@ export function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddTo
     <section className="results-panel workflow-shell-panel">
       <div className="panel-title results-title">
         <span>خروجی نود انتخاب‌شده</span>
-        <button className="tiny-action" type="button" onClick={onToggle} title="کوچک کردن خروجی نود" aria-label="کوچک کردن خروجی نود"><PanelRightClose size={13} /></button>
+        <button className="tiny-action icon-action" type="button" onClick={onToggle} title="کوچک کردن خروجی نود" aria-label="کوچک کردن خروجی نود"><PanelRightClose size={13} /></button>
       </div>
       <div className="results-scroll">
         {!selectedNodeId && <div className="empty-state">برای دیدن خروجی فقط همان نود، روی یک نود کلیک کنید.</div>}
