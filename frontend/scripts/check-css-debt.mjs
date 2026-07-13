@@ -14,7 +14,7 @@ while ((match = importPattern.exec(entryCss)) !== null) {
 const cubes = path.join(root, 'src', 'components', 'Cubes.css');
 if (fs.existsSync(cubes)) files.push(cubes);
 
-const MAX_IMPORTANT = 2273;
+const MAX_IMPORTANT = 1400;
 let importantCount = 0;
 let duplicateExactDeclarations = 0;
 const seen = new Set();

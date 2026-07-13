@@ -185,7 +185,7 @@ export function AnalysisBoard({ items, run, busy, workflowDirty, onClose, onRun,
               <button className="tiny-action" type="button" onClick={() => setPickerOpen((value) => !value)} title="افزودن خروجی"><Plus size={13} />افزودن خروجی</button>
               <button className="tiny-action" type="button" disabled={busy} onClick={onRun} title="اجرای دوباره"><RefreshCw size={13} className={busy ? 'spin' : ''} />Run</button>
               <button className="tiny-action" type="button" disabled={items.length === 0} onClick={onClear} title="پاک کردن برد"><Trash2 size={13} />پاک کردن</button>
-              <button className="icon-button" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={14} /></button>
+              <button className="icon-button icon-only" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={14} /></button>
             </div>
           </div>
 

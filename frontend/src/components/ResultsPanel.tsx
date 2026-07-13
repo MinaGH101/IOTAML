@@ -17,7 +17,7 @@ function fmt(value: unknown): string {
   return String(value);
 }
 
-const statusLabel: Record<string, string> = { queued: 'در صف', running: 'در حال اجرا', succeeded: 'موفق', failed: 'ناموفق' };
+const statusLabel: Record<string, string> = { queued: 'در صف', running: 'در حال اجرا', succeeded: 'موفق', failed: 'ناموفق', cancelled: 'لغوشده', timed_out: 'پایان زمان مجاز' };
 
 function rowsToCsv(rows: Record<string, unknown>[], columns?: string[]) {
   const cols = columns?.length ? columns : Object.keys(rows[0] || {});
@@ -58,15 +58,15 @@ function plotColors() {
   // Keep MUI X colors bound to CSS variables so theme changes and page refreshes
   // cannot leave charts/tables with colors captured from the previous theme.
   return {
-    text: 'var(--text)',
-    muted: 'var(--muted)',
-    purple: 'var(--iota-purple)',
-    blue: 'var(--iota-blue)',
-    cyan: 'var(--iota-cyan)',
-    panel: 'var(--results-surface-strong, var(--panel-solid))',
-    line: 'var(--line)',
-    lineStrong: 'var(--line-strong)',
-    bg: 'var(--iota-popup-bg, var(--panel-solid))'
+    text: 'var(--theme-text)',
+    muted: 'var(--theme-text-muted)',
+    purple: 'var(--theme-secondary)',
+    blue: 'var(--theme-secondary)',
+    cyan: 'var(--theme-primary)',
+    panel: 'var(--theme-popup-bg, var(--theme-popup-bg))',
+    line: 'var(--theme-divider)',
+    lineStrong: 'var(--theme-control-border)',
+    bg: 'var(--theme-popup-bg, var(--theme-popup-bg))'
   };
 }
 
@@ -138,18 +138,18 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
           fontFamily: 'inherit',
           fontSize: 11,
           direction: 'ltr',
-          backgroundColor: 'var(--results-surface, transparent)',
-          '--DataGrid-containerBackground': 'var(--results-header-bg, transparent)',
-          '--DataGrid-t-header-background-base': 'var(--results-header-bg, transparent)',
+          backgroundColor: 'var(--theme-panel-bg, transparent)',
+          '--DataGrid-containerBackground': 'var(--theme-table-header, transparent)',
+          '--DataGrid-t-header-background-base': 'var(--theme-table-header, transparent)',
           '--DataGrid-rowBorderColor': c.line,
           '& .MuiDataGrid-main, & .MuiDataGrid-virtualScroller, & .MuiDataGrid-virtualScrollerContent': {
-            backgroundColor: 'var(--results-surface, transparent)',
+            backgroundColor: 'var(--theme-panel-bg, transparent)',
             color: `${c.text} !important`
           },
           '& .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader': {
             borderBottom: `1px solid ${c.lineStrong}`,
             color: `${c.text} !important`,
-            backgroundColor: 'var(--results-header-bg, transparent) !important'
+            backgroundColor: 'var(--theme-table-header, transparent) !important'
           },
           '& .MuiDataGrid-columnHeaderTitle, & .MuiDataGrid-columnHeaderTitleContainer': {
             color: `${c.text} !important`,
@@ -158,10 +158,10 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
           '& .MuiDataGrid-row': {
             color: `${c.text} !important`,
             borderBottom: `1px solid ${c.line}`,
-            backgroundColor: 'var(--results-row-bg, transparent)'
+            backgroundColor: 'var(--theme-table-row, transparent)'
           },
-          '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: 'var(--results-row-alt-bg, color-mix(in srgb, var(--text) 4%, transparent))' },
-          '& .MuiDataGrid-row:hover': { backgroundColor: 'var(--results-row-hover-bg, color-mix(in srgb, var(--iota-cyan) 7%, transparent))' },
+          '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: 'var(--theme-table-row-alt, color-mix(in srgb, var(--theme-text) 4%, transparent))' },
+          '& .MuiDataGrid-row:hover': { backgroundColor: 'var(--theme-table-row-hover, color-mix(in srgb, var(--theme-primary) 7%, transparent))' },
           '& .MuiDataGrid-cell, & .MuiDataGrid-cellContent': {
             color: `${c.text} !important`,
             borderBottom: 0,
@@ -170,7 +170,7 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
           '& .MuiTablePagination-root, & .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiDataGrid-footerContainer': {
             color: `${c.muted} !important`,
             borderTop: `1px solid ${c.line}`,
-            backgroundColor: 'var(--results-footer-bg, var(--results-header-bg, transparent))'
+            backgroundColor: 'var(--theme-table-footer, var(--theme-table-header, transparent))'
           },
           '& .MuiSvgIcon-root': { color: `${c.muted} !important` }
         }}
@@ -439,7 +439,13 @@ export function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddTo
         {selectedNodeId && !run && <div className="empty-state">جریان را اجرا کنید تا خروجی این نود نمایش داده شود.</div>}
         {run && <>
           <div className={`status ${run.status}`}>{statusLabel[run.status] ?? run.status}</div>
+          <div className="run-progress-summary">
+            <span>{Math.round(Number(run.progress?.percent || 0))}%</span>
+            <progress max="100" value={Number(run.progress?.percent || 0)} />
+            <small>{run.progress?.nodes_finished || 0}/{run.progress?.nodes_total || 0} نود · تلاش {run.attempts}/{run.max_attempts}</small>
+          </div>
           {run.error && <div className="error-box">{run.error}</div>}
+          {run.logs && run.logs.length > 0 && <details className="run-log-details"><summary>گزارش اجرای سیستم</summary><pre>{run.logs.slice(-50).map((entry) => `${entry.timestamp} [${entry.level}] ${entry.message}`).join('\n')}</pre></details>}
           {!selectedNodeId && comparison.length > 0 && <div className="output-card workflow-shell-card"><div className="output-head"><b>مقایسه شاخه‌ها</b><button title="دانلود" aria-label="دانلود" onClick={() => downloadText('comparison.csv', rowsToCsv(comparison), 'text/csv;charset=utf-8')}><Download size={13}/></button></div><TableView rows={comparison} /></div>}
           {selectedNodeId && outputs.length === 0 && run.status === 'succeeded' && <div className="empty-state">برای این نود خروجی قابل نمایش پیدا نشد. نود را به مسیر اجرا وصل کنید و دوباره Run بزنید.</div>}
           {outputs.map((output, index) => <OutputCard output={output} index={index} onAddToBoard={onAddToBoard} key={`${output.node_id}-${output.path_index}-${index}`} />)}

@@ -1,0 +1,22 @@
+Workflow visual fixes
+=====================
+
+Fixed:
+1. Restored visible React Flow workspace dots in dark and light themes.
+2. Added semantic backgrounds to all node-palette item cards and flyout cards.
+3. Removed backgrounds, borders, shadows, and outlines from workflow topbar icon actions.
+4. Changed workflow run/save/delete/stop controls to explicit icon-only semantic action classes.
+
+Theme additions:
+- --theme-node-menu-item-bg
+- --theme-node-menu-item-hover-bg
+- stronger --theme-canvas-dot mapping
+
+Validation:
+- TypeScript: passed
+- Stylelint: passed
+- Theme contract: passed
+- CSS debt check: passed
+- Vite production build: passed
+- Undefined variables: 0
+- Raw colors outside theme.css: 0

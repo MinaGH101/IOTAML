@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Database, FileUp, Filter, FolderOpen, GitBranch, PlusCircle, RefreshCw, Save, Search, Trash2, Upload, UserCircle } from 'lucide-react';
+import { CalendarDays, Database, FileUp, Filter, FolderOpen, GitBranch, HardDrive, PlusCircle, RefreshCw, Save, Search, Trash2, Upload, UserCircle } from 'lucide-react';
 import { api } from '../api';
 import { AppTopNav } from '../components/AppTopNav';
 import { DatasetUploader } from '../components/DatasetUploader';
 import { ProjectForm, ProjectPriorityBadge, ProjectStatus } from '../components/ProjectForm';
-import type { Dataset, Project, ProjectPayload, ProjectPriority, ProjectState, UserProfile, Workflow } from '../types';
-import { DEFAULT_PROJECT_COLOR, formatDate, messageFromError, payloadFromProject, type UiMessage } from '../utils/appShared';
+import type { ArtifactUsage, Dataset, Project, ProjectPayload, ProjectPriority, ProjectState, UserProfile, Workflow } from '../types';
+import { formatDate, getDefaultProjectColor, messageFromError, payloadFromProject, type UiMessage } from '../utils/appShared';
 import { readWorkflowJson } from '../utils/workflowJson';
 
 type ProjectFilters = {
@@ -31,6 +31,14 @@ const dateTime = (value?: string | null) => {
 };
 
 const projectFilterDate = (project: Project) => project.start_date || project.created_at;
+
+const formatBytes = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '۰ بایت';
+  const units = ['بایت', 'کیلوبایت', 'مگابایت', 'گیگابایت', 'ترابایت'];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const amount = value / 1024 ** index;
+  return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: index === 0 ? 0 : 1 })} ${units[index]}`;
+};
 
 function projectMatchesFilters(project: Project, filters: ProjectFilters) {
   const search = filters.query.trim().toLowerCase();
@@ -69,6 +77,8 @@ export function ProjectsPanel({
 
   const filtered = useMemo(() => projects.filter((project) => projectMatchesFilters(project, filters)), [projects, filters]);
   const hasActiveFilters = filters.query || filters.state !== 'all' || filters.priority !== 'all' || filters.dateFrom || filters.dateTo;
+
+  const defaultProjectColor = getDefaultProjectColor();
 
   return (
     <div className="app-shell manager-shell">
@@ -127,7 +137,7 @@ export function ProjectsPanel({
             <div className="projects-list-scroll-reference">
               <div className="project-card-grid project-card-grid-reference">
                 {filtered.map((project) => (
-                  <button key={project.id} className="project-card project-card-reference" style={{ ['--project-color' as string]: project.color || DEFAULT_PROJECT_COLOR }} type="button" onClick={() => onOpenProject(project)}>
+                  <button key={project.id} className="project-card project-card-reference" style={{ ['--project-color' as string]: project.color || defaultProjectColor }} type="button" onClick={() => onOpenProject(project)}>
                     <div className="project-card-top project-card-top-reference">
                       <span className="project-card-icon-reference"><FolderOpen size={18} /></span>
                       <div className="project-card-badges"><ProjectPriorityBadge priority={project.priority} /><ProjectStatus state={project.state} /></div>
@@ -174,16 +184,23 @@ export function ProjectDetailPanel({
   const [draft, setDraft] = useState<ProjectPayload>(() => payloadFromProject(project));
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [artifactUsage, setArtifactUsage] = useState<ArtifactUsage | null>(null);
   const [message, setMessage] = useState<UiMessage>(null);
   const [busy, setBusy] = useState(false);
   const [importingWorkflow, setImportingWorkflow] = useState(false);
   const workflowImportRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
-    const [nextProject, datasetList, workflowList] = await Promise.all([api.getProject(project.id), api.datasets(project.id), api.workflows(project.id)]);
+    const [nextProject, datasetList, workflowList, usage] = await Promise.all([
+      api.getProject(project.id),
+      api.datasets(project.id),
+      api.workflows(project.id),
+      api.artifactUsage(project.id)
+    ]);
     onProjectUpdated(nextProject);
     setDatasets(datasetList);
     setWorkflows(workflowList);
+    setArtifactUsage(usage);
   }, [onProjectUpdated, project.id]);
 
   useEffect(() => {
@@ -298,6 +315,18 @@ export function ProjectDetailPanel({
             <article className="manager-panel project-data-card project-data-reference">
               <div className="reference-card-head"><div className="reference-step-title"><Upload size={16} /><div><b>داده‌های پروژه</b><span>دیتاست‌های CSV پروژه</span></div></div></div>
               <DatasetUploader datasets={datasets} onUpload={uploadDataset} onDelete={deleteDataset} />
+              {artifactUsage && (
+                <div className="artifact-usage-summary">
+                  <div className="artifact-usage-head">
+                    <span><HardDrive size={14} /> فضای ذخیره‌سازی پروژه</span>
+                    <b>{formatBytes(artifactUsage.total_bytes)} از {formatBytes(artifactUsage.quota_bytes)}</b>
+                  </div>
+                  <div className="artifact-usage-track" aria-label="میزان استفاده از فضای ذخیره‌سازی">
+                    <span style={{ width: `${Math.min(100, artifactUsage.quota_bytes ? (artifactUsage.total_bytes / artifactUsage.quota_bytes) * 100 : 0)}%` }} />
+                  </div>
+                  <small>{artifactUsage.artifact_count.toLocaleString('fa-IR')} فایل مدیریت‌شده در فضای پروژه</small>
+                </div>
+              )}
             </article>
 
             <article className="manager-panel workflows-reference-card">

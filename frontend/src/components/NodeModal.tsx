@@ -190,7 +190,7 @@ export function NodeModal({ node, edges, registry, aliases, datasets, availableC
               <div className="pinned-data-box workflow-shell-card n8n-pinned-box">
                 <div className="pinned-data-head">
                   <div><b>داده نمونه ثابت‌شده</b><span>برای تست مرحله‌های بعدی، خروجی نمونه این نود را ثابت نگه دارید.</span></div>
-                  <button type="button" className={pinned.enabled ? 'primary icon-only' : 'icon-button'} onClick={() => updatePinned({ enabled: !pinned.enabled })} title="فعال/غیرفعال کردن داده ثابت" aria-label="داده ثابت">
+                  <button type="button" className={pinned.enabled ? 'primary icon-only' : 'icon-button icon-only'} onClick={() => updatePinned({ enabled: !pinned.enabled })} title="فعال/غیرفعال کردن داده ثابت" aria-label="داده ثابت">
                     {pinned.enabled ? <Pin size={13} /> : <PinOff size={13} />}
                   </button>
                 </div>

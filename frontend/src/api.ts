@@ -1,4 +1,4 @@
-import type { CustomNodeDefinition, CustomNodePayload, Dataset, LoginResponse, NodeCatalogResponse, Project, ProjectPayload, RegistryNode, Run, UserProfile, Workflow, WorkflowValidationResult } from './types';
+import type { Artifact, ArtifactUsage, CustomNodeDefinition, CustomNodePayload, Dataset, LoginResponse, NodeCatalogResponse, Project, ProjectPayload, RegistryNode, Run, UserProfile, Workflow, WorkflowValidationResult } from './types';
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const AUTH_KEY = 'iota-auth-token';
@@ -15,17 +15,49 @@ export function clearAuthToken() {
   localStorage.removeItem(AUTH_KEY);
 }
 
+export class ApiError extends Error {
+  code: string;
+  details: Record<string, unknown>;
+  requestId: string;
+  status: number;
+
+  constructor(message: string, options: { code?: string; details?: Record<string, unknown>; requestId?: string; status?: number } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = options.code || 'REQUEST_FAILED';
+    this.details = options.details || {};
+    this.requestId = options.requestId || '';
+    this.status = options.status || 0;
+  }
+}
+
+type ApiEnvelope<T> =
+  | { success: true; data: T; meta: Record<string, unknown>; request_id: string }
+  | { success: false; error: { code: string; message: string; details: Record<string, unknown> }; request_id: string };
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getAuthToken();
   const headers = new Headers(options?.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || 'Request failed');
+  const payload = await res.json().catch(() => null) as ApiEnvelope<T> | T | null;
+
+  if (payload && typeof payload === 'object' && 'success' in payload) {
+    if (payload.success) return payload.data;
+    throw new ApiError(payload.error.message || 'Request failed', {
+      code: payload.error.code,
+      details: payload.error.details,
+      requestId: payload.request_id,
+      status: res.status
+    });
   }
-  return res.json() as Promise<T>;
+
+  if (!res.ok) {
+    const legacy = payload as { detail?: string } | null;
+    throw new ApiError(legacy?.detail || res.statusText || 'Request failed', { status: res.status });
+  }
+  return payload as T;
 }
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -78,6 +110,14 @@ export const api = {
   getRun: (id: number) => request<Run>(`/api/runs/${id}`),
   runProgress: (id: number) => request<Record<string, unknown>>(`/api/runs/${id}/progress`),
   nodePreview: (runId: number, nodeId: string) => request<Record<string, unknown>>(`/api/runs/${runId}/nodes/${nodeId}/preview`),
-  cancelRun: (id: number) => request<{ ok: boolean; status: string }>(`/api/runs/${id}/cancel`, { method: 'POST' }),
-  listRuns: (projectId?: number | null) => request<Run[]>(`/api/runs${projectQuery(projectId)}`)
+  cancelRun: (id: number) => request<Run>(`/api/runs/${id}/cancel`, { method: 'POST' }),
+  retryRun: (id: number) => request<Run>(`/api/runs/${id}/retry`, { method: 'POST' }),
+  runLogs: (id: number) => request<{ run_id: number; status: string; logs: Run['logs'] }>(`/api/runs/${id}/logs`),
+  queueHealth: () => request<Record<string, unknown>>('/api/runs/queue/health'),
+  listRuns: (projectId?: number | null) => request<Run[]>(`/api/runs${projectQuery(projectId)}`),
+
+  artifacts: (projectId?: number | null) => request<Artifact[]>(`/api/artifacts${projectQuery(projectId)}`),
+  artifactUsage: (projectId?: number | null) => request<ArtifactUsage>(`/api/artifacts/usage${projectQuery(projectId)}`),
+  artifactDownloadUrl: (id: number) => request<{ artifact_id: number; url: string; expires_in_seconds: number }>(`/api/artifacts/${id}/download-url`),
+  deleteArtifact: (id: number) => request<{ ok: boolean }>(`/api/artifacts/${id}`, { method: 'DELETE' })
 };

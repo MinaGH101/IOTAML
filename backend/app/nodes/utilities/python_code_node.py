@@ -31,7 +31,22 @@ def _validate_code(code: str) -> None:
 def _run_code(code: str, input_data: Any, timeout: int, memory_mb: int) -> dict[str, Any]:
     _validate_code(code)
     wrapper = textwrap.dedent('''
-    import json, math, statistics
+    import json, math, statistics, socket
+
+    def __blocked_network__(*args, **kwargs):
+        raise PermissionError("Network access is disabled inside Python Code nodes.")
+
+    socket.create_connection = __blocked_network__
+    __original_socket__ = socket.socket
+
+    class __RestrictedSocket__(__original_socket__):
+        def connect(self, *args, **kwargs):
+            return __blocked_network__(*args, **kwargs)
+        def connect_ex(self, *args, **kwargs):
+            __blocked_network__(*args, **kwargs)
+            return 1
+
+    socket.socket = __RestrictedSocket__
     input_data = json.loads(__INPUT_JSON__)
     def __user_fn__():
     __USER_CODE__
@@ -51,7 +66,7 @@ def _run_code(code: str, input_data: Any, timeout: int, memory_mb: int) -> dict[
                 resource.setrlimit(resource.RLIMIT_AS, (memory_mb * 1024 * 1024, memory_mb * 1024 * 1024))
                 resource.setrlimit(resource.RLIMIT_CPU, (max(1, timeout), max(1, timeout + 1)))
             preexec = limit_resources
-        proc = subprocess.run([sys.executable, str(script_path)], cwd=tmp, env=env, capture_output=True, text=True, timeout=timeout, preexec_fn=preexec)
+        proc = subprocess.run([sys.executable, '-I', '-S', str(script_path)], cwd=tmp, env=env, capture_output=True, text=True, timeout=timeout, preexec_fn=preexec)
     if proc.returncode != 0:
         raise RuntimeError(f'Python Code node failed: {proc.stderr[-2000:]}')
     lines = [line for line in proc.stdout.splitlines() if line.strip()]

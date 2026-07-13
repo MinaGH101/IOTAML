@@ -94,9 +94,9 @@ export function LoginPage({ onLogin }: { onLogin: (user: UserProfile) => void })
               gridSize={6}
               maxAngle={45}
               radius={3}
-              borderStyle="2px dashed #31cde3"
-              faceColor="#1a1a2e"
-              rippleColor="#ff6b6b"
+              borderStyle="2px dashed var(--theme-primary)"
+              faceColor="var(--theme-login-cube-face)"
+              rippleColor="var(--theme-login-cube-ripple)"
               rippleSpeed={1.5}
               autoAnimate
               rippleOnClick

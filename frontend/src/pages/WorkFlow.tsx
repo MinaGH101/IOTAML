@@ -17,7 +17,7 @@ import {
   type Node,
   type NodeChange
 } from '@xyflow/react';
-import { ArrowRight, Download, LayoutDashboard, LayoutGrid, LogOut, MoreHorizontal, Play, PlusCircle, RefreshCw, Save, Trash2, UserCircle } from 'lucide-react';
+import { ArrowRight, Download, LayoutDashboard, LayoutGrid, LogOut, MoreHorizontal, Play, PlusCircle, RefreshCw, Save, Square, Trash2, UserCircle } from 'lucide-react';
 import { api } from '../api';
 import { CustomSelect } from '../components/CustomSelect';
 import { CustomNodeBuilder } from '../components/CustomNodeBuilder';
@@ -49,6 +49,7 @@ import {
 
 const nodeTypes = { mlNode: MlNode };
 const multiSelectionKeys = ['Meta', 'Control', 'Shift'];
+const terminalRunStatuses = new Set(['succeeded', 'failed', 'cancelled', 'timed_out']);
 
 function BoardIcon({ size = 14 }: { size?: number }) {
   return (
@@ -526,7 +527,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
         return;
       }
       if (validation.warnings.length) setMessage(validation.warnings[0].message);
-      const run = await api.createRun({ workflow_name: workflowName, workflow_graph: graph, dataset_id: datasetId, project_id: projectId, target_column: targetColumn, task_type: taskType || 'auto' });
+      const run = await api.createRun({ workflow_name: workflowName, workflow_graph: graph, dataset_id: datasetId, project_id: projectId, target_column: targetColumn, task_type: taskType || 'auto', idempotency_key: crypto.randomUUID() });
       setCurrentRun(run);
       setLastRunSignature(currentOutputSignature);
       await refreshRunHistory();
@@ -536,22 +537,40 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   const runWorkflow = () => runGraphFromNode(selectedId);
 
   const retryRun = async (run: Run) => {
-    if (!run.workflow_graph) return;
     setBusy(true);
-    setMessage('اجرای قبلی دوباره شروع شد');
+    setMessage('اجرای قبلی دوباره در صف قرار گرفت');
     try {
-      const nextRun = await api.createRun({ workflow_name: run.workflow_name, workflow_graph: run.workflow_graph, dataset_id: run.dataset_id, project_id: projectId, target_column: run.target_column, task_type: run.task_type || 'auto' });
+      const nextRun = await api.retryRun(run.id);
       setCurrentRun(nextRun);
       setLastRunSignature(currentOutputSignature);
       await refreshRunHistory();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'اجرای دوباره ناموفق بود'); setBusy(false); }
   };
 
+  const cancelRun = async (run: Run) => {
+    if (terminalRunStatuses.has(run.status)) return;
+    setMessage('درخواست توقف اجرا ارسال شد');
+    try {
+      const cancelled = await api.cancelRun(run.id);
+      setCurrentRun(cancelled);
+      await refreshRunHistory();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'توقف اجرا ناموفق بود'); }
+  };
+
   useEffect(() => {
-    if (!currentRun || ['succeeded', 'failed'].includes(currentRun.status)) { setBusy(false); return; }
+    if (!currentRun || terminalRunStatuses.has(currentRun.status)) { setBusy(false); return; }
     const timer = window.setInterval(async () => {
-      const next = await api.getRun(currentRun.id); setCurrentRun(next);
-      if (['succeeded', 'failed'].includes(next.status)) { setBusy(false); setCurrentRun(next); refreshRunHistory().catch(() => undefined); window.clearInterval(timer); }
+      try {
+        const next = await api.getRun(currentRun.id);
+        setCurrentRun(next);
+        if (terminalRunStatuses.has(next.status)) {
+          setBusy(false);
+          refreshRunHistory().catch(() => undefined);
+          window.clearInterval(timer);
+        }
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'دریافت وضعیت اجرا ناموفق بود');
+      }
     }, 1200);
     return () => window.clearInterval(timer);
   }, [currentRun, refreshRunHistory]);
@@ -567,7 +586,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   };
 
   const appStyle = {
-    ['--results-width' as string]: resultsCollapsed ? '46px' : `${resultsWidth}px`,
+    ['--theme-results-panel-width' as string]: resultsCollapsed ? '46px' : `${resultsWidth}px`,
     ['--workflow-results-width' as string]: `${resultsWidth}px`
   };
   const flowNodes = useMemo(() => nodes.map((node) => ({ ...node, data: { ...node.data, onRename: renameNode } })), [nodes, renameNode]);
@@ -585,8 +604,8 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     minHeight: `${topbarHeight}px`,
     padding: '6px 12px',
     borderRadius: '16px',
-    background: 'var(--workflow-shell-surface)',
-    border: '1px solid var(--workflow-shell-border)',
+    background: 'var(--theme-panel-bg)',
+    border: '1px solid var(--theme-divider)',
     boxShadow: 'none',
     display: 'flex',
     alignItems: 'center',
@@ -655,8 +674,8 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     width: paletteCollapsed ? '52px' : '272px',
     borderRadius: '16px',
     overflow: paletteCollapsed ? 'visible' : 'hidden',
-    background: 'var(--workflow-shell-surface)',
-    border: '1px solid var(--workflow-shell-border)',
+    background: 'var(--theme-panel-bg)',
+    border: '1px solid var(--theme-divider)',
     boxShadow: 'none'
   };
 
@@ -669,8 +688,8 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     width: resultsCollapsed ? '52px' : `${resultsWidth}px`,
     borderRadius: '16px',
     overflow: 'hidden',
-    background: 'var(--workflow-shell-surface)',
-    border: '1px solid var(--workflow-shell-border)',
+    background: 'var(--theme-panel-bg)',
+    border: '1px solid var(--theme-divider)',
     boxShadow: 'none'
   };
 
@@ -693,21 +712,22 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
       `}</style>
       <header className="topbar workflow-topbar workflow-topbar-pro" dir="ltr" style={floatingTopbarStyle}>
         <div className="workflow-topbar-left" style={topbarLeftStyle}>
-          <button className="icon-button danger-nav" type="button" onClick={onLogout} title="خروج" aria-label="خروج"><LogOut size={14} /></button>
-          <button className="icon-button" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل"><UserCircle size={14} /></button>
+          <button className="icon-button icon-only topbar-danger-action" type="button" onClick={onLogout} title="خروج" aria-label="خروج"><LogOut size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل"><UserCircle size={14} /></button>
           <ThemeToggle />
-          <button className="icon-button" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها"><LayoutDashboard size={14} /></button>
-          <button className="icon-button" type="button" title="بیشتر" aria-label="بیشتر"><MoreHorizontal size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها"><LayoutDashboard size={14} /></button>
+          <button className="icon-button icon-only" type="button" title="بیشتر" aria-label="بیشتر"><MoreHorizontal size={14} /></button>
         </div>
 
         <div className="workflow-topbar-center" style={topbarCenterStyle}>
-          <button className="primary icon-only" title={selectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={busy || nodes.length === 0} onClick={runWorkflow}>{busy ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}</button>
-          <button className="primary icon-only" type="button" disabled={busy} onClick={saveWorkflow} title="ذخیره" aria-label="ذخیره"><Save size={14} /></button>
-          <button className="icon-button" type="button" onClick={exportCurrentWorkflow} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={14} /></button>
-          <button className={`icon-button ${analysisBoardOpen ? 'active' : ''}`} type="button" onClick={() => setAnalysisBoardOpen((value) => !value)} title={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><BoardIcon size={14} /></button>
-          <button className="icon-button" type="button" onClick={prettyLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={14} /></button>
-          <button className="danger icon-only" title="حذف" aria-label="حذف" type="button" disabled={!selectedId && !selectedEdgeId && selectedIds.length === 0 && selectedEdgeIds.length === 0} onClick={deleteSelected}><Trash2 size={14} /></button>
-          <button className="icon-button" type="button" onClick={newWorkflow} title="جریان جدید" aria-label="جریان جدید"><PlusCircle size={14} /></button>
+          <button className="icon-button icon-only topbar-primary-action" title={selectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={busy || nodes.length === 0} onClick={runWorkflow}>{busy ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}</button>
+          {currentRun && !terminalRunStatuses.has(currentRun.status) && <button className="icon-button icon-only topbar-danger-action" type="button" onClick={() => cancelRun(currentRun)} title="توقف اجرا" aria-label="توقف اجرا"><Square size={13} /></button>}
+          <button className="icon-button icon-only topbar-primary-action" type="button" disabled={busy} onClick={saveWorkflow} title="ذخیره" aria-label="ذخیره"><Save size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={exportCurrentWorkflow} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={14} /></button>
+          <button className={`icon-button icon-only ${analysisBoardOpen ? 'active' : ''}`} type="button" onClick={() => setAnalysisBoardOpen((value) => !value)} title={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><BoardIcon size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={prettyLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={14} /></button>
+          <button className="icon-button icon-only topbar-danger-action" title="حذف" aria-label="حذف" type="button" disabled={!selectedId && !selectedEdgeId && selectedIds.length === 0 && selectedEdgeIds.length === 0} onClick={deleteSelected}><Trash2 size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={newWorkflow} title="جریان جدید" aria-label="جریان جدید"><PlusCircle size={14} /></button>
         </div>
 
         <div className="workflow-topbar-right" style={topbarRightStyle}>
@@ -721,7 +741,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
             <h1>›</h1>
             <h3>{project.name}</h3>
           </div>
-          <button className="icon-button" type="button" onClick={onBack} title="بازگشت به پروژه" aria-label="بازگشت به پروژه"><ArrowRight size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={onBack} title="بازگشت به پروژه" aria-label="بازگشت به پروژه"><ArrowRight size={14} /></button>
         </div>
       </header>
 
@@ -749,7 +769,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
           {message && <div className="toast">{message}</div>}
           <div className={`workflow-flow-layer ${analysisBoardOpen ? 'is-hidden' : ''}`}>
             <ReactFlow nodes={flowNodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onSelectionChange={onSelectionChange} onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick} selectionOnDrag multiSelectionKeyCode={multiSelectionKeys} fitView>
-              <Background variant={BackgroundVariant.Dots} gap={24} size={1.35} color="var(--board-dot)" /><Controls /><MiniMap className="workflow-minimap-visible" pannable zoomable style={{ left: paletteCollapsed ? 76 : 304, right: 'auto', bottom: 24 }} />
+              <Background variant={BackgroundVariant.Dots} gap={24} size={1.35} color="var(--theme-canvas-dot)" /><Controls /><MiniMap className="workflow-minimap-visible" pannable zoomable style={{ left: paletteCollapsed ? 76 : 304, right: 'auto', bottom: 24 }} />
             </ReactFlow>
           </div>
           {analysisBoardOpen && (
@@ -782,6 +802,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
           setCurrentRun={setCurrentRun}
           setMessage={setMessage}
           retryRun={retryRun}
+          cancelRun={cancelRun}
           refreshRunHistory={refreshRunHistory}
           selectedNode={selectedNode}
           selectedEdge={selectedEdge}

@@ -90,8 +90,41 @@ export type Dataset = {
   filename: string;
   row_count: number;
   project_id: number | null;
+  artifact_id: number | null;
+  content_type: string;
+  size_bytes: number;
+  checksum_sha256: string | null;
   columns: Array<{ name: string; dtype: string; missing: number; unique: number }>;
   created_at: string;
+};
+
+export type Artifact = {
+  id: number;
+  project_id: number | null;
+  workflow_id: number | null;
+  run_id: number | null;
+  node_id: string | null;
+  owner_username: string;
+  artifact_type: string;
+  storage_backend: 'local' | 'minio' | string;
+  original_filename: string;
+  logical_name: string;
+  version: number;
+  parent_artifact_id: number | null;
+  content_type: string;
+  size_bytes: number;
+  checksum_sha256: string;
+  status: string;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type ArtifactUsage = {
+  project_id: number | null;
+  total_bytes: number;
+  quota_bytes: number;
+  artifact_count: number;
+  by_type: Record<string, number>;
 };
 
 export type Workflow = {
@@ -103,22 +136,47 @@ export type Workflow = {
   updated_at: string;
 };
 
+export type RunStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timed_out';
+
+export type RunNodeStatus = {
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'cancelled';
+  name?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  duration_ms?: number | null;
+  error?: string | null;
+};
+
 export type Run = {
   id: number;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'pending' | 'success' | 'skipped' | 'cached';
+  status: RunStatus;
   workflow_name: string;
   workflow_graph: Record<string, unknown>;
   dataset_id: number | null;
   project_id: number | null;
+  owner_username: string;
   target_column: string | null;
   task_type: string;
+  priority: number;
+  attempts: number;
+  max_attempts: number;
+  timeout_seconds: number;
+  cancel_requested: boolean;
+  locked_by: string | null;
+  heartbeat_at: string | null;
+  process_pid: number | null;
+  progress: { nodes_total?: number; nodes_finished?: number; percent?: number; current_node_id?: string | null } | null;
+  node_statuses: Record<string, RunNodeStatus> | null;
+  logs: Array<{ timestamp: string; level: string; message: string; context?: Record<string, unknown> }> | null;
   metrics: Record<string, unknown> | null;
   artifacts: Record<string, unknown> | null;
   error: string | null;
   created_at: string;
+  queued_at: string;
   started_at: string | null;
   finished_at: string | null;
 };
+
 
 export type WorkflowValidationMessage = {
   level: 'error' | 'warning';

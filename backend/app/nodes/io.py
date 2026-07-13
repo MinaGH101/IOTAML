@@ -261,6 +261,18 @@ def parse_number_list(value: Any, default: list[float] | None = None) -> list[fl
             raise ValueError(f'Invalid numeric threshold: {text}') from exc
     return numbers or (default or [])
 
+def read_dataset_path(dataset_path: str | Path) -> pd.DataFrame:
+    path = Path(dataset_path)
+    if not path.exists():
+        raise ValueError(f'Dataset file not found: {path}')
+    suffix = path.suffix.lower()
+    if suffix in {'.xlsx', '.xls'}:
+        return pd.read_excel(path)
+    if suffix == '.tsv':
+        return pd.read_csv(path, sep='\t')
+    return pd.read_csv(path)
+
+
 def read_dataset(dataset_id: Any) -> pd.DataFrame:
     from app.database import SessionLocal
     from app.models import Dataset
@@ -270,13 +282,9 @@ def read_dataset(dataset_id: Any) -> pd.DataFrame:
         dataset = db.get(Dataset, int(dataset_id))
         if not dataset:
             raise ValueError(f'Dataset not found: {dataset_id}')
-        path = Path(dataset.path)
-    suffix = path.suffix.lower()
-    if suffix in {'.xlsx', '.xls'}:
-        return pd.read_excel(path)
-    if suffix == '.tsv':
-        return pd.read_csv(path, sep='\t')
-    return pd.read_csv(path)
+        from app.domains.datasets.service import materialize_dataset
+        path = materialize_dataset(db, dataset)
+    return read_dataset_path(path)
 
 
 def run_file_path(context: Any, node_id: str, suffix: str) -> Path:

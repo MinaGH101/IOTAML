@@ -1,7 +1,7 @@
 import type { CSSProperties, Dispatch, SetStateAction, PointerEvent as ReactPointerEvent } from 'react';
 import { useState } from 'react';
 import type { Edge, Node } from '@xyflow/react';
-import { BarChart3, ChevronLeft, ChevronRight, History, RefreshCw, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, ChevronLeft, ChevronRight, History, RefreshCw, RotateCcw, SlidersHorizontal, Square } from 'lucide-react';
 import { Inspector } from '../components/Inspector';
 import { ResultsPanel, type Output } from '../components/ResultsPanel';
 import type { Dataset, RegistryNode, Run } from '../types';
@@ -9,7 +9,7 @@ import { formatDateTime, runDuration } from '../utils/appShared';
 
 type RightTab = 'results' | 'settings' | 'history';
 
-function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onRefresh }: { runs: Run[]; currentRunId?: number | null; busy: boolean; onSelect: (run: Run) => void; onRetry: (run: Run) => void; onRefresh: () => void }) {
+function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onCancel, onRefresh }: { runs: Run[]; currentRunId?: number | null; busy: boolean; onSelect: (run: Run) => void; onRetry: (run: Run) => void; onCancel: (run: Run) => void; onRefresh: () => void }) {
   return (
     <section className="run-history-panel workflow-tab-history-panel">
       <div className="workflow-tab-content-head">
@@ -22,9 +22,12 @@ function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onRefres
             <button type="button" className="run-history-main" onClick={() => onSelect(run)}>
               <span className={`run-dot ${run.status}`} />
               <b>{run.workflow_name}</b>
-              <small>#{run.id} · {formatDateTime(run.created_at)} · {runDuration(run)}</small>
+              <small>#{run.id} · {formatDateTime(run.created_at)} · {runDuration(run)} · تلاش {run.attempts}/{run.max_attempts}</small>
+              <small>{Math.round(Number(run.progress?.percent || 0))}% · {run.status}</small>
             </button>
-            <button type="button" className="workflow-tab-icon-button" disabled={busy || !run.workflow_graph} onClick={() => onRetry(run)} title="اجرای دوباره با همین گراف" aria-label="اجرای دوباره"><RotateCcw size={14} /></button>
+            {['queued', 'running'].includes(run.status)
+              ? <button type="button" className="workflow-tab-icon-button" onClick={() => onCancel(run)} title="توقف اجرا" aria-label="توقف اجرا"><Square size={13} /></button>
+              : <button type="button" className="workflow-tab-icon-button" disabled={busy || !run.workflow_graph} onClick={() => onRetry(run)} title="اجرای دوباره با همین گراف" aria-label="اجرای دوباره"><RotateCcw size={14} /></button>}
           </div>
         ))}
         {runs.length === 0 && <div className="empty-state small">هنوز اجرای ذخیره‌شده‌ای برای این پروژه وجود ندارد.</div>}
@@ -47,6 +50,7 @@ type RightPanelProps = {
   setCurrentRun: Dispatch<SetStateAction<Run | null>>;
   setMessage: Dispatch<SetStateAction<string>>;
   retryRun: (run: Run) => void | Promise<void>;
+  cancelRun: (run: Run) => void | Promise<void>;
   refreshRunHistory: () => Promise<void>;
   selectedNode: Node | null;
   selectedEdge: Edge | null;
@@ -83,6 +87,7 @@ export function RightPanel({
   setCurrentRun,
   setMessage,
   retryRun,
+  cancelRun,
   refreshRunHistory,
   selectedNode,
   selectedEdge,
@@ -167,6 +172,7 @@ export function RightPanel({
                   busy={busy}
                   onSelect={(run) => { setCurrentRun(run); setMessage('خروجی اجرای قبلی برای Debug نمایش داده شد'); }}
                   onRetry={retryRun}
+                  onCancel={cancelRun}
                   onRefresh={() => refreshRunHistory().catch(() => undefined)}
                 />
               </div>

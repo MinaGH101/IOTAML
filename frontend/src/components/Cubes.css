@@ -1,11 +1,3 @@
-:root {
-  --col-gap: 5%;
-  --row-gap: 5%;
-  --cube-perspective: 99999999px;
-  --cube-face-border: 1px solid #fff;
-  --cube-face-bg: #120F17;
-}
-
 .default-animation {
   position: relative;
   width: 50%;
@@ -17,8 +9,8 @@
   display: grid;
   width: 100%;
   height: 100%;
-  gap: var(--row-gap) var(--col-gap);
-  perspective: var(--cube-perspective);
+  gap: var(--theme-cube-row-gap) var(--theme-cube-column-gap);
+  perspective: var(--theme-cube-perspective);
   grid-auto-rows: 1fr;
 }
 
@@ -43,8 +35,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--cube-face-bg);
-  border: var(--cube-face-border);
+  background: var(--theme-cube-face-bg);
+  border: var(--theme-cube-face-border);
   opacity: 1;
 }
 

@@ -21,7 +21,6 @@ export interface CubesProps {
   cellGap?: number | Gap;
   borderStyle?: string;
   faceColor?: string;
-  shadow?: boolean | string;
   autoAnimate?: boolean;
   rippleOnClick?: boolean;
   rippleColor?: string;
@@ -36,12 +35,11 @@ const Cubes: React.FC<CubesProps> = ({
   easing = 'power3.out',
   duration = { enter: 0.3, leave: 0.6 },
   cellGap,
-  borderStyle = '1px solid #fff',
-  faceColor = '#120F17',
-  shadow = false,
+  borderStyle = '1px solid var(--theme-divider)',
+  faceColor = 'var(--theme-login-cube-face)',
   autoAnimate = true,
   rippleOnClick = true,
-  rippleColor = '#fff',
+  rippleColor = 'var(--theme-login-cube-ripple)',
   rippleSpeed = 2
 }) => {
   const sceneRef = useRef<HTMLDivElement | null>(null);
@@ -288,9 +286,8 @@ const Cubes: React.FC<CubesProps> = ({
     rowGap: rowGap
   };
   const wrapperStyle = {
-    '--cube-face-border': borderStyle,
-    '--cube-face-bg': faceColor,
-    '--cube-face-shadow': shadow === true ? '0 0 6px rgba(0,0,0,.5)' : shadow || 'none',
+    '--theme-cube-face-border': borderStyle,
+    '--theme-cube-face-bg': faceColor,
     ...(cubeSize
       ? {
           width: `${gridSize * cubeSize}px`,

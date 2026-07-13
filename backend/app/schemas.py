@@ -16,6 +16,10 @@ class DatasetOut(BaseModel):
     columns: list[ColumnInfo]
     row_count: int
     project_id: int | None = None
+    artifact_id: int | None = None
+    content_type: str = "text/csv"
+    size_bytes: int = 0
+    checksum_sha256: str | None = None
     created_at: datetime
 
     class Config:
@@ -38,12 +42,16 @@ class WorkflowOut(WorkflowCreate):
 
 
 class RunCreate(BaseModel):
-    workflow_name: str = "Untitled Run"
+    workflow_name: str = Field(default="Untitled Run", min_length=1, max_length=255)
     workflow_graph: dict
     dataset_id: int | None = None
     project_id: int | None = None
     target_column: str | None = None
     task_type: str = "auto"
+    priority: int = Field(default=0, ge=-100, le=100)
+    max_attempts: int | None = Field(default=None, ge=1, le=10)
+    timeout_seconds: int | None = Field(default=None, ge=10, le=86400)
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class RunOut(BaseModel):
@@ -53,12 +61,25 @@ class RunOut(BaseModel):
     workflow_graph: dict
     dataset_id: int | None
     project_id: int | None = None
+    owner_username: str
     target_column: str | None
     task_type: str
+    priority: int
+    attempts: int
+    max_attempts: int
+    timeout_seconds: int
+    cancel_requested: bool
+    locked_by: str | None
+    heartbeat_at: datetime | None
+    process_pid: int | None
+    progress: dict | None
+    node_statuses: dict | None
+    logs: list[dict] | None
     metrics: dict | None
     artifacts: dict | None
     error: str | None
     created_at: datetime
+    queued_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
 
@@ -131,3 +152,33 @@ class LoginOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserProfile
+
+
+class CustomPortIn(BaseModel):
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z][A-Za-z0-9_-]*$")
+    name: str = Field(min_length=1, max_length=120)
+    type: str = Field(default="any", min_length=1, max_length=64)
+    required: bool = True
+    multiple: bool = False
+
+
+class CustomNodeCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=2000)
+    inputs: list[CustomPortIn] = Field(default_factory=list)
+    outputs: list[CustomPortIn] = Field(default_factory=lambda: [CustomPortIn(id="output", name="Output", type="json", required=False)])
+    code: str = Field(min_length=1, max_length=100000)
+    template: dict | None = None
+
+
+class CustomNodeOut(CustomNodeCreate):
+    id: str
+    owner_username: str
+    category: str = "User Nodes"
+    executionMode: str = "sandboxed"
+    isCustom: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

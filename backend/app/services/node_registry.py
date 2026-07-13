@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from app.nodes.registry import all_nodes_api, get_categories, get_node, node_map
+from app.nodes.registry import all_nodes_api, catalog_metadata, get_categories, get_node, node_map
 
 
 def get_node_registry() -> list[dict[str, Any]]:
@@ -19,3 +19,7 @@ def get_node_categories() -> list[str]:
 def get_node_definition(node_id: str) -> dict[str, Any] | None:
     node = get_node(node_id)
     return node.to_api() if node else None
+
+
+def get_catalog_metadata() -> dict[str, Any]:
+    return catalog_metadata()

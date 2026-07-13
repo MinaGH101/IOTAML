@@ -1,13 +1,50 @@
-import { API_URL } from '../api';
+import { API_URL, ApiError } from '../api';
 import type { Project, ProjectPayload, Run, UserProfile } from '../types';
 
 export type Theme = 'light' | 'dark';
 export type UiMessage = { text: string; tone: 'success' | 'error' | 'info' } | null;
 
-export const PROJECT_COLORS = ['#31cde3', '#7257f2', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#8b5cf6'];
-export const DEFAULT_PROJECT_COLOR = PROJECT_COLORS[0];
+const PROJECT_COLOR_VARIABLES = [
+  '--theme-project-color-1',
+  '--theme-project-color-2',
+  '--theme-project-color-3',
+  '--theme-project-color-4',
+  '--theme-project-color-5',
+  '--theme-project-color-6',
+  '--theme-project-color-7',
+] as const;
+
+export function readThemeColor(variable: string): string {
+  if (typeof document === 'undefined') return '';
+  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+}
+
+export function getProjectColors(): string[] {
+  return PROJECT_COLOR_VARIABLES.map(readThemeColor).filter(Boolean);
+}
+
+export function getDefaultProjectColor(): string {
+  return readThemeColor('--theme-project-color-1') || readThemeColor('--theme-primary');
+}
+
+const API_ERROR_MESSAGES: Record<string, string> = {
+  ARTIFACT_TOO_LARGE: 'حجم فایل بیشتر از محدودیت فضای ذخیره‌سازی است.',
+  STORAGE_QUOTA_EXCEEDED: 'سهمیه فضای ذخیره‌سازی پروژه یا کاربر تکمیل شده است.',
+  STORAGE_UNAVAILABLE: 'فضای ذخیره‌سازی در دسترس نیست. دوباره تلاش کنید.',
+  DATASET_READ_FAILED: 'فایل CSV قابل خواندن نیست.',
+  UNSUPPORTED_FILE_TYPE: 'نوع فایل پشتیبانی نمی‌شود.',
+  PROJECT_NOT_FOUND: 'پروژه پیدا نشد.',
+  DATASET_NOT_FOUND: 'دیتاست پیدا نشد.',
+  WORKFLOW_NOT_FOUND: 'جریان کاری پیدا نشد.',
+  WORKFLOW_VALIDATION_FAILED: 'ساختار جریان کاری معتبر نیست.',
+  PERMISSION_DENIED: 'اجازه انجام این عملیات را ندارید.',
+  VALIDATION_ERROR: 'اطلاعات واردشده معتبر نیست.'
+};
 
 export function messageFromError(error: unknown, fallback: string): UiMessage {
+  if (error instanceof ApiError) {
+    return { text: API_ERROR_MESSAGES[error.code] || error.message || fallback, tone: 'error' };
+  }
   return { text: error instanceof Error ? error.message : fallback, tone: 'error' };
 }
 
@@ -25,7 +62,7 @@ export const defaultProjectPayload = (user?: UserProfile | null): ProjectPayload
   project_manager: user ? `${user.first_name} ${user.last_name}`.trim() || user.username : '',
   state: 'open',
   priority: 'medium',
-  color: DEFAULT_PROJECT_COLOR
+  color: getDefaultProjectColor()
 });
 
 export const payloadFromProject = (project: Project): ProjectPayload => ({
@@ -36,7 +73,7 @@ export const payloadFromProject = (project: Project): ProjectPayload => ({
   project_manager: project.project_manager || '',
   state: project.state,
   priority: project.priority || 'medium',
-  color: project.color || DEFAULT_PROJECT_COLOR
+  color: project.color || getDefaultProjectColor()
 });
 
 export function formatDate(value?: string | null) {

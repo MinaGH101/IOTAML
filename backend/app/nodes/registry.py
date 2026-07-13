@@ -15,6 +15,7 @@ from app.nodes.cleaning.select_columns_node import SelectColumnsNode
 from app.nodes.cleaning.filter_dataframe_node import FilterDataFrameNode
 from app.nodes.cleaning.replace_values_node import ReplaceValuesNode
 from app.nodes.cleaning.imputation_node import ImputationNode
+from app.nodes.cleaning.detection_limit_node import DetectionLimitHandlingNode
 from app.nodes.anomaly_detection.z_score_node import ZScoreOutlierNode
 from app.nodes.anomaly_detection.iqr_node import IQROutlierNode
 from app.nodes.anomaly_detection.threshold_node import ThresholdAnomalyNode
@@ -70,6 +71,7 @@ EXACT_CATEGORIES = [
     'ML Model Analysis',
     'Export or Report',
     'Utilities / Advanced',
+    'User Nodes',
 ]
 
 NODE_CLASSES: list[type[BaseNode]] = [
@@ -78,7 +80,7 @@ NODE_CLASSES: list[type[BaseNode]] = [
     # Data Inspection
     DataOverviewNode, MissingValuesReportNode, CorrelationMatrixNode, StatisticalReportNode,
     # Data Cleaning
-    ConvertTypeNode, SelectColumnsNode, FilterDataFrameNode, ReplaceValuesNode, ImputationNode,
+    ConvertTypeNode, SelectColumnsNode, FilterDataFrameNode, ReplaceValuesNode, ImputationNode, DetectionLimitHandlingNode,
     # Anomaly Detection
     ZScoreOutlierNode, IQROutlierNode, ThresholdAnomalyNode,
     # Transformation
@@ -168,9 +170,98 @@ SOURCE_NODE_IDS = {'DI-001', 'DI-002', 'DI-010'}
 LEGACY_SOURCE_NODE_TYPES = {'data_csv', 'data_demo', 'data_demo_iris', 'data_demo_wine', 'data_demo_breast_cancer'}
 
 
+PORT_COMPATIBILITY: dict[str, set[str]] = {
+    'any': {'any', 'dataframe', 'json', 'json_items', 'series', 'columns', 'model', 'metrics', 'plot', 'file', 'report', 'artifact', 'artifact_ref', 'text', 'schema', 'trigger', 'stream'},
+    'dataframe': {'dataframe', 'any', 'json', 'artifact_ref', 'report'},
+    'json_items': {'json_items', 'json', 'any', 'artifact_ref', 'report', 'dataframe'},
+    'json': {'json', 'json_items', 'any', 'metrics', 'report'},
+    'metrics': {'metrics', 'json', 'any', 'report'},
+    'plot': {'plot', 'artifact', 'artifact_ref', 'report', 'any'},
+    'artifact_ref': {'artifact_ref', 'artifact', 'file', 'report', 'any'},
+    'artifact': {'artifact', 'artifact_ref', 'file', 'report', 'any'},
+    'file': {'file', 'artifact_ref', 'artifact', 'report', 'any'},
+    'report': {'report', 'artifact', 'artifact_ref', 'file', 'json', 'any'},
+    'model': {'model', 'artifact_ref', 'artifact', 'any'},
+    'schema': {'schema', 'json', 'any'},
+    'series': {'series', 'columns', 'json', 'any'},
+    'columns': {'columns', 'json', 'any'},
+    'text': {'text', 'json', 'any'},
+    'trigger': {'trigger', 'any'},
+    'stream': {'stream', 'json_items', 'any'},
+}
+
+VALID_PORT_TYPES = frozenset(PORT_COMPATIBILITY) | frozenset().union(*PORT_COMPATIBILITY.values())
+CATALOG_VERSION = 1
+
+
+def validate_registry_integrity() -> None:
+    """Fail fast when catalog definitions drift or become internally invalid."""
+    ids = [node.id for node in _REGISTRY]
+    duplicate_ids = sorted({node_id for node_id in ids if ids.count(node_id) > 1})
+    if duplicate_ids:
+        raise RuntimeError(f'Duplicate node IDs: {", ".join(duplicate_ids)}')
+
+    invalid_aliases = {
+        alias: target
+        for alias, target in LEGACY_NODE_ALIASES.items()
+        if target not in _BY_ID
+    }
+    if invalid_aliases:
+        details = ', '.join(f'{alias}->{target}' for alias, target in sorted(invalid_aliases.items()))
+        raise RuntimeError(f'Legacy aliases target missing nodes: {details}')
+
+    invalid_categories = sorted({node.category for node in _REGISTRY if node.category not in EXACT_CATEGORIES})
+    if invalid_categories:
+        raise RuntimeError(f'Unknown node categories: {", ".join(invalid_categories)}')
+
+    invalid_ports: list[str] = []
+    for node in _REGISTRY:
+        for port_definition in [*node.inputs, *node.outputs]:
+            if port_definition.type not in VALID_PORT_TYPES:
+                invalid_ports.append(f'{node.id}.{port_definition.id}:{port_definition.type}')
+    if invalid_ports:
+        raise RuntimeError(f'Unknown port types: {", ".join(invalid_ports)}')
+
+
+def catalog_metadata() -> dict[str, Any]:
+    return {
+        'version': CATALOG_VERSION,
+        'aliases': dict(LEGACY_NODE_ALIASES),
+        'categories': get_categories(),
+        'compatiblePorts': {
+            source_type: sorted(target_types)
+            for source_type, target_types in PORT_COMPATIBILITY.items()
+        },
+    }
+
+
 def canonical_node_id(node_id: str) -> str:
     return LEGACY_NODE_ALIASES.get(str(node_id), str(node_id))
 
+
+
+def _get_custom_record(node_id: str):
+    if not str(node_id).startswith('UC-'):
+        return None
+    import json
+    import os
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    snapshot_path = os.getenv('IOTA_CUSTOM_NODE_SNAPSHOT')
+    if snapshot_path:
+        try:
+            payload = json.loads(Path(snapshot_path).read_text(encoding='utf-8'))
+            record = payload.get(str(node_id))
+            if record:
+                return SimpleNamespace(**record)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    from app.database import SessionLocal
+    from app.models import CustomNode
+    with SessionLocal() as db:
+        return db.get(CustomNode, str(node_id))
 
 def all_nodes() -> list[NodeDefinition]:
     return [node.definition() for node in _REGISTRY]
@@ -193,13 +284,30 @@ def runner_map() -> dict[str, BaseNode]:
 
 
 def get_node(node_id: str) -> NodeDefinition | None:
-    node = _BY_ID.get(canonical_node_id(node_id))
-    return node.definition() if node else None
+    canonical = canonical_node_id(node_id)
+    node = _BY_ID.get(canonical)
+    if node:
+        return node.definition()
+    record = _get_custom_record(canonical)
+    if record:
+        from app.nodes.utilities.custom_python_node import CustomPythonNode
+        return CustomPythonNode(record).definition()
+    return None
 
 
 def get_node_runner(node_id: str) -> BaseNode | None:
-    return _BY_ID.get(canonical_node_id(node_id))
+    canonical = canonical_node_id(node_id)
+    node = _BY_ID.get(canonical)
+    if node:
+        return node
+    record = _get_custom_record(canonical)
+    if record:
+        from app.nodes.utilities.custom_python_node import CustomPythonNode
+        return CustomPythonNode(record)
+    return None
 
 
 def get_categories() -> list[str]:
     return list(EXACT_CATEGORIES)
+
+validate_registry_integrity()

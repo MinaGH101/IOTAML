@@ -1,5 +1,5 @@
 import type { Project, ProjectPayload, ProjectPriority } from '../types';
-import { DEFAULT_PROJECT_COLOR, PROJECT_COLORS } from '../utils/appShared';
+import { getDefaultProjectColor, getProjectColors } from '../utils/appShared';
 
 const PRIORITY_OPTIONS: Array<{ value: ProjectPriority; label: string }> = [
   { value: 'low', label: 'کم' },
@@ -19,6 +19,8 @@ export function ProjectStatus({ state }: { state: Project['state'] }) {
 
 export function ProjectForm({ value, onChange, compact = false }: { value: ProjectPayload; onChange: (next: ProjectPayload) => void; compact?: boolean }) {
   const setField = <K extends keyof ProjectPayload>(key: K, fieldValue: ProjectPayload[K]) => onChange({ ...value, [key]: fieldValue });
+  const projectColors = getProjectColors();
+  const defaultProjectColor = getDefaultProjectColor();
 
   return (
     <div className={`project-form ${compact ? 'compact' : ''}`}>
@@ -62,9 +64,9 @@ export function ProjectForm({ value, onChange, compact = false }: { value: Proje
       <label>
         رنگ پروژه
         <div className="project-color-control">
-          <input type="color" value={value.color || DEFAULT_PROJECT_COLOR} onChange={(event) => setField('color', event.target.value)} aria-label="رنگ پروژه" />
+          <input type="color" value={value.color || defaultProjectColor} onChange={(event) => setField('color', event.target.value)} aria-label="رنگ پروژه" />
           <div className="project-color-swatches">
-            {PROJECT_COLORS.map((color) => (
+            {projectColors.map((color) => (
               <button
                 key={color}
                 type="button"

@@ -1,0 +1,69 @@
+IOTA ML domain/storage/response refactor
+========================================
+
+Implemented
+-----------
+1. Clear domain separation
+   - API routers are registered from backend/app/domains.
+   - Artifacts, datasets, projects, and workflows use route/service/repository layers.
+   - Runs, nodes, and auth have domain boundaries with compatibility service/model modules.
+   - Existing app/api/routes_*.py files are compatibility re-exports only.
+   - Architecture regression tests prevent main.py from returning to legacy route imports.
+
+2. MinIO/S3-compatible object storage
+   - Added MinIO to Docker Compose with persistent volume and health check.
+   - Added StorageBackend abstraction with LocalStorageBackend and MinioStorageBackend.
+   - Added artifacts PostgreSQL table and Alembic migration.
+   - Added artifact ownership, project/run/node links, types, versions, checksums, sizes,
+     MIME metadata, retention status, expiration, and soft deletion.
+   - CSV datasets are stored as artifact objects; PostgreSQL keeps dataset metadata.
+   - Worker materializes dataset objects before isolated execution.
+   - Files generated under a run directory are automatically persisted as node-output artifacts.
+   - Added signed download URLs, direct download, listing, metadata, deletion, and usage APIs.
+   - Added user/project quotas, upload limits, CSV validation, deletion guards, retention cleanup,
+     legacy dataset migration, backup scripts, and restore scripts.
+   - Added MinIO health to /health/ready.
+
+3. Central error and response format
+   - Added request-ID middleware.
+   - Added stable success/error envelopes for all /api JSON responses.
+   - Added application, validation, HTTP, and unexpected-exception handlers.
+   - Raw exception strings are not returned for unhandled errors.
+   - Added OpenAPI envelope schemas and examples.
+   - Frontend API client unwraps envelopes and exposes stable ApiError codes.
+   - Frontend maps important backend codes to Persian user-facing messages.
+
+4. Frontend integration
+   - Added artifact and storage-usage types and API methods.
+   - Project detail page shows managed storage usage and quota progress.
+   - Dataset rows show object size.
+   - Existing theme contract is preserved; no raw colors were added outside theme.css.
+
+Validation
+----------
+- Backend tests: 16 passed.
+- Backend compileall: passed.
+- Alembic upgrade to 20260712_0002: passed on a clean SQLite validation database.
+- API local-storage integration: login, project creation, CSV upload, artifact metadata,
+  and usage endpoint passed.
+- Frontend TypeScript: passed.
+- Stylelint: passed.
+- Theme contract: passed with zero undefined/legacy variables and zero raw colors outside theme.css.
+- CSS debt check: passed.
+- Vite production build: passed.
+- Docker Compose YAML structure: parsed successfully.
+- Docker Compose services: api, frontend, migrate, minio, postgres, redis, worker.
+
+Environment limitation
+----------------------
+Docker was unavailable in the execution environment, so an actual
+`docker compose up --build` was not executed. The Compose file was structurally validated.
+
+First run
+---------
+1. Copy .env.example to .env and replace all default secrets.
+2. Run: docker compose down
+3. Run: docker compose up --build
+4. MinIO console: http://localhost:9001
+5. For old local dataset files, run:
+   docker compose exec api python scripts/migrate_legacy_artifacts.py

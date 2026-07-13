@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from app.nodes.io import node_label, output, safe_json
 from app.nodes.registry import get_node_runner
@@ -9,6 +9,7 @@ from app.workflow.expressions import resolve_settings
 from app.workflow.graph import node_registry_id, topological_sort, upstream_outputs
 from app.workflow.runtime_context import RuntimeContext
 from app.workflow.validator import validate_workflow_graph
+from app.services.run_state import RunCancelledError
 
 LEGACY_PREFIXES = ('data_', 'transform_', 'analysis_', 'model_')
 
@@ -46,7 +47,7 @@ def visible_node_output(value: Any) -> Any:
     return output_value
 
 
-def execute_scientific_workflow(graph: dict[str, Any], dataset_id: int | None, target_column: str | None, task_type: str, project_id: int | None, execution_id: int | str) -> dict[str, Any]:
+def execute_scientific_workflow(graph: dict[str, Any], dataset_id: int | None, target_column: str | None, task_type: str, project_id: int | None, execution_id: int | str, *, dataset_path: str | None = None, progress_callback: Callable[[str, str, str | None], None] | None = None, cancel_check: Callable[[], bool] | None = None) -> dict[str, Any]:
     validation = validate_workflow_graph(graph)
     if not validation.valid:
         raise ValueError('; '.join(msg.message for msg in validation.errors))
@@ -55,11 +56,17 @@ def execute_scientific_workflow(graph: dict[str, Any], dataset_id: int | None, t
     by_id = {str(node['id']): node for node in nodes}
     order = topological_sort(nodes, edges)
     run_path = Path('storage') / 'runs' / str(execution_id)
-    ctx = RuntimeContext(execution_id=execution_id, project_id=project_id, dataset_id=dataset_id, target_column=target_column, task_type=task_type, run_path=run_path)
+    ctx = RuntimeContext(execution_id=execution_id, project_id=project_id, dataset_id=dataset_id, dataset_path=dataset_path, target_column=target_column, task_type=task_type, run_path=run_path)
     node_outputs: dict[str, Any] = {}
     errors: list[dict[str, Any]] = []
     for node_id in order:
         node = by_id[node_id]
+        if cancel_check and cancel_check():
+            if progress_callback:
+                progress_callback(node_id, 'cancelled', 'Cancellation requested.')
+            raise RunCancelledError('Cancellation requested.')
+        if progress_callback:
+            progress_callback(node_id, 'running', None)
         try:
             inputs = upstream_outputs(node_id, edges, node_outputs)
             result = apply_node(node, inputs, ctx)
@@ -68,7 +75,13 @@ def execute_scientific_workflow(graph: dict[str, Any], dataset_id: int | None, t
             label = (node.get('data') or {}).get('label')
             if label:
                 ctx.node_outputs[str(label)] = result
+            if progress_callback:
+                progress_callback(node_id, 'succeeded', None)
+        except RunCancelledError:
+            raise
         except Exception as exc:
+            if progress_callback:
+                progress_callback(node_id, 'failed', str(exc))
             errors.append({'node_id': node_id, 'node_name': node_label(node), 'error_type': exc.__class__.__name__, 'message': str(exc), 'suggested_fix': 'Check node settings, input connections, and required columns.'})
             node_outputs[node_id] = {'output': output(node_id, node_label(node), 'json', error=str(exc), error_type=exc.__class__.__name__)}
             ctx.node_outputs[node_id] = node_outputs[node_id]

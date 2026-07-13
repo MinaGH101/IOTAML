@@ -3,6 +3,7 @@ import { CheckSquare, Code2, Plus, Trash2, Wand2 } from 'lucide-react';
 import { CustomSelect, type SelectOption } from './CustomSelect';
 import type { Dataset, NodeParam, RegistryNode } from '../types';
 import { resolveRegistryId } from '../features/workflow/catalog';
+import { readThemeColor } from '../utils/appShared';
 
 type ParamEditorProps = {
   selectedNode: Node;
@@ -229,7 +230,8 @@ function scatterBlocks(value: unknown): ScatterBlock[] {
 
 function ScatterBlocksEditor({ value, columns, onChange }: { value: unknown; columns: string[]; onChange: (blocks: ScatterBlock[]) => void }) {
   const blocks = scatterBlocks(value);
-  const nextBlock = (): ScatterBlock => ({ title: '', x_column: columns[0] || '', y_column: columns[1] || columns[0] || '', color: '#31cde3', x_min: null, x_max: null, y_min: null, y_max: null, point_size: 7, max_points: 1000 });
+  const plotColor = readThemeColor('--theme-plot-default');
+  const nextBlock = (): ScatterBlock => ({ title: '', x_column: columns[0] || '', y_column: columns[1] || columns[0] || '', color: plotColor, x_min: null, x_max: null, y_min: null, y_max: null, point_size: 7, max_points: 1000 });
   const updateBlock = (index: number, patch: Partial<ScatterBlock>) => onChange(blocks.map((block, i) => i === index ? { ...block, ...patch } : block));
   const removeBlock = (index: number) => onChange(blocks.filter((_, i) => i !== index));
   const columnOptions = [{ value: '', label: 'انتخاب ستون' }, ...columns.map((column) => ({ value: column, label: column }))];
@@ -249,7 +251,7 @@ function ScatterBlocksEditor({ value, columns, onChange }: { value: unknown; col
           <div className="replacement-grid">
             <label className="field"><span>X Column</span><CustomSelect value={String(block.x_column || '')} options={columnOptions} onChange={(next) => updateBlock(index, { x_column: next })} /></label>
             <label className="field"><span>Y Column</span><CustomSelect value={String(block.y_column || '')} options={columnOptions} onChange={(next) => updateBlock(index, { y_column: next })} /></label>
-            <label className="field color-field"><span>Color</span><input type="color" value={String(block.color || '#31cde3')} onChange={(event) => updateBlock(index, { color: event.target.value })} /></label>
+            <label className="field color-field"><span>Color</span><input type="color" value={String(block.color || plotColor)} onChange={(event) => updateBlock(index, { color: event.target.value })} /></label>
             <label className="field"><span>Point Size</span><input type="number" min={2} max={30} value={Number(block.point_size || 7)} onChange={(event) => updateBlock(index, { point_size: Number(event.target.value) })} /></label>
             <label className="field"><span>X Min</span><input type="number" step="any" value={numericValue(block.x_min)} onChange={(event) => updateBlock(index, { x_min: parseOptionalNumber(event.target.value) })} /></label>
             <label className="field"><span>X Max</span><input type="number" step="any" value={numericValue(block.x_max)} onChange={(event) => updateBlock(index, { x_max: parseOptionalNumber(event.target.value) })} /></label>
@@ -287,7 +289,7 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
   });
   const hasPlotOutput = Boolean(registryNode?.outputs?.some((port) => ['plot', 'metrics'].includes(String(port.type)))) || ['VZ-002', 'VZ-003', 'VZ-004', 'MA-001', 'MA-006'].includes(registryId);
   const schema = hasPlotOutput && !normalizedSchema.some((param) => param.name === 'color')
-    ? [...normalizedSchema, { name: 'color', label: 'Color', type: 'color', default: '#31cde3', required: false, options: [], supportsDynamic: false, help: 'Plot color.' } as NodeParam]
+    ? [...normalizedSchema, { name: 'color', label: 'Color', type: 'color', default: readThemeColor('--theme-plot-default'), required: false, options: [], supportsDynamic: false, help: 'Plot color.' } as NodeParam]
     : normalizedSchema;
   const isCsvNode = registryId === 'DI-002';
   const selectedDatasetId = Number(params.dataset_id || 0);
@@ -385,7 +387,7 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
           return <div className="field" key={param.name}>{label}<button type="button" className="tiny-action icon-only" title="انتخاب همه" aria-label="انتخاب همه" onClick={() => update(param.name, featureColumns)}><CheckSquare size={12} /></button><PillPicker items={featureColumns} selected={selected} onChange={(next) => update(param.name, next)} empty="ستونی برای انتخاب پیدا نشد." /></div>;
         }
         if (param.type === 'color') {
-          return <label className="field color-field" key={param.name}>{label}<input type="color" value={String(value || '#31cde3')} onChange={(event) => update(param.name, event.target.value)} /></label>;
+          return <label className="field color-field" key={param.name}>{label}<input type="color" value={String(value || readThemeColor('--theme-plot-default'))} onChange={(event) => update(param.name, event.target.value)} /></label>;
         }
         if (param.type === 'number' || param.type === 'integer' || param.type === 'float') {
           return <label className="field" key={param.name}>{label}<input type="number" step={param.type === 'integer' ? 1 : 'any'} value={value === null ? '' : String(value)} onChange={(event) => update(param.name, normalizeNumber(event.target.value, param))} /></label>;

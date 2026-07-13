@@ -8,10 +8,11 @@
     "typecheck": "tsc --noEmit",
     "lint:css": "stylelint \"src/**/*.css\"",
     "build": "tsc && vite build",
-    "check": "npm run typecheck && npm run lint:css && npm run check:css-debt && npm run build",
+    "check": "npm run typecheck && npm run lint:css && npm run check:theme && npm run check:css-debt && npm run build",
     "preview": "vite preview --host 0.0.0.0",
     "css:dedupe": "node scripts/dedupe-css.mjs",
-    "check:css-debt": "node scripts/check-css-debt.mjs"
+    "check:css-debt": "node scripts/check-css-debt.mjs",
+    "check:theme": "node scripts/check-theme-contract.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

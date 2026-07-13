@@ -5,7 +5,7 @@ import math
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import joblib
 import numpy as np
@@ -40,6 +40,7 @@ from sklearn.svm import SVC, SVR
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from app.services.node_registry import get_node_map
+from app.services.run_state import RunCancelledError
 
 MODEL_NODES = {
     "model_logistic_regression",
@@ -926,7 +927,7 @@ def merge_node_outputs(target: dict[str, Any], outputs: dict[str, Any], path_ind
             key = f"{node_id}__path_{path_index or len(target)}__{len(target)}"
         target[key] = safe_json(item)
 
-def execute_workflow(graph: dict[str, Any], dataset_df: pd.DataFrame | None, target_column: str | None, task_type: str, run_path: Path) -> dict[str, Any]:
+def execute_workflow(graph: dict[str, Any], dataset_df: pd.DataFrame | None, target_column: str | None, task_type: str, run_path: Path, *, progress_callback: Callable[[str, str, str | None], None] | None = None, cancel_check: Callable[[], bool] | None = None) -> dict[str, Any]:
     paths = build_paths(graph)
     if not paths:
         raise ValueError("Workflow is empty.")
@@ -954,13 +955,25 @@ def execute_workflow(graph: dict[str, Any], dataset_df: pd.DataFrame | None, tar
                 group["suffix_seen"].add(node["id"])
 
     for group in model_groups.values():
+        merged_path = group["prefix"] + group["suffix"]
+        if cancel_check and cancel_check():
+            raise RunCancelledError('Cancellation requested.')
+        for path_node in merged_path:
+            if progress_callback:
+                progress_callback(str(path_node['id']), 'running', None)
         try:
-            merged_path = group["prefix"] + group["suffix"]
             context = load_context(merged_path, dataset_df, target_column, task_type)
             branch = train_branch(context, group["model_node"], merged_path, run_path)
             branch["path_index"] = group["path_index"]
             branches.append(branch)
+            for path_node in merged_path:
+                if progress_callback:
+                    progress_callback(str(path_node['id']), 'succeeded', None)
+        except RunCancelledError:
+            raise
         except Exception as exc:
+            if merged_path and progress_callback:
+                progress_callback(str(merged_path[-1]['id']), 'failed', str(exc))
             errors.append({"path_index": str(group["path_index"]), "error": str(exc), "traceback": traceback.format_exc(limit=5)})
 
     all_node_outputs: dict[str, Any] = {}
@@ -974,12 +987,24 @@ def execute_workflow(graph: dict[str, Any], dataset_df: pd.DataFrame | None, tar
         )
 
     for index, path in analysis_paths:
+        if cancel_check and cancel_check():
+            raise RunCancelledError('Cancellation requested.')
+        for path_node in path:
+            if progress_callback:
+                progress_callback(str(path_node['id']), 'running', None)
         try:
             context = load_context(path, dataset_df, target_column, task_type)
             source = node_label(path[-2]) if len(path) > 1 else f"مسیر {index}"
             merge_node_outputs(all_node_outputs, context.node_outputs, path_index=index, source_label=source)
             analysis_only.append({"path_index": index, "nodes": [node_map.get(registry_id(node), {}).get("label", registry_id(node)) for node in path], "analysis": safe_json(context.analysis), "node_outputs": safe_json(context.node_outputs)})
+            for path_node in path:
+                if progress_callback:
+                    progress_callback(str(path_node['id']), 'succeeded', None)
+        except RunCancelledError:
+            raise
         except Exception as exc:
+            if path and progress_callback:
+                progress_callback(str(path[-1]['id']), 'failed', str(exc))
             errors.append({"path_index": str(index), "error": str(exc), "traceback": traceback.format_exc(limit=5)})
 
     if not branches and errors:

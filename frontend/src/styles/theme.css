@@ -1,0 +1,793 @@
+/*
+ * IOTA ML theme
+ * =============
+ * Edit this file to restyle the whole application.
+ *
+ * The first two blocks contain the actual dark/light color palettes.
+ * Everything below maps those colors to components by purpose:
+ * surfaces, text, buttons, icons, fields, tables, modals and node categories.
+ */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Brand colors */
+  --theme-primary: #2fa99a;
+  --theme-primary-hover: #3ab9aa;
+  --theme-primary-active: #24877c;
+  --theme-primary-soft: color-mix(in srgb, var(--theme-primary) 13%, transparent);
+  --theme-secondary: #7184ad;
+  --theme-secondary-hover: #8295bd;
+  --theme-secondary-soft: color-mix(in srgb, var(--theme-secondary) 13%, transparent);
+
+  /* Status colors */
+  --theme-success: #4ca77b;
+  --theme-success-soft: color-mix(in srgb, var(--theme-success) 13%, transparent);
+  --theme-warning: #c3944a;
+  --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 13%, transparent);
+  --theme-danger: #cf686d;
+  --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 13%, transparent);
+  --theme-info: #6388bd;
+  --theme-info-soft: color-mix(in srgb, var(--theme-info) 13%, transparent);
+
+  /* Page and component surfaces */
+  --theme-app-bg: #07080a;
+  --theme-workspace-bg: #090b0e;
+  --theme-board-bg: #212428;
+  --theme-topbar-bg: #0c0e12;
+  --theme-panel-bg: #0f1217;
+  --theme-panel-muted: #12161c;
+  --theme-panel-raised: #161b22;
+  --theme-control-bg: #0b0d11;
+  --theme-popup-bg: #101319;
+  --theme-hover-bg: #151a21;
+  --theme-selected-bg: #121d2a;
+  --theme-overlay-bg: rgb(1 3 6 / 82%);
+
+  /* Text and quiet separators */
+  --theme-text: #e6edf1;
+  --theme-text-secondary: #bac6cd;
+  --theme-text-muted: #82909a;
+  --theme-text-inverse: #061411;
+  --theme-placeholder: #687680;
+  --theme-divider: rgb(153 169 181 / 10%);
+  --theme-control-border: rgb(153 169 181 / 18%);
+  --theme-focus: color-mix(in srgb, var(--theme-primary) 68%, transparent);
+  --theme-icon: #85939d;
+  --theme-icon-hover: var(--theme-primary);
+
+  /* Functional colors consumed by React controls */
+  --theme-plot-default: #2fa99a;
+  --theme-login-cube-face: #172128;
+  --theme-login-cube-ripple: #7184ad;
+  --theme-project-color-1: #2fa99a;
+  --theme-project-color-2: #7184ad;
+  --theme-project-color-3: #4ca77b;
+  --theme-project-color-4: #c3944a;
+  --theme-project-color-5: #cf686d;
+  --theme-project-color-6: #6388bd;
+  --theme-project-color-7: #916ba0;
+
+  /* Data presentation */
+  --theme-table-header: #1b252d;
+  --theme-table-footer: #172128;
+  --theme-table-row: transparent;
+  --theme-table-row-alt: #19232b;
+  --theme-table-row-hover: #1b302e;
+  --theme-chart-grid: var(--theme-divider);
+
+  /* Workflow palette items */
+  --theme-node-menu-item-bg: #181c23;
+  --theme-node-menu-item-hover-bg: #23313a;
+}
+
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Brand colors */
+  --theme-primary: #168d81;
+  --theme-primary-hover: #10796f;
+  --theme-primary-active: #0d685f;
+  --theme-primary-soft: color-mix(in srgb, var(--theme-primary) 11%, transparent);
+  --theme-secondary: #6178a3;
+  --theme-secondary-hover: #526b98;
+  --theme-secondary-soft: color-mix(in srgb, var(--theme-secondary) 10%, transparent);
+
+  /* Status colors */
+  --theme-success: #318f66;
+  --theme-success-soft: color-mix(in srgb, var(--theme-success) 11%, transparent);
+  --theme-warning: #a87825;
+  --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 11%, transparent);
+  --theme-danger: #b9575e;
+  --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  --theme-info: #5577ad;
+  --theme-info-soft: color-mix(in srgb, var(--theme-info) 10%, transparent);
+
+  /* Page and component surfaces */
+  --theme-app-bg: #eaf0f2;
+  --theme-workspace-bg: #f2f5f6;
+  --theme-board-bg: #e4eff3;
+  --theme-topbar-bg: #f8fafb;
+  --theme-panel-bg: #ffffff;
+  --theme-panel-muted: #f4f7f8;
+  --theme-panel-raised: #ebf1f3;
+  --theme-control-bg: #f1f5f6;
+  --theme-popup-bg: #fbfcfc;
+  --theme-hover-bg: #edf4f2;
+  --theme-selected-bg: #dff0ec;
+  --theme-overlay-bg: rgb(25 37 45 / 42%);
+
+  /* Text and quiet separators */
+  --theme-text: #1e2a31;
+  --theme-text-secondary: #46555f;
+  --theme-text-muted: #74818a;
+  --theme-text-inverse: #f7fffd;
+  --theme-placeholder: #89959d;
+  --theme-divider: rgb(43 64 77 / 9%);
+  --theme-control-border: rgb(43 64 77 / 17%);
+  --theme-focus: color-mix(in srgb, var(--theme-primary) 58%, transparent);
+  --theme-icon: #697780;
+  --theme-icon-hover: var(--theme-primary);
+
+  /* Functional colors consumed by React controls */
+  --theme-plot-default: #168d81;
+  --theme-login-cube-face: #e9eff2;
+  --theme-login-cube-ripple: #6178a3;
+  --theme-project-color-1: #168d81;
+  --theme-project-color-2: #6178a3;
+  --theme-project-color-3: #318f66;
+  --theme-project-color-4: #a87825;
+  --theme-project-color-5: #b9575e;
+  --theme-project-color-6: #5577ad;
+  --theme-project-color-7: #7b5d91;
+
+  /* Data presentation */
+  --theme-table-header: #e9eff2;
+  --theme-table-footer: #edf2f4;
+  --theme-table-row: #ffffff;
+  --theme-table-row-alt: #f5f8f9;
+  --theme-table-row-hover: #e8f2ef;
+  --theme-chart-grid: var(--theme-divider);
+
+  /* Workflow palette items */
+  --theme-node-menu-item-bg: #edf2f4;
+  --theme-node-menu-item-hover-bg: #e5efed;
+}
+
+:root {
+  /* Typography and geometry */
+  --theme-font-family: Vazirmatn, IRANSans, Tahoma, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --theme-font-size: 11.5px;
+  --theme-line-height: 1.55;
+  --theme-radius-none: 0;
+  --theme-radius-compact: 4px;
+  --theme-radius-control: 6px;
+  --theme-radius-panel: 9px;
+  --theme-radius-modal: 12px;
+  --theme-radius-pill: 999px;
+  --theme-radius-round: 50%;
+  --theme-radius-brand: 4px 7px;
+  --theme-border-width: 1px;
+  --theme-border-width-strong: 2px;
+  --theme-control-height: 32px;
+  --theme-panel-gap: 10px;
+  --theme-panel-padding: 12px;
+  --theme-modal-gap: 8px;
+  --theme-transition-fast: 120ms ease;
+  --theme-transition: 170ms ease;
+
+  /* Global visual behavior */
+  --theme-shadow: none;
+  --theme-blur: 0px;
+  --theme-transparent: transparent;
+  --theme-white: #ffffff;
+  --theme-black: #000000;
+
+  /* Primary button role */
+  --theme-button-primary-bg: var(--theme-primary-active);
+  --theme-button-primary-bg-hover: var(--theme-primary);
+  --theme-button-primary-bg-active: var(--theme-primary-active);
+  --theme-button-primary-border: var(--theme-transparent);
+  --theme-button-primary-text: var(--theme-text-inverse);
+
+  /* Secondary button role */
+  --theme-button-secondary-bg: var(--theme-panel-muted);
+  --theme-button-secondary-bg-hover: var(--theme-panel-raised);
+  --theme-button-secondary-border: var(--theme-transparent);
+  --theme-button-secondary-border-hover: var(--theme-transparent);
+  --theme-button-secondary-text: var(--theme-text-secondary);
+
+  /* Danger button role */
+  --theme-button-danger-bg: var(--theme-transparent);
+  --theme-button-danger-bg-hover: var(--theme-danger-soft);
+  --theme-button-danger-border: var(--theme-transparent);
+  --theme-button-danger-text: var(--theme-danger);
+
+  /* Neutral button role */
+  --theme-button-neutral-bg: var(--theme-panel-muted);
+  --theme-button-neutral-bg-hover: var(--theme-panel-raised);
+  --theme-button-neutral-border: var(--theme-transparent);
+  --theme-button-neutral-border-hover: var(--theme-transparent);
+  --theme-button-neutral-text: var(--theme-text-secondary);
+  --theme-button-neutral-text-hover: var(--theme-primary);
+
+  /* Workflow and data presentation roles */
+  --theme-results-panel-width: 380px;
+  --theme-page-max-width: 1500px;
+  --theme-canvas-dot: color-mix(in srgb, var(--theme-text-muted) 32%, transparent);
+  --theme-node-bg: var(--theme-panel-muted);
+  --theme-node-bg-hover: var(--theme-hover-bg);
+  --theme-node-text: var(--theme-text);
+  --theme-node-border: var(--theme-control-border);
+  --theme-node-border-active: var(--theme-primary);
+
+  /* Login illustration roles */
+  --theme-cube-face-border: var(--theme-border-width) solid var(--theme-divider);
+  --theme-cube-face-bg: var(--theme-panel-muted);
+  --theme-cube-column-gap: 5%;
+  --theme-cube-row-gap: 5%;
+  --theme-cube-perspective: 99999999px;
+
+  /* Category colors. Change these to recolor nodes and palette items. */
+  --category-data-input: #3b9fbd;
+  --category-data-inspection: #36a7aa;
+  --category-data-cleaning: #499a75;
+  --category-anomaly: #b78843;
+  --category-transformation: #7c72aa;
+  --category-visualization: #ad6888;
+  --category-ml-processing: #5f7fa9;
+  --category-model-training: #716aa2;
+  --category-model-analysis: #3b9187;
+  --category-export: #ad6b70;
+  --category-user-nodes: #916ba0;
+}
+
+/* Node category mapping */
+.cat-data-entry,
+.cat-data-input { --node-category-color: var(--category-data-input); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-data-inspection { --node-category-color: var(--category-data-inspection); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-data-cleaning { --node-category-color: var(--category-data-cleaning); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-anomaly-detection { --node-category-color: var(--category-anomaly); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-data-transformation,
+.cat-transformation { --node-category-color: var(--category-transformation); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-data-analysis-visualization,
+.cat-visualizations { --node-category-color: var(--category-visualization); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-ml-data-processing { --node-category-color: var(--category-ml-processing); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-model-design-train,
+.cat-ml-model-design-and-training { --node-category-color: var(--category-model-training); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-model-analysis,
+.cat-ml-model-analysis { --node-category-color: var(--category-model-analysis); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-export-or-report { --node-category-color: var(--category-export); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-utilities-advanced,
+.cat-control-flow,
+.cat-user-nodes { --node-category-color: var(--category-user-nodes); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+
+.n8n-node-modal {
+  --node-accent: var(--node-category-color, var(--theme-primary));
+}
+
+/* Responsive theme values. Layout remains in its component stylesheet. */
+@media (width <= 1180px) {
+  :root {
+    --theme-panel-gap: 8px;
+    --theme-panel-padding: 10px;
+    --theme-modal-gap: 6px;
+  }
+}
+
+@media (width <= 760px) {
+  :root {
+    --theme-panel-gap: 6px;
+    --theme-panel-padding: 8px;
+    --theme-control-height: 34px;
+    --theme-radius-panel: 7px;
+    --theme-radius-modal: 9px;
+  }
+}
+
+/* Global behavior: no shadows, glow or glass effects. */
+html,
+body,
+#root {
+  background: var(--theme-app-bg) !important;
+  color: var(--theme-text) !important;
+  font-family: var(--theme-font-family);
+}
+
+* {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  scrollbar-color: var(--theme-control-border) transparent;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--theme-control-border) !important;
+  border: var(--theme-border-width-strong) solid transparent !important;
+  background-clip: content-box !important;
+}
+
+/* Page-level surfaces */
+.app-shell,
+.auth-page,
+.auth-page-ai,
+.manager-shell,
+.manager-page,
+.workspace {
+  background: var(--theme-workspace-bg) !important;
+  background-image: none !important;
+}
+
+.board {
+  background: var(--theme-board-bg) !important;
+}
+
+.analysis-board {
+  background: var(--theme-board-bg) !important;
+  background-image: none !important;
+}
+
+/* React Flow canvas dots stay visible in both themes. */
+.react-flow__background {
+  opacity: 1 !important;
+}
+
+.react-flow__background pattern circle {
+  fill: var(--theme-canvas-dot) !important;
+}
+
+.topbar,
+.app-main-topbar,
+.workflow-topbar,
+.workflow-topbar-pro {
+  background: var(--theme-topbar-bg) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
+  backdrop-filter: none !important;
+}
+
+/* Major regions use surface contrast, not enclosing borders. */
+.left-stack,
+.right-stack-wrap,
+.auth-card,
+.manager-panel,
+.project-card,
+.workflow-card,
+.profile-main-card-reference,
+.activity-panel-reference,
+.notification-panel-reference,
+.projects-list-reference,
+.project-filter-panel-reference,
+.project-info-reference,
+.project-create-info-reference,
+.project-data-reference,
+.workflows-reference-card,
+.project-create-card-reference,
+.analysis-board-card,
+.workflow-shell-card,
+.plot-group-window {
+  background: var(--theme-panel-bg) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: var(--theme-radius-panel) !important;
+  backdrop-filter: none !important;
+}
+
+.palette,
+.inspector,
+.results-panel,
+.flow-chip,
+.run-history-panel,
+.workflow-section-card,
+.workflow-section-body,
+.workflow-quick-settings-body,
+.output-card,
+.modal-output-card,
+.metric-card,
+.checkbox-grid,
+.pill-picker,
+.pinned-data-box,
+.notification-row,
+.dataset-mini-row,
+.analysis-board-toolbar,
+.analysis-output-picker,
+.plot-group-item,
+.mui-table-wrap,
+.mui-chart-wrap {
+  background: var(--theme-panel-muted) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: var(--theme-radius-panel) !important;
+}
+
+/* Node menu items use a real surface so each draggable item is easy to scan. */
+.node-palette .palette-node-card,
+.node-palette .flyout-node-card,
+.palette-flyout .palette-node-card,
+.node-palette-item.palette-node-card,
+.left-stack .palette-node-card,
+.left-stack .flyout-node-card {
+  background: var(--theme-node-menu-item-bg) !important;
+  background-image: none !important;
+  border: 0 !important;
+  color: var(--node-category-color, var(--theme-text-secondary)) !important;
+  border-radius: var(--theme-radius-control) !important;
+}
+
+.node-palette .palette-node-card:hover,
+.node-palette .flyout-node-card:hover,
+.palette-flyout .palette-node-card:hover,
+.node-palette-item.palette-node-card:hover,
+.left-stack .palette-node-card:hover,
+.left-stack .flyout-node-card:hover {
+  background: color-mix(
+    in srgb,
+    var(--node-category-color, var(--theme-primary)) 10%,
+    var(--theme-node-menu-item-hover-bg)
+  ) !important;
+  border: 0 !important;
+  color: var(--node-category-color, var(--theme-primary)) !important;
+  transform: none !important;
+}
+
+/* Modal: only the outer frame and column dividers remain. */
+.modal-backdrop,
+.node-modal-backdrop,
+.n8n-node-backdrop.node-modal-backdrop {
+  background: var(--theme-overlay-bg) !important;
+  backdrop-filter: none !important;
+}
+
+.modal-card,
+.node-modal,
+.n8n-node-modal.node-modal {
+  background: var(--theme-popup-bg) !important;
+  background-image: none !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
+  border-radius: var(--theme-radius-modal) !important;
+  backdrop-filter: none !important;
+}
+
+.node-modal-header,
+.n8n-node-modal-header.node-modal-header {
+  background: var(--theme-panel-muted) !important;
+  border: 0 !important;
+  border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
+}
+
+.node-modal-grid,
+.n8n-node-grid.node-modal-grid {
+  background: var(--theme-popup-bg) !important;
+  gap: var(--theme-modal-gap) !important;
+}
+
+.node-modal-section,
+.n8n-node-panel.node-modal-section,
+.n8n-params-panel.node-modal-section,
+:root[data-theme="dark"] .node-modal-section,
+:root[data-theme="light"] .node-modal-section {
+  background: var(--theme-panel-bg) !important;
+  border: 0 !important;
+  border-radius: var(--theme-radius-panel) !important;
+}
+
+.node-modal-section + .node-modal-section {
+  border-inline-start: var(--theme-border-width) solid var(--theme-divider) !important;
+}
+
+.section-title,
+.n8n-panel-title.section-title,
+.node-modal-section .section-title {
+  background: var(--theme-panel-muted) !important;
+  color: var(--theme-text-secondary) !important;
+  border: 0 !important;
+  border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
+}
+
+/* Form controls have quiet fills and only show a line on focus. */
+input,
+select,
+textarea,
+.field input,
+.field select,
+.field textarea,
+.run-controls input,
+.searchbox,
+.iota-select-trigger,
+.node-title-input,
+.node-modal-name,
+.pinned-data-box textarea,
+.auth-input-wrap,
+.project-filter-search {
+  background: var(--theme-control-bg) !important;
+  background-image: none !important;
+  color: var(--theme-text) !important;
+  border: var(--theme-border-width) solid transparent !important;
+  border-radius: var(--theme-radius-control) !important;
+  outline: 0 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--theme-placeholder) !important;
+}
+
+input:hover,
+select:hover,
+textarea:hover,
+.field input:hover,
+.field select:hover,
+.field textarea:hover,
+.iota-select-trigger:hover {
+  background: var(--theme-hover-bg) !important;
+  border-color: transparent !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.searchbox:focus-within,
+.iota-select.open .iota-select-trigger {
+  background: var(--theme-control-bg) !important;
+  border-color: var(--theme-focus) !important;
+  outline: 0 !important;
+}
+
+/* Primary buttons */
+.primary,
+button.primary,
+.auth-submit,
+.n8n-execute-button.primary {
+  background: var(--theme-button-primary-bg) !important;
+  background-image: none !important;
+  border: 0 !important;
+  color: var(--theme-button-primary-text) !important;
+  border-radius: var(--theme-radius-control) !important;
+}
+
+.primary:hover,
+button.primary:hover,
+.auth-submit:hover,
+.n8n-execute-button.primary:hover {
+  background: var(--theme-button-primary-bg-hover) !important;
+  color: var(--theme-button-primary-text) !important;
+  transform: none !important;
+}
+
+/* Secondary/text buttons share one role throughout the application. */
+.icon-button:not(.icon-only, .theme-toggle, .iota-nav-icon, .profile-icon-only),
+.tiny-action:not(.icon-only, .icon-action),
+.choice-pill,
+.group-toggle,
+.secondary,
+button.secondary {
+  background: var(--theme-panel-bg) !important;
+  background-image: none !important;
+  border: 0 !important;
+  color: var(--theme-button-secondary-text) !important;
+  border-radius: var(--theme-radius-control) !important;
+}
+
+.icon-button:not(.icon-only, .theme-toggle, .iota-nav-icon, .profile-icon-only):hover,
+.tiny-action:not(.icon-only, .icon-action):hover,
+.choice-pill:hover,
+.choice-pill.active,
+.group-toggle:hover,
+.secondary:hover,
+button.secondary:hover {
+  background: var(--theme-button-secondary-bg-hover) !important;
+  border: 0 !important;
+  color: var(--theme-primary) !important;
+  transform: none !important;
+}
+
+.danger,
+button.danger {
+  background: var(--theme-button-danger-bg) !important;
+  border: 0 !important;
+  color: var(--theme-button-danger-text) !important;
+}
+
+.danger:hover,
+button.danger:hover {
+  background: var(--theme-button-danger-bg-hover) !important;
+  border: 0 !important;
+  color: var(--theme-danger) !important;
+}
+
+/* Icon buttons: always transparent and borderless, including all top bars. */
+.icon-only,
+.icon-action,
+.tiny-icon,
+.modal-close,
+.theme-toggle,
+.panel-toggle,
+.sidebar-toggle,
+.workflow-float-toggle,
+.workflow-tab-icon-button,
+.workflow-right-collapse-button,
+.analysis-board-control-toggle,
+.auth-eye-button,
+.iota-nav-icon,
+.profile-icon-only,
+.output-head button,
+.output-fullscreen-actions .tiny-action,
+.MuiIconButton-root,
+.workflow-topbar-pro .icon-button,
+.workflow-topbar .icon-button {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  color: var(--theme-icon) !important;
+  border-radius: var(--theme-radius-control) !important;
+}
+
+.icon-only:hover,
+.icon-action:hover,
+.tiny-icon:hover,
+.modal-close:hover,
+.theme-toggle:hover,
+.panel-toggle:hover,
+.sidebar-toggle:hover,
+.workflow-float-toggle:hover,
+.workflow-tab-icon-button:hover,
+.workflow-right-collapse-button:hover,
+.analysis-board-control-toggle:hover,
+.auth-eye-button:hover,
+.iota-nav-icon:hover,
+.profile-icon-only:hover,
+.output-head button:hover,
+.output-fullscreen-actions .tiny-action:hover,
+.MuiIconButton-root:hover,
+.workflow-topbar-pro .icon-button:hover,
+.workflow-topbar .icon-button:hover {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--theme-icon-hover) !important;
+  transform: none !important;
+}
+
+/* Workflow topbar actions are icons only: never framed or filled. */
+.workflow-topbar-pro .workflow-topbar-left > button,
+.workflow-topbar-pro .workflow-topbar-center > button,
+.workflow-topbar-pro .workflow-topbar-right > button {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  color: var(--theme-icon) !important;
+}
+
+.workflow-topbar-pro .workflow-topbar-left > button:hover,
+.workflow-topbar-pro .workflow-topbar-center > button:hover,
+.workflow-topbar-pro .workflow-topbar-right > button:hover,
+.workflow-topbar-pro .workflow-topbar-left > button:focus-visible,
+.workflow-topbar-pro .workflow-topbar-center > button:focus-visible,
+.workflow-topbar-pro .workflow-topbar-right > button:focus-visible {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--theme-icon-hover) !important;
+}
+
+.workflow-topbar-pro .topbar-primary-action {
+  color: var(--theme-primary) !important;
+}
+
+.workflow-topbar-pro .topbar-danger-action,
+.workflow-topbar-pro .danger-nav {
+  color: var(--theme-danger) !important;
+}
+
+.workflow-topbar-pro .icon-button.active {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--theme-primary) !important;
+}
+
+/* Status roles */
+.status.succeeded,
+.run-dot.succeeded,
+.manager-toast.success {
+  color: var(--theme-success) !important;
+}
+
+.status.failed,
+.run-dot.failed,
+.manager-toast.error,
+.error-box,
+.auth-error {
+  color: var(--theme-danger) !important;
+}
+
+.status.running,
+.status.queued,
+.run-dot.running,
+.run-dot.queued,
+.manager-toast.info {
+  color: var(--theme-info) !important;
+}
+
+.status.succeeded { background: var(--theme-success-soft) !important; }
+.status.failed,
+.error-box,
+.auth-error { background: var(--theme-danger-soft) !important; }
+.status.running,
+.status.queued { background: var(--theme-info-soft) !important; }
+.node-warning { background: var(--theme-warning-soft) !important; border: 0 !important; }
+
+/* Tables: alternating surfaces replace dense grid lines. */
+table,
+.MuiDataGrid-root,
+.MuiDataGrid-main,
+.MuiDataGrid-virtualScroller,
+.MuiDataGrid-footerContainer {
+  background: var(--theme-panel-bg) !important;
+  border: 0 !important;
+  color: var(--theme-text) !important;
+}
+
+th,
+.MuiDataGrid-columnHeaders,
+.MuiDataGrid-columnHeader {
+  background: var(--theme-table-header) !important;
+  color: var(--theme-text-secondary) !important;
+  border: 0 !important;
+}
+
+td,
+.MuiDataGrid-cell,
+.MuiDataGrid-footerContainer {
+  border-color: transparent !important;
+}
+
+tbody tr:nth-child(even),
+.MuiDataGrid-row:nth-of-type(even) {
+  background: var(--theme-table-row-alt) !important;
+}
+
+tbody tr:hover,
+.MuiDataGrid-row:hover {
+  background: var(--theme-table-row-hover) !important;
+}
+
+.MuiDataGrid-root {
+  --DataGrid-containerBackground: var(--theme-table-header) !important;
+  --DataGrid-t-header-background-base: var(--theme-table-header) !important;
+  --DataGrid-rowBorderColor: transparent !important;
+  border-radius: var(--theme-radius-panel) !important;
+}
+
+.MuiChartsTooltip-paper {
+  background: var(--theme-popup-bg) !important;
+  border: 0 !important;
+  border-radius: var(--theme-radius-control) !important;
+}
+
+/* Decorative layers from earlier themes are disabled. */
+.app-shell::before,
+.manager-page::before,
+.auth-page::before,
+.auth-page-ai::before,
+.auth-page-ai::after,
+.auth-visual-panel::before,
+.auth-visual-panel::after,
+.manager-panel::before,
+.project-card::before,
+.brand-block h1::before {
+  background: none !important;
+  background-image: none !important;
+  filter: none !important;
+  opacity: 0 !important;
+}

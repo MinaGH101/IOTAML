@@ -1,28 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
-from app.nodes.registry import LEGACY_NODE_ALIASES, LEGACY_SOURCE_NODE_TYPES, SOURCE_NODE_IDS, get_node
+from app.nodes.registry import (
+    LEGACY_NODE_ALIASES,
+    LEGACY_SOURCE_NODE_TYPES,
+    PORT_COMPATIBILITY,
+    SOURCE_NODE_IDS,
+    canonical_node_id,
+    get_node,
+)
 from app.workflow.graph import topological_sort
 from app.workflow.types import ValidationMessage, ValidationResult
-
-COMPATIBLE: dict[str, set[str]] = {
-    'any': {'any','dataframe','json','json_items','series','columns','model','metrics','plot','file','report','artifact','artifact_ref','text','schema','trigger','stream'},
-    'dataframe': {'dataframe','any','json','artifact_ref','report'},
-    'json_items': {'json_items','json','any','artifact_ref','report','dataframe'},
-    'json': {'json','json_items','any','metrics','report'},
-    'metrics': {'metrics','json','any','report'},
-    'plot': {'plot','artifact','artifact_ref','report','any'},
-    'artifact_ref': {'artifact_ref','artifact','file','report','any'},
-    'artifact': {'artifact','artifact_ref','file','report','any'},
-    'file': {'file','artifact_ref','artifact','any'},
-    'model': {'model','artifact_ref','artifact','any'},
-    'schema': {'schema','json','any'},
-    'series': {'series','columns','json','any'},
-    'columns': {'columns','json','any'},
-    'text': {'text','json','any'},
-    'trigger': {'trigger','any'},
-    'stream': {'stream','json_items','any'},
-}
 
 
 def _port_type(node_def: Any, handle: str | None, side: str) -> str:
@@ -37,7 +25,7 @@ def _port_type(node_def: Any, handle: str | None, side: str) -> str:
 def compatible(source_type: str, target_type: str) -> bool:
     if source_type == target_type or target_type == 'any' or source_type == 'any':
         return True
-    return target_type in COMPATIBLE.get(source_type, set())
+    return target_type in PORT_COMPATIBILITY.get(source_type, set())
 
 
 def validate_workflow_graph(graph: dict[str, Any]) -> ValidationResult:
@@ -50,7 +38,8 @@ def validate_workflow_graph(graph: dict[str, Any]) -> ValidationResult:
     for node in nodes:
         node_id = str(node.get('id'))
         registry_id = str((node.get('data') or {}).get('registryId') or node.get('type') or '')
-        node_def = get_node(registry_id)
+        canonical_id = canonical_node_id(registry_id)
+        node_def = get_node(canonical_id)
         if not node_def:
             errors.append(ValidationMessage(nodeId=node_id, type='unsupported_node_type', message=f'Unsupported node type: {registry_id}', suggestedFix='Replace this node with a registered catalog node.'))
             continue
@@ -68,8 +57,8 @@ def validate_workflow_graph(graph: dict[str, Any]) -> ValidationResult:
         if src not in by_instance or dst not in by_instance:
             errors.append(ValidationMessage(edgeId=edge_id, type='dangling_edge', message='Connection references a missing node.', suggestedFix='Delete the broken connection.'))
             continue
-        src_def = get_node(str((by_instance[src].get('data') or {}).get('registryId') or by_instance[src].get('type') or ''))
-        dst_def = get_node(str((by_instance[dst].get('data') or {}).get('registryId') or by_instance[dst].get('type') or ''))
+        src_def = get_node(canonical_node_id(str((by_instance[src].get('data') or {}).get('registryId') or by_instance[src].get('type') or '')))
+        dst_def = get_node(canonical_node_id(str((by_instance[dst].get('data') or {}).get('registryId') or by_instance[dst].get('type') or '')))
         if not src_def or not dst_def:
             continue
         source_type = _port_type(src_def, edge.get('sourceHandle'), 'source')
@@ -81,12 +70,13 @@ def validate_workflow_graph(graph: dict[str, Any]) -> ValidationResult:
     for node in nodes:
         node_id = str(node.get('id'))
         registry_id = str((node.get('data') or {}).get('registryId') or node.get('type') or '')
-        node_def = get_node(registry_id)
+        canonical_id = canonical_node_id(registry_id)
+        node_def = get_node(canonical_id)
         if not node_def:
             continue
         incoming = [edge for edge in edges if str(edge.get('target')) == node_id]
         # Trigger/file/source nodes may intentionally have no incoming connection.
-        if any(port.required for port in node_def.inputs) and not incoming and registry_id not in SOURCE_NODE_IDS and registry_id not in LEGACY_SOURCE_NODE_TYPES:
+        if any(port.required for port in node_def.inputs) and not incoming and canonical_id not in SOURCE_NODE_IDS and registry_id not in LEGACY_SOURCE_NODE_TYPES:
             warnings.append(ValidationMessage(level='warning', nodeId=node_id, type='missing_input_connection', message=f'{node_def.name} has no input connection.', suggestedFix='Connect it to an upstream node if it needs previous output.'))
 
     try:

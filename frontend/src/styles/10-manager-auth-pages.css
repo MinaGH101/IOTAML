@@ -3,27 +3,26 @@ display:grid;
 place-items:center;
 gap:10px;
 font-size:13px;
-color:var(--soft)
+color:var(--theme-text-secondary)
 }
 
 .auth-page,.manager-shell {
 min-height:100vh;
-background:radial-gradient(circle at 14% 10%,color-mix(in srgb,var(--iota-cyan) 10%,transparent),transparent 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--iota-purple) 12%,transparent),transparent 28%),var(--bg)
+background:radial-gradient(circle at 14% 10%,color-mix(in srgb,var(--theme-primary) 10%,var(--theme-transparent)),var(--theme-transparent) 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--theme-secondary) 12%,var(--theme-transparent)),var(--theme-transparent) 28%),var(--theme-app-bg)
 }
 
 .auth-page {
 display:grid;
 place-items:center;
 padding:28px;
-color:var(--text)
+color:var(--theme-text)
 }
 
 .auth-card,.manager-panel {
-background:var(--panel);
-border:1px solid var(--line);
-border-radius:var(--radius-panel,11px);
-box-shadow:var(--shadow);
-backdrop-filter:blur(14px)
+background:var(--theme-panel-bg);
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+backdrop-filter:none
 }
 
 .auth-card {
@@ -39,11 +38,11 @@ width:58px;
 height:58px;
 display:grid;
 place-items:center;
-color:#fff;
+color:var(--theme-white);
 font-weight:950;
 letter-spacing:.04em;
-border-radius:17px;
-background:linear-gradient(135deg,var(--iota-purple),var(--iota-blue),var(--iota-cyan))
+border-radius:var(--theme-radius-modal);
+background:linear-gradient(135deg,var(--theme-secondary),var(--theme-secondary),var(--theme-primary))
 }
 
 .auth-card h1 {
@@ -53,7 +52,7 @@ font-size:24px
 
 .auth-card p {
 margin:0 0 4px;
-color:var(--muted);
+color:var(--theme-text-muted);
 line-height:1.75;
 font-size:11.5px
 }
@@ -61,7 +60,7 @@ font-size:11.5px
 .auth-card label,.project-form label,.profile-card-main label {
 display:grid;
 gap:6px;
-color:var(--soft);
+color:var(--theme-text-secondary);
 font-size:11px;
 font-weight:800
 }
@@ -69,10 +68,10 @@ font-weight:800
 .auth-card input,.project-form input,.project-form select,.project-form textarea,.manager-list-head input,.profile-card-main input {
 width:100%;
 min-width:0;
-color:var(--text);
-background:color-mix(in srgb,var(--input) 92%,transparent);
-border:1px solid color-mix(in srgb,var(--line-strong) 72%,transparent);
-border-radius:var(--radius-control,8px);
+color:var(--theme-text);
+background:color-mix(in srgb,var(--theme-control-bg) 92%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-control-border) 72%,var(--theme-transparent));
+border-radius:var(--theme-radius-control);
 padding:8px 10px;
 outline:none;
 font-size:11.5px
@@ -85,16 +84,16 @@ line-height:1.65
 }
 
 .auth-card input:focus,.project-form input:focus,.project-form select:focus,.project-form textarea:focus,.manager-list-head input:focus,.profile-card-main input:focus {
-border-color:color-mix(in srgb,var(--iota-cyan) 42%,transparent)!important;
-background:color-mix(in srgb,var(--panel-solid) 80%,transparent)!important
+border-color:color-mix(in srgb,var(--theme-primary) 42%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-popup-bg) 80%,var(--theme-transparent))
 }
 
 .auth-error,.manager-toast {
-border:1px solid color-mix(in srgb,var(--danger) 26%,transparent);
-background:color-mix(in srgb,var(--danger) 10%,transparent);
-color:color-mix(in srgb,var(--danger) 82%,var(--text));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-danger) 26%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-danger) 10%,var(--theme-transparent));
+color:color-mix(in srgb,var(--theme-danger) 82%,var(--theme-text));
 padding:8px 10px;
-border-radius:10px;
+border-radius:var(--theme-radius-panel);
 font-size:11px
 }
 
@@ -141,7 +140,7 @@ gap:9px
 
 .panel-heading {
 margin-bottom:13px;
-color:var(--iota-cyan)
+color:var(--theme-primary)
 }
 
 .panel-heading b,.manager-list-head b,.detail-actions-card b {
@@ -150,7 +149,7 @@ display:block
 
 .panel-heading span,.manager-list-head span,.detail-actions-card span {
 display:block;
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:10.5px;
 margin-top:3px
 }
@@ -191,10 +190,9 @@ gap:10px
 
 .project-card,.workflow-card {
 text-align:right;
-color:var(--text);
-border-radius:12px!important;
+color:var(--theme-text);
+border-radius:var(--theme-radius-panel);
 padding:13px;
-box-shadow:none!important
 }
 
 .project-card {
@@ -207,18 +205,18 @@ justify-content:space-between
 }
 
 .project-state {
-border-radius:999px;
+border-radius:var(--theme-radius-pill);
 padding:4px 8px;
 font-size:10px;
-color:var(--iota-cyan);
-background:color-mix(in srgb,var(--iota-cyan) 12%,transparent);
-border:1px solid color-mix(in srgb,var(--iota-cyan) 24%,transparent)
+color:var(--theme-primary);
+background:color-mix(in srgb,var(--theme-primary) 12%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 24%,var(--theme-transparent))
 }
 
 .project-state.closed {
-color:var(--muted);
-background:color-mix(in srgb,var(--muted) 12%,transparent);
-border-color:color-mix(in srgb,var(--muted) 22%,transparent)
+color:var(--theme-text-muted);
+background:color-mix(in srgb,var(--theme-text-muted) 12%,var(--theme-transparent));
+border-color:color-mix(in srgb,var(--theme-text-muted) 22%,var(--theme-transparent))
 }
 
 .project-card h3 {
@@ -227,7 +225,7 @@ margin:0
 
 .project-card p {
 margin:0;
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:11px;
 line-height:1.65;
 min-height:36px
@@ -236,7 +234,7 @@ min-height:36px
 .project-meta {
 display:grid;
 gap:5px;
-color:var(--soft);
+color:var(--theme-text-secondary);
 font-size:10.5px
 }
 
@@ -255,14 +253,14 @@ margin-top:auto
 flex:1;
 text-align:center;
 padding:7px;
-border-radius:9px;
-color:var(--soft)
+border-radius:var(--theme-radius-panel);
+color:var(--theme-text-secondary)
 }
 
 .empty-manager {
-color:var(--muted);
-border:1px dashed var(--line-strong);
-border-radius:12px;
+color:var(--theme-text-muted);
+border:var(--theme-border-width) dashed var(--theme-control-border);
+border-radius:var(--theme-radius-panel);
 padding:20px;
 text-align:center;
 grid-column:1 / -1
@@ -310,7 +308,7 @@ font-size:12.5px
 
 .workflow-card span {
 display:block;
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:10px;
 margin-top:3px
 }
@@ -320,15 +318,14 @@ width:34px;
 height:34px;
 display:grid;
 place-items:center;
-border-radius:10px;
-color:var(--iota-cyan);
-background:color-mix(in srgb,var(--iota-cyan) 10%,transparent);
-border:1px solid color-mix(in srgb,var(--iota-cyan) 18%,transparent)
+border-radius:var(--theme-radius-panel);
+color:var(--theme-primary);
+background:color-mix(in srgb,var(--theme-primary) 10%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 18%,var(--theme-transparent))
 }
 
 .project-data-card .dataset-card {
-box-shadow:none;
-background:transparent;
+background:var(--theme-transparent);
 border:0;
 padding:0
 }
@@ -352,9 +349,9 @@ min-width:0
 .project-data-card .dataset-mini-row {
 align-items:center;
 padding:9px;
-border:1px solid var(--line);
-border-radius:10px!important;
-background:color-mix(in srgb,var(--panel-solid) 78%,transparent)
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-popup-bg) 78%,var(--theme-transparent))
 }
 
 .profile-grid {
@@ -375,8 +372,8 @@ align-self:start
 margin:4px auto;
 display:grid;
 place-items:center;
-color:var(--iota-cyan);
-border:1px solid color-mix(in srgb,var(--iota-cyan) 25%,transparent);
+color:var(--theme-primary);
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 25%,var(--theme-transparent));
 overflow:hidden
 }
 
@@ -394,11 +391,11 @@ gap:4px
 
 .profile-name b {
 font-size:16px;
-color:var(--text)
+color:var(--theme-text)
 }
 
 .profile-name span {
-color:var(--iota-cyan);
+color:var(--theme-primary);
 font-size:11px
 }
 
@@ -420,7 +417,7 @@ grid-template-rows:1fr auto;
 gap:8px;
 align-items:end;
 text-align:center;
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:10px
 }
 
@@ -437,25 +434,25 @@ gap:8px
 align-items:flex-start;
 flex-direction:column;
 padding:10px;
-border:1px solid var(--line)
+border:var(--theme-border-width) solid var(--theme-divider)
 }
 
 .notification-row b {
-color:var(--text)
+color:var(--theme-text)
 }
 
 .notification-row span,.notification-row small {
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:10.5px;
 line-height:1.6
 }
 
 .notification-row.alarm {
-border-color:color-mix(in srgb,var(--iota-cyan) 22%,var(--line))
+border-color:color-mix(in srgb,var(--theme-primary) 22%,var(--theme-divider))
 }
 
 .notification-row.alarm.warning {
-border-color:color-mix(in srgb,#f59e0b 30%,var(--line))
+border-color:color-mix(in srgb,var(--theme-warning) 30%,var(--theme-divider))
 }
 
 .manager-toast {
@@ -477,7 +474,7 @@ min-height:auto
 }
 
 .manager-shell {
-background:radial-gradient(circle at 14% 4%,color-mix(in srgb,var(--iota-cyan) 12%,transparent),transparent 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--iota-purple) 16%,transparent),transparent 30%),var(--bg)
+background:radial-gradient(circle at 14% 4%,color-mix(in srgb,var(--theme-primary) 12%,var(--theme-transparent)),var(--theme-transparent) 28%),radial-gradient(circle at 86% 12%,color-mix(in srgb,var(--theme-secondary) 16%,var(--theme-transparent)),var(--theme-transparent) 30%),var(--theme-app-bg)
 }
 
 .manager-page {
@@ -487,7 +484,7 @@ position:relative
 .manager-panel {
 position:relative;
 overflow:hidden;
-border-color:color-mix(in srgb,var(--line-strong) 55%,transparent)
+border-color:color-mix(in srgb,var(--theme-control-border) 55%,var(--theme-transparent))
 }
 
 .manager-panel::before {
@@ -496,8 +493,8 @@ position:absolute;
 inset-inline:14px;
 top:0;
 height:2px;
-border-radius:99px;
-background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--iota-cyan) 64%,transparent),transparent);
+border-radius:var(--theme-radius-pill);
+background:linear-gradient(90deg,var(--theme-transparent),color-mix(in srgb,var(--theme-primary) 64%,var(--theme-transparent)),var(--theme-transparent));
 pointer-events:none
 }
 
@@ -506,28 +503,27 @@ margin-top:8px
 }
 
 .manager-toast {
-border-color:color-mix(in srgb,var(--muted) 24%,transparent);
-background:color-mix(in srgb,var(--panel-solid) 88%,transparent);
-color:var(--soft);
-box-shadow:0 12px 28px color-mix(in srgb,#000 12%,transparent)
+border-color:color-mix(in srgb,var(--theme-text-muted) 24%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-popup-bg) 88%,var(--theme-transparent));
+color:var(--theme-text-secondary);
 }
 
 .manager-toast.success {
-border-color:color-mix(in srgb,#22c55e 34%,transparent);
-background:color-mix(in srgb,#22c55e 12%,var(--panel-solid));
-color:color-mix(in srgb,#22c55e 84%,var(--text))
+border-color:color-mix(in srgb,var(--theme-success) 34%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-success) 12%,var(--theme-popup-bg));
+color:color-mix(in srgb,var(--theme-success) 84%,var(--theme-text))
 }
 
 .manager-toast.error {
-border-color:color-mix(in srgb,var(--danger) 30%,transparent);
-background:color-mix(in srgb,var(--danger) 10%,var(--panel-solid));
-color:color-mix(in srgb,var(--danger) 82%,var(--text))
+border-color:color-mix(in srgb,var(--theme-danger) 30%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-danger) 10%,var(--theme-popup-bg));
+color:color-mix(in srgb,var(--theme-danger) 82%,var(--theme-text))
 }
 
 .manager-toast.info {
-border-color:color-mix(in srgb,var(--iota-cyan) 32%,transparent);
-background:color-mix(in srgb,var(--iota-cyan) 10%,var(--panel-solid));
-color:color-mix(in srgb,var(--iota-cyan) 84%,var(--text))
+border-color:color-mix(in srgb,var(--theme-primary) 32%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-primary) 10%,var(--theme-popup-bg));
+color:color-mix(in srgb,var(--theme-primary) 84%,var(--theme-text))
 }
 
 .project-state-color-row {
@@ -545,8 +541,8 @@ padding:14px
 content:'';
 position:absolute;
 inset-inline-start:0;
-border-radius:0 99px 99px 0;
-background:var(--project-color,var(--iota-cyan))
+border-radius:var(--theme-radius-pill);
+background:var(--project-color,var(--theme-primary))
 }
 
 .project-card:hover {
@@ -554,7 +550,7 @@ transform:translateY(-1px)
 }
 
 .project-card-top {
-color:var(--project-color,var(--iota-cyan))
+color:var(--project-color,var(--theme-primary))
 }
 
 .project-card h3 {
@@ -563,8 +559,8 @@ letter-spacing:-.01em
 }
 
 .project-stats span {
-border:1px solid color-mix(in srgb,var(--project-color,var(--iota-cyan)) 14%,transparent);
-background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 8%,var(--input))
+border:var(--theme-border-width) solid color-mix(in srgb,var(--project-color,var(--theme-primary)) 14%,var(--theme-transparent));
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 8%,var(--theme-control-bg))
 }
 
 .workflow-card:hover {
@@ -581,17 +577,16 @@ display:inline-flex;
 align-items:center;
 justify-content:center;
 gap:7px;
-border-radius:var(--radius-control,8px);
-color:var(--iota-cyan);
-border:1px dashed color-mix(in srgb,var(--iota-cyan) 38%,transparent);
-background:color-mix(in srgb,var(--iota-cyan) 8%,transparent)
+border-radius:var(--theme-radius-control);
+color:var(--theme-primary);
+border:var(--theme-border-width) dashed color-mix(in srgb,var(--theme-primary) 38%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-primary) 8%,var(--theme-transparent))
 }
 
 .profile-avatar {
 width:104px;
 height:104px;
-border-radius:32px;
-box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--iota-cyan) 18%,transparent)
+border-radius:var(--theme-radius-modal);
 }
 
 .activity-bars {
@@ -600,7 +595,7 @@ padding:12px 8px 4px
 }
 
 .notification-row {
-border-radius:12px
+border-radius:var(--theme-radius-panel)
 }
 
 .profile-side-stack .manager-panel {
@@ -614,17 +609,17 @@ z-index:20
 
 .app-main-topbar .brand-block,.workflow-brand {
 padding:4px 7px;
-border:1px solid color-mix(in srgb,var(--line) 70%,transparent);
-border-radius:12px;
-background:color-mix(in srgb,var(--panel-solid) 54%,transparent)
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-divider) 70%,var(--theme-transparent));
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-popup-bg) 54%,var(--theme-transparent))
 }
 
 .topbar h1 {
 font-size:16px!important;
 letter-spacing:-.01em!important;
-background:none!important;
-background-clip:initial!important;
-color:var(--text)!important
+background:none;
+background-clip:initial;
+color:var(--theme-text)
 }
 
 .topbar p {
@@ -648,9 +643,8 @@ min-height:31px
 }
 
 .manager-panel {
-border-radius:12px!important;
-background:color-mix(in srgb,var(--panel-solid) 88%,transparent)!important;
-box-shadow:0 14px 36px color-mix(in srgb,#000 10%,transparent)!important
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-popup-bg) 88%,var(--theme-transparent));
 }
 
 .manager-panel::before {
@@ -658,10 +652,9 @@ display:none!important
 }
 
 .project-card {
-background:transparent!important;
-border-width:1.5px!important;
-border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 46%,var(--line))!important;
-box-shadow:none!important
+background:var(--theme-transparent);
+border-width:1.5px;
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 46%,var(--theme-divider));
 }
 
 .project-card::before {
@@ -671,8 +664,8 @@ width:5px!important
 }
 
 .project-card:hover {
-background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 6%,transparent)!important;
-border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 68%,transparent)!important
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 6%,var(--theme-transparent));
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 68%,var(--theme-transparent))
 }
 
 .project-data-card {
@@ -681,8 +674,8 @@ order:-1
 
 .project-data-card .upload-zone {
 min-height:48px;
-border-radius:10px!important;
-background:color-mix(in srgb,var(--iota-cyan) 6%,transparent)!important
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-primary) 6%,var(--theme-transparent))
 }
 
 .activity-bars {
@@ -698,10 +691,9 @@ justify-self:center
 }
 
 .run-history-panel {
-background:var(--panel);
-border:1px solid var(--line);
-border-radius:10px!important;
-box-shadow:var(--shadow);
+background:var(--theme-panel-bg);
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
 overflow:hidden
 }
 
@@ -732,15 +724,15 @@ display:grid;
 grid-template-columns:minmax(0,1fr) auto;
 align-items:center;
 gap:6px;
-border:1px solid var(--line);
-border-radius:9px;
-background:color-mix(in srgb,var(--panel-solid) 74%,transparent);
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-popup-bg) 74%,var(--theme-transparent));
 padding:6px
 }
 
 .run-history-row.active {
-border-color:color-mix(in srgb,var(--iota-cyan) 48%,transparent);
-background:color-mix(in srgb,var(--iota-cyan) 7%,var(--panel-solid))
+border-color:color-mix(in srgb,var(--theme-primary) 48%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-primary) 7%,var(--theme-popup-bg))
 }
 
 .run-history-main {
@@ -750,8 +742,8 @@ grid-template-columns:auto minmax(0,1fr);
 gap:4px 7px;
 text-align:right;
 border:0;
-background:transparent;
-color:var(--text);
+background:var(--theme-transparent);
+color:var(--theme-text);
 padding:0
 }
 
@@ -764,7 +756,7 @@ font-size:10.5px
 
 .run-history-main small {
 grid-column:2;
-color:var(--muted);
+color:var(--theme-text-muted);
 direction:ltr;
 text-align:left;
 font-size:9.5px
@@ -773,21 +765,21 @@ font-size:9.5px
 .run-dot {
 width:8px;
 height:8px;
-border-radius:99px;
+border-radius:var(--theme-radius-pill);
 align-self:center;
-background:var(--muted)
+background:var(--theme-text-muted)
 }
 
 .run-dot.succeeded {
-background:#22c55e
+background:var(--theme-success)
 }
 
 .run-dot.failed {
-background:var(--danger)
+background:var(--theme-danger)
 }
 
 .run-dot.running,.run-dot.queued {
-background:var(--iota-blue)
+background:var(--theme-secondary)
 }
 
 .pinned-data-box {
@@ -795,9 +787,9 @@ margin:12px;
 padding:10px;
 display:grid;
 gap:8px;
-border:1px dashed color-mix(in srgb,var(--iota-cyan) 36%,transparent);
-border-radius:10px;
-background:color-mix(in srgb,var(--iota-cyan) 6%,transparent)
+border:var(--theme-border-width) dashed color-mix(in srgb,var(--theme-primary) 36%,var(--theme-transparent));
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-primary) 6%,var(--theme-transparent))
 }
 
 .pinned-data-head {
@@ -811,13 +803,13 @@ gap:8px
 display:block;
 direction:ltr;
 text-align:left;
-color:var(--text);
+color:var(--theme-text);
 font-size:11px
 }
 
 .pinned-data-head span,.pinned-data-box small {
 display:block;
-color:var(--muted);
+color:var(--theme-text-muted);
 font-size:10px;
 line-height:1.6
 }
@@ -827,10 +819,10 @@ min-height:96px;
 resize:vertical;
 direction:ltr;
 text-align:left;
-color:var(--text);
-background:color-mix(in srgb,var(--input) 94%,transparent);
-border:1px solid color-mix(in srgb,var(--line-strong) 58%,transparent);
-border-radius:9px;
+color:var(--theme-text);
+background:color-mix(in srgb,var(--theme-control-bg) 94%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-control-border) 58%,var(--theme-transparent));
+border-radius:var(--theme-radius-panel);
 padding:8px;
 outline:none;
 font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
@@ -838,8 +830,8 @@ font-size:10.5px
 }
 
 .pinned-data-box textarea:focus {
-border-color:color-mix(in srgb,var(--iota-cyan) 42%,transparent);
-background:color-mix(in srgb,var(--panel-solid) 80%,transparent)
+border-color:color-mix(in srgb,var(--theme-primary) 42%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-popup-bg) 80%,var(--theme-transparent))
 }
 
 .topbar,.app-main-topbar,.workflow-topbar {
@@ -862,10 +854,9 @@ gap:0!important
 .app-main-topbar .brand-block,.app-brand-with-back,.workflow-brand {
 min-height:56px;
 padding:0 12px!important;
-border:0!important;
-border-radius:0!important;
-background:transparent!important;
-box-shadow:none!important
+border:0;
+border-radius:var(--theme-radius-none);
+background:var(--theme-transparent);
 }
 
 .workflow-brand {
@@ -898,34 +889,32 @@ margin-inline-start:auto!important
 }
 
 .icon-button,.tiny-action,.output-head button,.modal-close {
-border-radius:0!important;
-box-shadow:none!important;
-background:transparent!important;
-border-color:transparent!important
+border-radius:var(--theme-radius-none);
+background:var(--theme-transparent);
+border-color:var(--theme-transparent)
 }
 
 .icon-button:hover,.tiny-action:hover,.output-head button:hover,.modal-close:hover {
-background:color-mix(in srgb,var(--iota-cyan) 9%,transparent)!important;
-border-color:color-mix(in srgb,var(--iota-cyan) 36%,transparent)!important
+background:color-mix(in srgb,var(--theme-primary) 9%,var(--theme-transparent));
+border-color:color-mix(in srgb,var(--theme-primary) 36%,var(--theme-transparent))
 }
 
 .manager-shell,.auth-page {
-background:var(--bg)!important
+background:var(--theme-app-bg)
 }
 
 .manager-page {
-background:radial-gradient(circle,color-mix(in srgb,var(--iota-cyan) 10%,transparent) 1px,transparent 1.2px),var(--workspace-back)!important;
-background-size:26px 26px,auto!important
+background:radial-gradient(circle,color-mix(in srgb,var(--theme-primary) 10%,var(--theme-transparent)) 1px,var(--theme-transparent) 1.2px),var(--theme-workspace-bg);
+background-size:26px 26px,auto
 }
 
 .auth-card,.manager-panel,.project-card,.workflow-card,.notification-row,.project-data-card .dataset-mini-row,.run-history-panel,.upload-zone,.project-color-control,.profile-image-picker > span,.empty-manager {
-border-radius:0!important;
-box-shadow:none!important
+border-radius:var(--theme-radius-none);
 }
 
 .manager-panel,.auth-card {
-background:color-mix(in srgb,var(--panel-solid) 94%,transparent)!important;
-border:1px solid var(--line)!important
+background:color-mix(in srgb,var(--theme-popup-bg) 94%,var(--theme-transparent));
+border:var(--theme-border-width) solid var(--theme-divider)
 }
 
 .manager-panel::before,.project-card::before {
@@ -937,24 +926,23 @@ gap:10px!important
 }
 
 .project-card,.workflow-card {
-background:transparent!important;
-border:1px solid color-mix(in srgb,var(--project-color,var(--iota-cyan)) 42%,var(--line))!important;
+background:var(--theme-transparent);
+border:var(--theme-border-width) solid color-mix(in srgb,var(--project-color,var(--theme-primary)) 42%,var(--theme-divider));
 transform:none!important
 }
 
 .project-card:hover,.workflow-card:hover {
-background:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 5%,transparent)!important;
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 5%,var(--theme-transparent));
 transform:none!important
 }
 
 .project-stats span,.workflow-icon,.project-state,.profile-avatar,.notification-row,.project-data-card .dataset-mini-row {
-border-radius:0!important;
-box-shadow:none!important
+border-radius:var(--theme-radius-none);
 }
 
 .profile-avatar {
-background:transparent!important;
-border-color:var(--line)!important
+background:var(--theme-transparent);
+border-color:var(--theme-divider)
 }
 
 .activity-bars {
@@ -967,7 +955,7 @@ flex:0 0 22px!important
 
 .activity-bar span {
 width:12px!important;
-border-radius:0!important
+border-radius:var(--theme-radius-none)
 }
 
 .workflow-card-grid,.project-card-grid {
@@ -987,28 +975,16 @@ grid-template-columns:auto minmax(160px,1fr) minmax(420px,auto)!important
 width:130px
 }
 }
-
-:root {
---radius-panel:4px;
---radius-control:4px;
---shadow:none
-}
-
-*,::before,::after {
-box-shadow:none!important
-}
-
 .app-shell,.auth-page,.manager-shell,.manager-page,.workspace,.board,.node-modal-grid,.node-modal-header {
-background-image:none!important;
-box-shadow:none!important
+background-image:none;
 }
 
 .app-shell,.auth-page,.manager-shell {
-background:var(--bg)!important
+background:var(--theme-app-bg)
 }
 
 .board {
-border-color:var(--line)!important
+border-color:var(--theme-divider)
 }
 
 .topbar p,.auth-card p,.panel-heading span,.manager-list-head span,.detail-actions-card span {
@@ -1016,219 +992,207 @@ display:none!important
 }
 
 .palette,.inspector,.results-panel,.dataset-card,.flow-chip,.auth-card,.manager-panel,.project-card,.workflow-card,.notification-row,.run-history-panel,.output-card,.metric-card,.checkbox-grid,.node-modal-section,.modal-output-card,.pinned-data-box,.project-data-card .dataset-mini-row,.empty-manager {
-background:transparent!important;
-background-image:none!important;
-border:1px solid var(--line)!important;
-border-radius:14px!important;
-box-shadow:none!important;
-backdrop-filter:none!important;
+background:var(--theme-transparent);
+background-image:none;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+backdrop-filter:none;
 padding:auto
 }
 
 .manager-panel {
-border:0!important
+border:0
 }
 
 .modal-card,.node-modal,.palette-flyout,.iota-select-menu {
-background:var(--bg)!important;
-background-image:none!important;
-border:1px solid var(--line-strong)!important;
-border-radius:4px!important;
-box-shadow:none!important;
-backdrop-filter:none!important
+background:var(--theme-app-bg);
+background-image:none;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-compact);
+backdrop-filter:none
 }
 
 .topbar,.app-main-topbar,.workflow-topbar {
 min-height:54px!important;
-border:0!important;
-border-bottom:1px solid var(--line)!important;
-border-radius:0!important;
-box-shadow:none!important;
-backdrop-filter:none!important
+border:0;
+border-bottom:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-none);
+backdrop-filter:none
 }
 
 .workflow-brand {
-border-inline:0!important
+border-inline:0
 }
 
 .profile-controls {
-border-inline-start:0!important
+border-inline-start:0
 }
 
 .workflow-nav-actions,.workflow-run-controls,.profile-controls,.app-main-topbar .brand-block,.app-brand-with-back,.workflow-brand {
-border-radius:0!important;
-background:transparent!important;
-box-shadow:none!important
+border-radius:var(--theme-radius-none);
+background:var(--theme-transparent);
 }
 
 button,input,select,textarea,.collapse-button,.tiny-icon,.icon-button,.tiny-action,.output-head button,.modal-close,.palette-node-card,.flyout-node-card,.palette-node-icon,.upload-zone,.dataset-mini-row,.project-state,.project-stats span,.workflow-icon,.profile-avatar,.profile-image-picker > span,.project-color-control,.iota-select-trigger,.iota-select-option,.choice-pill,.pretty-checkbox .checkmark,.node-title-input,.node-modal-name,.pinned-data-box textarea,.manager-toast,.auth-error,.toast {
-border-radius:4px!important;
-box-shadow:none!important
+border-radius:var(--theme-radius-compact);
 }
 
 button,.icon-button,.tiny-action,.output-head button,.modal-close,.collapse-button,.tiny-icon,.primary,.danger,.upload-zone,.profile-image-picker > span,.palette-node-card,.flyout-node-card,.iota-select-trigger,.iota-select-option,.choice-pill,.group-toggle,.run-history-row,.run-history-main {
-background:transparent!important;
-background-image:none!important;
-box-shadow:none!important;
+background:var(--theme-transparent);
+background-image:none;
 transition:color .14s ease,border-color .14s ease!important
 }
 
 .primary,.icon-button,.tiny-action,.output-head button,.modal-close,.collapse-button,.tiny-icon,.upload-zone,.profile-image-picker > span,.choice-pill {
-border:1px solid var(--line)!important;
-color:var(--soft)!important
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text-secondary)
 }
 
 .primary,.run-controls .primary.icon-only,.node-modal-actions .primary.icon-only,.auth-submit {
-color:var(--iota-cyan)!important;
-border-color:color-mix(in srgb,var(--iota-cyan) 46%,var(--line))!important;
-background:transparent!important
+color:var(--theme-primary);
+border-color:color-mix(in srgb,var(--theme-primary) 46%,var(--theme-divider));
+background:var(--theme-transparent)
 }
 
 .danger,.danger.full,.compact-danger {
-color:var(--danger)!important;
-border-color:color-mix(in srgb,var(--danger) 42%,var(--line))!important;
-background:transparent!important
+color:var(--theme-danger);
+border-color:color-mix(in srgb,var(--theme-danger) 42%,var(--theme-divider));
+background:var(--theme-transparent)
 }
 
 button:hover,button:focus-visible,.primary:hover,.primary:focus-visible,.danger:hover,.danger:focus-visible,.upload-zone:hover,.profile-image-picker > span:hover,.palette-node-card:hover,.flyout-node-card:hover,.choice-pill:hover,.choice-pill.active,.iota-select-trigger:hover,.iota-select.open .iota-select-trigger,.iota-select-option:hover,.iota-select-option.active,.group-toggle:hover,.run-history-row:hover,.run-history-row.active,.project-card:hover,.workflow-card:hover,.notification-row:hover,.dataset-mini-row:hover {
-background:transparent!important;
-background-image:none!important;
-border-color:color-mix(in srgb,var(--iota-cyan) 64%,var(--line-strong))!important;
-color:var(--iota-cyan)!important;
+background:var(--theme-transparent);
+background-image:none;
+border-color:color-mix(in srgb,var(--theme-primary) 64%,var(--theme-control-border));
+color:var(--theme-primary);
 transform:none!important
 }
 
 .topbar .icon-button,.workflow-topbar .icon-button,.app-main-topbar .icon-button,.topbar .primary.icon-only,.topbar .danger.icon-only,.topbar .theme-toggle,.workflow-topbar .theme-toggle,.app-main-topbar .theme-toggle {
-background:transparent!important;
-border-color:transparent!important;
-color:var(--soft)!important
+background:var(--theme-transparent);
+border-color:var(--theme-transparent);
+color:var(--theme-text-secondary)
 }
 
 .topbar .icon-button:hover,.workflow-topbar .icon-button:hover,.app-main-topbar .icon-button:hover,.topbar .primary.icon-only:hover,.topbar .danger.icon-only:hover,.topbar .theme-toggle:hover,.workflow-topbar .theme-toggle:hover,.app-main-topbar .theme-toggle:hover {
-background:transparent!important;
-border-color:transparent!important;
-color:var(--iota-cyan)!important
+background:var(--theme-transparent);
+border-color:var(--theme-transparent);
+color:var(--theme-primary)
 }
 
 .run-controls input,.run-controls select,.field input,.field select,.field textarea,.searchbox,.searchbox input,.auth-card input,.project-form input,.project-form select,.project-form textarea,.manager-list-head input,.profile-card-main input,.node-title-input,.node-modal-name,.pinned-data-box textarea {
-background:transparent!important;
-background-image:none!important;
-border-color:var(--line)!important;
-color:var(--text)!important;
-box-shadow:none!important
+background:var(--theme-transparent);
+background-image:none;
+border-color:var(--theme-divider);
+color:var(--theme-text);
 }
 
 .run-controls input:hover,.run-controls input:focus,.field input:hover,.field input:focus,.field select:hover,.field select:focus,.field textarea:hover,.field textarea:focus,.searchbox:hover,.searchbox:focus-within,.auth-card input:hover,.auth-card input:focus,.project-form input:hover,.project-form input:focus,.project-form select:hover,.project-form select:focus,.project-form textarea:hover,.project-form textarea:focus,.manager-list-head input:hover,.manager-list-head input:focus,.profile-card-main input:hover,.profile-card-main input:focus,.node-title-input:hover,.node-title-input:focus,.node-modal-name:hover,.node-modal-name:focus,.pinned-data-box textarea:hover,.pinned-data-box textarea:focus {
-background:transparent!important;
-border-color:color-mix(in srgb,var(--iota-cyan) 64%,var(--line-strong))!important;
-color:var(--text)!important
+background:var(--theme-transparent);
+border-color:color-mix(in srgb,var(--theme-primary) 64%,var(--theme-control-border));
+color:var(--theme-text)
 }
 
 .project-card,.workflow-card {
-border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 52%,var(--line))!important
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 52%,var(--theme-divider))
 }
 
 .project-card:hover,.workflow-card:hover {
-border-color:color-mix(in srgb,var(--project-color,var(--iota-cyan)) 82%,var(--line-strong))!important;
-color:var(--project-color,var(--iota-cyan))!important
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 82%,var(--theme-control-border));
+color:var(--project-color,var(--theme-primary))
 }
 
 .project-card:hover h3,.workflow-card:hover b {
-color:var(--project-color,var(--iota-cyan))!important
+color:var(--project-color,var(--theme-primary))
 }
 
 .project-stats span,.workflow-icon,.project-state,.profile-avatar,.notification-row,.activity-bar span,.pretty-checkbox input:checked + .checkmark,.status,.status.succeeded,.status.failed,.status.running,.status.queued {
-background:transparent!important;
-background-image:none!important
+background:var(--theme-transparent);
+background-image:none
 }
 
 .activity-bar span {
-border:1px solid color-mix(in srgb,var(--iota-cyan) 58%,var(--line))!important
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 58%,var(--theme-divider))
 }
 
 .ml-node::before,:root[data-theme="light"] .ml-node::before {
-background:transparent!important;
-background-image:none!important;
-border:1px solid color-mix(in srgb,var(--cat-color,var(--iota-cyan)) 48%,var(--line))!important;
-box-shadow:none!important;
+background:var(--theme-transparent);
+background-image:none;
+border:var(--theme-border-width) solid color-mix(in srgb,var(--node-category-color,var(--theme-primary)) 48%,var(--theme-divider));
 transform:none!important
 }
 
 .ml-node:hover::before,.ml-node.selected::before,:root[data-theme="light"] .ml-node:hover::before,:root[data-theme="light"] .ml-node.selected::before {
-background:transparent!important;
-background-image:none!important;
-border:2px solid color-mix(in srgb,var(--cat-color,var(--iota-cyan)) 82%,var(--line-strong))!important;
-box-shadow:none!important;
+background:var(--theme-transparent);
+background-image:none;
+border:var(--theme-border-width-strong) solid color-mix(in srgb,var(--node-category-color,var(--theme-primary)) 82%,var(--theme-control-border));
 transform:none!important
 }
 
 .ml-node:hover .node-title,.ml-node.selected .node-title,.ml-node:hover .node-title-input,.ml-node.selected .node-title-input,.ml-node:hover .node-type-label,.ml-node.selected .node-type-label {
-color:var(--cat-color,var(--iota-cyan))!important
+color:var(--node-category-color,var(--theme-primary))
 }
 
 .ml-node.shape-trapezium::before,.ml-node.shape-hexagon::before {
-border-radius:0!important
+border-radius:var(--theme-radius-none)
 }
 
 .react-flow__controls,.react-flow__minimap {
-box-shadow:none!important;
-border-radius:4px!important
+border-radius:var(--theme-radius-compact)
 }
 
 .react-flow__controls-button,.react-flow__minimap {
-background:transparent!important;
-color:var(--text)!important
+background:var(--theme-transparent);
+color:var(--theme-text)
 }
 
 .palette-node-card:hover span,.flyout-node-card:hover span,.iota-select-option:hover,.iota-select-option.active,.choice-pill:hover,.choice-pill.active,.group-toggle:hover,.run-history-row.active .run-history-main,.run-history-row:hover .run-history-main {
-color:var(--iota-cyan)!important
+color:var(--theme-primary)
 }
 
 html,body,#root,.app-shell,.auth-page,.manager-shell {
-background:var(--iota-app-bg)!important;
-background-image:none!important
+background:var(--theme-app-bg);
+background-image:none
 }
 
 .topbar,.app-main-topbar,.workflow-topbar {
-background:var(--iota-topbar-bg)!important;
-background-image:none!important
+background:var(--theme-topbar-bg);
+background-image:none
 }
 
 .workspace,.manager-page {
-background:radial-gradient(circle,color-mix(in srgb,var(--line-strong) 0%,transparent) 0,transparent 0),var(--iota-workspace-bg)!important;
-background-size:24px 24px,auto!important
+background:radial-gradient(circle,color-mix(in srgb,var(--theme-control-border) 0%,var(--theme-transparent)) 0,var(--theme-transparent) 0),var(--theme-workspace-bg);
+background-size:24px 24px,auto
 }
 
 .board {
-background:radial-gradient(circle,color-mix(in srgb,var(--line-strong) 78%,transparent) 1px,transparent 1.2px),var(--iota-board-bg)!important;
-background-size:22px 22px,auto!important
+background:radial-gradient(circle,color-mix(in srgb,var(--theme-control-border) 78%,var(--theme-transparent)) 1px,var(--theme-transparent) 1.2px),var(--theme-board-bg);
+background-size:22px 22px,auto
 }
 
 .modal-card,.node-modal,.palette-flyout,.iota-select-menu,.node-modal-backdrop {
-background:var(--iota-popup-bg)!important;
-background-image:none!important
+background:var(--theme-popup-bg);
+background-image:none
 }
 
 .node-modal-header,.node-modal-grid {
-background-image:none!important
+background-image:none
 }
 
 .react-flow__node:has(.ml-node),.react-flow__node.selected:has(.ml-node),.react-flow__node:has(.ml-node):focus,.react-flow__node:has(.ml-node):focus-visible,.react-flow__node:has(.ml-node) > div,.react-flow__node-mlNode,.react-flow__node-mlNode.selected,.react-flow__node-mlNode:focus,.react-flow__node-mlNode:focus-visible,.react-flow__node-mlNode > div {
-background:transparent!important;
-border:0!important;
-outline:0!important;
-box-shadow:none!important
+background:var(--theme-transparent);
+border:0;
+outline:0;
 }
 
 .ml-node,.ml-node:hover,.ml-node.selected {
 position:relative!important;
 isolation:isolate!important;
 overflow:visible!important;
-background:transparent!important;
-background-image:none!important;
-border:0!important;
-outline:0!important;
-box-shadow:none!important
+background:var(--theme-transparent);
+background-image:none;
+border:0;
+outline:0;
 }
 
 .ml-node::before,.ml-node::after {
@@ -1236,9 +1200,8 @@ content:""!important;
 position:absolute!important;
 display:block!important;
 pointer-events:none!important;
-border:0!important;
-outline:0!important;
-box-shadow:none!important;
+border:0;
+outline:0;
 transform:none!important
 }
 
@@ -1248,35 +1211,34 @@ z-index:-2!important
 }
 
 .ml-node::after {
-inset:var(--iota-node-outline-width)!important;
+inset:var(--theme-border-width)!important;
 z-index:-1!important;
-background:var(--iota-node-bg)!important
+background:var(--theme-node-bg)
 }
 
 .ml-node:hover::after,.ml-node.selected::after {
-inset:var(--iota-node-outline-width-active)!important;
-background:var(--iota-node-bg-hover)!important
+inset:var(--theme-border-width-strong)!important;
+background:var(--theme-node-bg-hover)
 }
 
 .ml-node .node-title-input {
-background:var(--iota-node-bg)!important
+background:var(--theme-node-bg)
 }
 
 .ml-node.shape-ellipse .node-title-input,.ml-node.shape-ellipse .node-title-input:hover,.ml-node.shape-ellipse .node-title-input:focus,.ml-node.shape-ellipse .node-title-input:focus-visible {
-background:transparent!important;
-border:0!important;
-outline:0!important;
-box-shadow:none!important
+background:var(--theme-transparent);
+border:0;
+outline:0;
 }
 
 .ml-node.shape-rectangle::before,.ml-node.shape-rectangle::after,.ml-node.shape-square::before,.ml-node.shape-square::after {
 clip-path:none!important;
-border-radius:4px!important
+border-radius:var(--theme-radius-compact)
 }
 
 .ml-node.shape-ellipse::before,.ml-node.shape-ellipse::after {
 clip-path:none!important;
-border-radius:999px!important
+border-radius:var(--theme-radius-pill)
 }
 
 .ml-node .node-content,.ml-node .react-flow__handle,.ml-node .node-title,.ml-node .node-title-input,.ml-node .node-type-label,.ml-node .node-icon {
@@ -1291,10 +1253,9 @@ width:10px!important;
 height:10px!important;
 min-width:10px!important;
 min-height:10px!important;
-border-radius:999px!important;
-background:var(--cat-color,var(--iota-cyan))!important;
-border:2px solid var(--iota-board-bg,var(--board))!important;
-box-shadow:none!important;
+border-radius:var(--theme-radius-pill);
+background:var(--node-category-color,var(--theme-primary));
+border:var(--theme-border-width-strong) solid var(--theme-board-bg,var(--theme-board-bg));
 opacity:1!important
 }
 

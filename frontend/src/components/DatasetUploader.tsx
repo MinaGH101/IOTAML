@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Database, Hash, Layers, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, HardDrive, Hash, Layers, Trash2, Upload } from 'lucide-react';
 import type { Dataset } from '../types';
 import { formatDate } from '../utils/appShared';
+
+const formatBytes = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '۰ بایت';
+  const units = ['بایت', 'کیلوبایت', 'مگابایت', 'گیگابایت'];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  return `${(value / 1024 ** index).toLocaleString('fa-IR', { maximumFractionDigits: index ? 1 : 0 })} ${units[index]}`;
+};
 
 export function DatasetUploader({
   datasets,
@@ -44,6 +51,7 @@ export function DatasetUploader({
               <div className="dataset-row-meta-ai">
                 <span><Hash size={12} /> {dataset.row_count.toLocaleString('fa-IR')} ردیف</span>
                 <span><Layers size={12} /> {dataset.columns.length.toLocaleString('fa-IR')} ستون</span>
+                <span><HardDrive size={12} /> {formatBytes(dataset.size_bytes)}</span>
                 <span>{formatDate(dataset.created_at)}</span>
               </div>
 

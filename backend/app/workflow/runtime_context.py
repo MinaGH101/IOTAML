@@ -9,6 +9,7 @@ class RuntimeContext:
     execution_id: int | str
     project_id: int | None = None
     dataset_id: int | None = None
+    dataset_path: str | None = None
     target_column: str | None = None
     task_type: str = 'auto'
     run_path: Path | None = None

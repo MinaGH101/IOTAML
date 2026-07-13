@@ -146,7 +146,7 @@ export function CustomNodeBuilder({ definition, workflowNodes, registry, busy, o
           <div className="custom-node-builder-actions">
             {definition && onDelete && <button className="danger" type="button" disabled={busy} onClick={() => onDelete().catch((reason) => setError(reason instanceof Error ? reason.message : 'حذف ناموفق بود'))}><Trash2 size={14} /> حذف</button>}
             <button className="primary" type="button" disabled={busy} onClick={submit}><Save size={14} /> ذخیره نود</button>
-            <button className="icon-button" type="button" onClick={onClose}><X size={15} /></button>
+            <button className="icon-button icon-only" type="button" onClick={onClose}><X size={15} /></button>
           </div>
         </header>
 
