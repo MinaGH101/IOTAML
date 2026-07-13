@@ -1171,7 +1171,7 @@ inset:0;
 pointer-events:none;
 opacity:.35;
 background-image:linear-gradient(120deg,var(--theme-transparent) 0 22px,var(--theme-primary-soft) 23px,var(--theme-transparent) 24px),radial-gradient(circle,var(--theme-primary-soft) 1px,var(--theme-transparent) 1.5px);
-background-size:46px 46px,24px 24px;
+background-size:46px 46px,18px 18px;
 mask-image:linear-gradient(90deg,var(--theme-transparent),var(--theme-black) 18%,var(--theme-black) 82%,var(--theme-transparent))
 }
 

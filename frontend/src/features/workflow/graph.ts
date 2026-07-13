@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import type { AnalysisBoardItem } from '../../components/AnalysisBoard';
+import type { AnalysisBoardItem, AnalysisBoardTab } from '../../components/AnalysisBoard';
 import type { Output } from '../../components/ResultsPanel';
 import type { Dataset, RegistryNode } from '../../types';
 import { resolveRegistryId, type LegacyNodeAliases } from './catalog';
@@ -12,6 +12,8 @@ export type FlowGraph = {
     targetColumn?: string;
     taskType?: string;
     analysisBoard?: AnalysisBoardItem[];
+    analysisBoards?: AnalysisBoardTab[];
+    activeAnalysisBoardId?: string;
   };
 };
 
@@ -280,6 +282,46 @@ export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
 
 export function serializeAnalysisBoardItems(items: AnalysisBoardItem[]) {
   return items.map(({ snapshot: _snapshot, ...item }) => item);
+}
+
+
+export const MAIN_ANALYSIS_BOARD_ID = 'analysis-board-main';
+
+export function createMainAnalysisBoard(items: AnalysisBoardItem[] = []): AnalysisBoardTab {
+  return {
+    id: MAIN_ANALYSIS_BOARD_ID,
+    name: 'برد اصلی',
+    items,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function restoreAnalysisBoardTabs(value: unknown, legacyItems?: unknown): AnalysisBoardTab[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return [createMainAnalysisBoard(restoreAnalysisBoardItems(legacyItems))];
+  }
+  const tabs = value
+    .filter((item): item is Partial<AnalysisBoardTab> => Boolean(item && typeof item === 'object' && !Array.isArray(item)))
+    .map((item, index) => ({
+      id: String(item.id || (index === 0 ? MAIN_ANALYSIS_BOARD_ID : `analysis-board-${Date.now()}-${index}`)),
+      name: String(item.name || (index === 0 ? 'برد اصلی' : `برد ${index + 1}`)).trim() || `برد ${index + 1}`,
+      items: restoreAnalysisBoardItems(item.items),
+      createdAt: String(item.createdAt || new Date().toISOString()),
+    }));
+
+  const mainIndex = tabs.findIndex((tab) => tab.id === MAIN_ANALYSIS_BOARD_ID);
+  if (mainIndex < 0) tabs.unshift(createMainAnalysisBoard());
+  else if (mainIndex > 0) tabs.unshift(tabs.splice(mainIndex, 1)[0]);
+  return tabs;
+}
+
+export function serializeAnalysisBoardTabs(tabs: AnalysisBoardTab[]) {
+  return tabs.map((tab) => ({
+    id: tab.id,
+    name: tab.name,
+    items: serializeAnalysisBoardItems(tab.items),
+    createdAt: tab.createdAt,
+  }));
 }
 
 export function workflowOutputSignature(

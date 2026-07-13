@@ -304,7 +304,32 @@ def cleanup_expired_artifacts(db: Session, limit: int = 200) -> int:
 
 
 def ingest_run_artifact_paths(db: Session, run: Run, payload: Any) -> Any:
-    run_root = (Path(get_settings().storage_dir) / "runs" / str(run.id)).resolve()
+    storage_root = Path(get_settings().storage_dir).resolve()
+    canonical_run_root = (storage_root / "runs" / str(run.id)).resolve()
+    persisted: dict[Path, dict[str, Any]] = {}
+
+    def path_candidate(value: str) -> Path | None:
+        if not value or len(value) > 4096 or "\n" in value or "\x00" in value:
+            return None
+        if "/" not in value and "\\" not in value:
+            return None
+        candidate = Path(value)
+        if not candidate.suffix:
+            return None
+        try:
+            resolved = candidate.resolve()
+            if not resolved.is_file() or storage_root not in resolved.parents:
+                return None
+            parts = resolved.parts
+            belongs_to_run = resolved == canonical_run_root or canonical_run_root in resolved.parents
+            if not belongs_to_run:
+                belongs_to_run = any(
+                    parts[index] == "runs" and index + 1 < len(parts) and parts[index + 1] == str(run.id)
+                    for index in range(len(parts) - 1)
+                )
+            return resolved if belongs_to_run else None
+        except (OSError, RuntimeError, ValueError):
+            return None
 
     def convert(value: Any, node_id: str | None = None) -> Any:
         if isinstance(value, dict):
@@ -313,16 +338,14 @@ def ingest_run_artifact_paths(db: Session, run: Run, payload: Any) -> Any:
         if isinstance(value, list):
             return [convert(item, node_id) for item in value]
         if isinstance(value, str):
-            candidate = Path(value)
-            try:
-                resolved = candidate.resolve()
-                is_allowed = candidate.is_file() and (resolved == run_root or run_root in resolved.parents)
-            except (OSError, RuntimeError):
-                is_allowed = False
-            if is_allowed:
+            resolved = path_candidate(value)
+            if resolved is not None:
+                cached = persisted.get(resolved)
+                if cached is not None:
+                    return cached
                 artifact = create_artifact_from_path(
                     db,
-                    source_path=candidate,
+                    source_path=resolved,
                     owner_username=run.owner_username,
                     artifact_type="node_output",
                     project_id=run.project_id,
@@ -330,12 +353,15 @@ def ingest_run_artifact_paths(db: Session, run: Run, payload: Any) -> Any:
                     node_id=node_id,
                     expires_in_days=get_settings().artifact_default_retention_days,
                 )
-                return {
+                reference = {
                     "artifact_id": artifact.id,
                     "filename": artifact.original_filename,
                     "content_type": artifact.content_type,
                     "size_bytes": artifact.size_bytes,
                 }
+                persisted[resolved] = reference
+                return reference
         return value
 
     return convert(payload)
+

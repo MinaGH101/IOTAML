@@ -132,3 +132,14 @@ frontend/src/styles/theme.css
 ```
 
 Run `npm run check:theme` after theme changes.
+
+## Analysis boards and responsive execution
+
+- Workflow connections are animated while the workflow canvas is visible.
+- Workflow and Analysis Board dot grids are rendered on fixed canvas layers, so they do not move during pan.
+- Analysis Board supports named tabs. Only the active tab mounts its result cards.
+- The right results panel can target any board tab. Pins made from Workflow or a node modal always go to the main board.
+- Board pan, zoom, card drag, and resize use `requestAnimationFrame` and direct transforms instead of React state on every pointer event.
+- The worker preloads the scientific runtime and uses a warm Linux fork for each isolated run, with the previous subprocess path as a fallback.
+- Redis wakes idle workers immediately; PostgreSQL queue polling is throttled while idle, and active process monitoring remains fast.
+- Set `JOB_USE_FORK_FAST_PATH=false` to disable warm-fork execution when debugging or on an incompatible host.

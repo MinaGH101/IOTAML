@@ -4,12 +4,12 @@ import json
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.config import get_settings
 from app.database import get_db
 from app.domains.runs.models import Run
-from app.schemas import RunCreate, RunOut
+from app.schemas import RunCreate, RunOut, RunSummaryOut
 from app.domains.runs.service import (
     TERMINAL_STATUSES, append_log, enqueue_run, enforce_run_quotas, find_idempotent_run,
     get_current_user, initial_node_statuses, progress_payload, queue_metrics, queue_retry,
@@ -74,7 +74,18 @@ def create_run(
         queued_at=utcnow(),
         node_statuses=node_statuses,
         progress=progress_payload(graph, node_statuses),
-        logs=[{'timestamp': utcnow().isoformat() + 'Z', 'level': 'info', 'message': 'Run created and queued.', 'context': {}}],
+        logs=[
+            {'timestamp': utcnow().isoformat() + 'Z', 'level': 'info', 'message': 'Run created and queued.', 'context': {}},
+            *[
+                {
+                    'timestamp': utcnow().isoformat() + 'Z',
+                    'level': 'warning',
+                    'message': warning.message,
+                    'context': {'type': warning.type, 'node_id': warning.nodeId, 'edge_id': warning.edgeId},
+                }
+                for warning in validation.warnings
+            ],
+        ],
     )
     db.add(run)
     try:
@@ -90,7 +101,7 @@ def create_run(
     return run
 
 
-@router.get('', response_model=list[RunOut])
+@router.get('', response_model=list[RunSummaryOut])
 def list_runs(
     project_id: int | None = None,
     status: str | None = None,
@@ -98,7 +109,21 @@ def list_runs(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> list[Run]:
-    query = db.query(Run).filter(Run.owner_username == str(current_user['username']))
+    query = db.query(Run).options(load_only(
+        Run.id,
+        Run.status,
+        Run.workflow_name,
+        Run.project_id,
+        Run.attempts,
+        Run.max_attempts,
+        Run.cancel_requested,
+        Run.progress,
+        Run.error,
+        Run.created_at,
+        Run.queued_at,
+        Run.started_at,
+        Run.finished_at,
+    )).filter(Run.owner_username == str(current_user['username']))
     if project_id is not None:
         query = query.filter(Run.project_id == project_id)
     if status:
@@ -130,18 +155,35 @@ def get_run_progress(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    run = _owned_run(db, run_id, str(current_user['username']))
-    artifacts = run.artifacts or {}
+    username = str(current_user['username'])
+    run = db.query(Run).options(load_only(
+        Run.id,
+        Run.owner_username,
+        Run.status,
+        Run.attempts,
+        Run.max_attempts,
+        Run.cancel_requested,
+        Run.heartbeat_at,
+        Run.started_at,
+        Run.finished_at,
+        Run.error,
+        Run.progress,
+        Run.node_statuses,
+    )).filter(Run.id == run_id, Run.owner_username == username).first()
+    if not run:
+        raise HTTPException(status_code=404, detail='Run not found.')
     return {
         'run_id': run.id,
         'status': run.status,
         'attempts': run.attempts,
         'max_attempts': run.max_attempts,
         'cancel_requested': run.cancel_requested,
-        'progress': run.progress or progress_payload(run.workflow_graph or {}, run.node_statuses or {}),
+        'heartbeat_at': run.heartbeat_at,
+        'started_at': run.started_at,
+        'finished_at': run.finished_at,
+        'error': run.error,
+        'progress': run.progress or {},
         'node_statuses': run.node_statuses or {},
-        'node_outputs': artifacts.get('node_outputs') or {},
-        'errors': artifacts.get('errors') or [],
     }
 
 

@@ -3,13 +3,14 @@ import { useState } from 'react';
 import type { Edge, Node } from '@xyflow/react';
 import { BarChart3, ChevronLeft, ChevronRight, History, RefreshCw, RotateCcw, SlidersHorizontal, Square } from 'lucide-react';
 import { Inspector } from '../components/Inspector';
+import type { AnalysisBoardTab } from '../components/AnalysisBoard';
 import { ResultsPanel, type Output } from '../components/ResultsPanel';
-import type { Dataset, RegistryNode, Run } from '../types';
+import type { Dataset, RegistryNode, Run, RunSummary } from '../types';
 import { formatDateTime, runDuration } from '../utils/appShared';
 
 type RightTab = 'results' | 'settings' | 'history';
 
-function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onCancel, onRefresh }: { runs: Run[]; currentRunId?: number | null; busy: boolean; onSelect: (run: Run) => void; onRetry: (run: Run) => void; onCancel: (run: Run) => void; onRefresh: () => void }) {
+function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onCancel, onRefresh }: { runs: RunSummary[]; currentRunId?: number | null; busy: boolean; onSelect: (run: RunSummary) => void; onRetry: (run: RunSummary) => void; onCancel: (run: RunSummary) => void; onRefresh: () => void }) {
   return (
     <section className="run-history-panel workflow-tab-history-panel">
       <div className="workflow-tab-content-head">
@@ -27,7 +28,7 @@ function RunHistoryPanel({ runs, currentRunId, busy, onSelect, onRetry, onCancel
             </button>
             {['queued', 'running'].includes(run.status)
               ? <button type="button" className="workflow-tab-icon-button" onClick={() => onCancel(run)} title="توقف اجرا" aria-label="توقف اجرا"><Square size={13} /></button>
-              : <button type="button" className="workflow-tab-icon-button" disabled={busy || !run.workflow_graph} onClick={() => onRetry(run)} title="اجرای دوباره با همین گراف" aria-label="اجرای دوباره"><RotateCcw size={14} /></button>}
+              : <button type="button" className="workflow-tab-icon-button" disabled={busy} onClick={() => onRetry(run)} title="اجرای دوباره با همین گراف" aria-label="اجرای دوباره"><RotateCcw size={14} /></button>}
           </div>
         ))}
         {runs.length === 0 && <div className="empty-state small">هنوز اجرای ذخیره‌شده‌ای برای این پروژه وجود ندارد.</div>}
@@ -44,13 +45,12 @@ type RightPanelProps = {
   selectedFlow: { nodes: Node[]; edges: Edge[]; mode: 'all' | 'selected' };
   historyCollapsed: boolean;
   setHistoryCollapsed: Dispatch<SetStateAction<boolean>>;
-  runHistory: Run[];
+  runHistory: RunSummary[];
   currentRun: Run | null;
   busy: boolean;
-  setCurrentRun: Dispatch<SetStateAction<Run | null>>;
-  setMessage: Dispatch<SetStateAction<string>>;
-  retryRun: (run: Run) => void | Promise<void>;
-  cancelRun: (run: Run) => void | Promise<void>;
+  retryRun: (run: Run | RunSummary) => void | Promise<void>;
+  cancelRun: (run: Run | RunSummary) => void | Promise<void>;
+  selectHistoricalRun: (run: RunSummary) => void | Promise<void>;
   refreshRunHistory: () => Promise<void>;
   selectedNode: Node | null;
   selectedEdge: Edge | null;
@@ -67,6 +67,10 @@ type RightPanelProps = {
   setQuickSettingsCollapsed: Dispatch<SetStateAction<boolean>>;
   selectedId: string | null;
   onAddOutputToBoard?: (output: Output, index: number) => void;
+  analysisBoardOpen: boolean;
+  boardTabs: AnalysisBoardTab[];
+  boardTargetId: string;
+  onBoardTargetChange: (id: string) => void;
 };
 
 const tabMeta: Record<RightTab, { label: string; icon: typeof BarChart3 }> = {
@@ -84,10 +88,9 @@ export function RightPanel({
   runHistory,
   currentRun,
   busy,
-  setCurrentRun,
-  setMessage,
   retryRun,
   cancelRun,
+  selectHistoricalRun,
   refreshRunHistory,
   selectedNode,
   selectedEdge,
@@ -99,7 +102,11 @@ export function RightPanel({
   renameNode,
   deleteSelected,
   selectedId,
-  onAddOutputToBoard
+  onAddOutputToBoard,
+  analysisBoardOpen,
+  boardTabs,
+  boardTargetId,
+  onBoardTargetChange
 }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<RightTab>('results');
 
@@ -154,6 +161,20 @@ export function RightPanel({
 
             {activeTab === 'results' && (
               <div className="workflow-right-tab-body workflow-results-tab">
+                {onAddOutputToBoard && (
+                  <div className="workflow-board-target">
+                    <label htmlFor="workflow-board-target-select">برد مقصد</label>
+                    <select
+                      id="workflow-board-target-select"
+                      value={analysisBoardOpen ? boardTargetId : 'analysis-board-main'}
+                      disabled={!analysisBoardOpen}
+                      onChange={(event) => onBoardTargetChange(event.target.value)}
+                    >
+                      {boardTabs.map((tab) => <option value={tab.id} key={tab.id}>{tab.name}</option>)}
+                    </select>
+                    <small>{analysisBoardOpen ? 'Pin به برد انتخاب‌شده اضافه می‌شود.' : 'در Workflow، Pin همیشه به برد اصلی می‌رود.'}</small>
+                  </div>
+                )}
                 <ResultsPanel run={currentRun} selectedNodeId={selectedId} collapsed={false} onToggle={() => setResultsCollapsed(true)} onAddToBoard={onAddOutputToBoard} />
               </div>
             )}
@@ -170,7 +191,7 @@ export function RightPanel({
                   runs={runHistory}
                   currentRunId={currentRun?.id}
                   busy={busy}
-                  onSelect={(run) => { setCurrentRun(run); setMessage('خروجی اجرای قبلی برای Debug نمایش داده شد'); }}
+                  onSelect={(run) => { void selectHistoricalRun(run); }}
                   onRetry={retryRun}
                   onCancel={cancelRun}
                   onRefresh={() => refreshRunHistory().catch(() => undefined)}

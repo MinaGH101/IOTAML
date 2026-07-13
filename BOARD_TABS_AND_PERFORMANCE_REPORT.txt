@@ -1,0 +1,52 @@
+IOTA ML — Board Tabs, Canvas UI, and Execution Performance Update
+
+Workflow UI
+- Enabled animated/moving connection lines for new, loaded, and default workflow edges.
+- Replaced transform-bound React Flow backgrounds with a fixed, higher-visibility dot grid.
+- The dot grid remains stationary while nodes and the workflow viewport move.
+- Topbar center now contains only Run, Analysis Board, and Save.
+- All other icon actions, including Back, are grouped on the left.
+
+Analysis Board UI
+- Added the same fixed, higher-visibility dot grid to the Analysis Board.
+- Collapsed node-list state is now one standalone node-list icon at the top-left.
+- The collapsed node list does not reserve a vertical sidebar.
+- Collapsed right panel now uses only the height required by its toolbar icons.
+- Added multiple named board tabs with add, select, rename, and delete actions.
+- The main board cannot be deleted.
+- Only the active board tab renders result cards, preventing inactive tabs from adding chart/table render cost.
+- The right results panel includes a destination-board selector while Analysis Board is open.
+- Pins made from Workflow and Node Modal always target the main board.
+- Board tabs are saved inside the workflow graph, with migration support for the previous single-board format.
+
+Frontend performance
+- Board viewport pan/zoom uses requestAnimationFrame and direct DOM transforms.
+- Card dragging/resizing avoids React state updates during pointer movement.
+- Result lookup is indexed by node instead of repeatedly scanning every output.
+- Board cards use content-visibility and containment to reduce chart/table paint and layout work.
+- Hidden workflow canvas paint is suppressed and edge animation pauses while Analysis Board is open.
+- Run-progress polling is adaptive, avoids overlapping requests, and compares scalar progress timestamps.
+
+Backend performance
+- Added warm Linux fork execution with preloaded NumPy, pandas, scikit-learn, and workflow executors.
+- Kept isolated-process timeout, cancellation, resource limits, stdout/stderr capture, and subprocess fallback.
+- Preserved the sanitized child environment and custom-node snapshot for warm-fork runs.
+- Redis pub/sub wakes idle workers immediately.
+- Idle PostgreSQL queue checks are throttled to one second while active process completion checks remain at 50 ms.
+- Progress and worker-state queries load only required Run columns.
+- Progress writes use update timestamps and avoid unnecessary graph fallback work.
+- Artifact finalization skips normal strings before filesystem resolution and deduplicates repeated file paths.
+- Scientific libraries are limited to one BLAS/OpenMP thread per execution by default to prevent oversubscription.
+
+Validation
+- Backend compile: passed
+- Backend tests: 16 passed
+- Warm-fork isolated execution smoke test: passed
+- Frontend TypeScript: passed
+- Stylelint: passed
+- Theme contract: passed
+- CSS debt contract: passed
+- Frontend production build: passed
+- Docker Compose YAML structure: passed
+
+Docker itself was not available in the validation environment, so containers were not started here.

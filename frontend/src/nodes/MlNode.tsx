@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { categoryClassName, nodeIcon } from '../components/NodePalette';
 import type { PortDefinition } from '../types';
@@ -26,7 +27,7 @@ function PortHandles({ ports, type }: { ports: PortDefinition[]; type: 'source' 
   return <>{fallback.map((port, index) => <Handle key={`${type}-${port.id}`} id={port.id} type={type} position={position} className={`typed-handle handle-${port.type}`} style={{ top: `${28 + index * 18}px` }} title={`${port.name || port.id}: ${port.type}`} />)}</>;
 }
 
-export function MlNode({ id, data, selected }: NodeProps) {
+function MlNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as EditableNodeData;
   const category = String(nodeData.category || 'Data Input');
   const label = String(nodeData.label || 'Node');
@@ -47,3 +48,5 @@ export function MlNode({ id, data, selected }: NodeProps) {
     </div>
   );
 }
+
+export const MlNode = memo(MlNodeComponent);

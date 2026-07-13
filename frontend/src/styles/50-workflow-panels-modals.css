@@ -811,7 +811,6 @@ align-items:center
 }
 
 .workflow-right-tabs-collapsed .workflow-right-tabs-toolbar {
-width:100%;
 min-height:100%;
 flex:1 1 auto;
 flex-direction:column;
@@ -1168,4 +1167,58 @@ grid-template-columns:1fr!important
   margin: 8px 0 0;
   padding: 8px;
   border-top: var(--theme-border-width) solid var(--theme-divider);
+}
+
+/* Collapsed right panel only occupies the height required by its controls. */
+.workflow-right-tabs-wrap.workflow-right-tabs-collapsed {
+height:auto!important;
+min-height:0!important;
+bottom:auto!important
+}
+
+.workflow-right-tabs-collapsed .workflow-right-tabs-panel {
+height:auto!important;
+min-height:0!important
+}
+
+.workflow-right-tabs-collapsed .workflow-right-tabs-toolbar {
+width:100%;
+min-height:0!important;
+height:auto!important;
+flex:0 0 auto!important;
+padding:8px 0!important
+}
+
+.workflow-board-target {
+flex:0 0 auto;
+display:grid;
+grid-template-columns:auto minmax(0,1fr);
+align-items:center;
+gap:5px 8px;
+padding:8px 10px;
+border-bottom:var(--theme-border-width) solid var(--theme-divider);
+background:var(--theme-panel-muted)
+}
+
+.workflow-board-target label {
+color:var(--theme-text-secondary);
+font-size:10px;
+font-weight:800
+}
+
+.workflow-board-target select {
+min-width:0;
+height:30px;
+padding:0 8px;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-control);
+background:var(--theme-control-bg);
+color:var(--theme-text);
+font-size:10px
+}
+
+.workflow-board-target small {
+grid-column:1 / -1;
+color:var(--theme-text-muted);
+font-size:9px
 }

@@ -147,6 +147,36 @@ export type RunNodeStatus = {
   error?: string | null;
 };
 
+export type RunProgressSnapshot = {
+  run_id: number;
+  status: RunStatus;
+  attempts: number;
+  max_attempts: number;
+  cancel_requested: boolean;
+  heartbeat_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  progress: { nodes_total?: number; nodes_finished?: number; percent?: number; current_node_id?: string | null; updated_at?: number } | null;
+  node_statuses: Record<string, RunNodeStatus>;
+};
+
+export type RunSummary = {
+  id: number;
+  status: RunStatus;
+  workflow_name: string;
+  project_id: number | null;
+  attempts: number;
+  max_attempts: number;
+  cancel_requested: boolean;
+  progress: { nodes_total?: number; nodes_finished?: number; percent?: number; current_node_id?: string | null; updated_at?: number } | null;
+  error: string | null;
+  created_at: string;
+  queued_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
 export type Run = {
   id: number;
   status: RunStatus;
@@ -165,7 +195,7 @@ export type Run = {
   locked_by: string | null;
   heartbeat_at: string | null;
   process_pid: number | null;
-  progress: { nodes_total?: number; nodes_finished?: number; percent?: number; current_node_id?: string | null } | null;
+  progress: { nodes_total?: number; nodes_finished?: number; percent?: number; current_node_id?: string | null; updated_at?: number } | null;
   node_statuses: Record<string, RunNodeStatus> | null;
   logs: Array<{ timestamp: string; level: string; message: string; context?: Record<string, unknown> }> | null;
   metrics: Record<string, unknown> | null;

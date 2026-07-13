@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import signal
 import socket
@@ -15,28 +16,146 @@ from typing import IO, Any
 
 from redis import Redis
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import CustomNode, Dataset, Run
 from app.domains.datasets.service import materialize_dataset
 from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths
+from app.services.jobs import QUEUE_NAME
 from app.services.run_queue import claim_next_run, fail_or_requeue, recover_stale_runs
 from app.services.run_state import append_log, progress_payload, utcnow
+
+
+class WorkerWakeup:
+    """Use Redis pub/sub for immediate queue wakeups with timed polling fallback."""
+
+    def __init__(self) -> None:
+        self._pubsub = None
+        try:
+            client = Redis.from_url(
+                get_settings().redis_url,
+                socket_connect_timeout=0.5,
+                socket_timeout=0.5,
+                health_check_interval=30,
+            )
+            self._pubsub = client.pubsub(ignore_subscribe_messages=True)
+            self._pubsub.subscribe(QUEUE_NAME)
+        except Exception:
+            self._pubsub = None
+
+    def wait(self, timeout: float) -> bool:
+        timeout = max(0.05, float(timeout))
+        if self._pubsub is None:
+            time.sleep(timeout)
+            return False
+        try:
+            return self._pubsub.get_message(timeout=timeout) is not None
+        except Exception:
+            try:
+                self._pubsub.close()
+            except Exception:
+                pass
+            self._pubsub = None
+            time.sleep(timeout)
+            return False
+
+    def close(self) -> None:
+        if self._pubsub is None:
+            return
+        try:
+            self._pubsub.close()
+        except Exception:
+            pass
+
+
+class ForkedProcessAdapter:
+    """Expose the subset of subprocess.Popen used by the worker."""
+
+    def __init__(self, process: multiprocessing.Process) -> None:
+        self._process = process
+
+    @property
+    def pid(self) -> int:
+        return int(self._process.pid or 0)
+
+    @property
+    def returncode(self) -> int | None:
+        return self._process.exitcode
+
+    def poll(self) -> int | None:
+        return None if self._process.is_alive() else self._process.exitcode
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        self._process.join(timeout)
+        if self._process.is_alive():
+            raise subprocess.TimeoutExpired('forked-workflow', timeout)
+        return self._process.exitcode
+
+    def terminate(self) -> None:
+        self._process.terminate()
+
+    def kill(self) -> None:
+        if hasattr(self._process, 'kill'):
+            self._process.kill()
+        else:
+            self._process.terminate()
+
+
+def _preload_execution_runtime() -> None:
+    """Import scientific dependencies once so Linux forked jobs start warm."""
+    if os.name != 'posix' or not get_settings().job_use_fork_fast_path:
+        return
+    try:
+        import numpy  # noqa: F401
+        import pandas  # noqa: F401
+        import sklearn  # noqa: F401
+        from app.workflow import executor as scientific_executor  # noqa: F401
+        from app.services import workflow_executor as legacy_executor  # noqa: F401
+    except Exception:
+        # The normal subprocess path remains available if preloading fails.
+        return
+
+
+def _run_forked_child(
+    snapshot_path: str,
+    result_path: str,
+    progress_path: str,
+    cancel_path: str,
+    stdout_fd: int,
+    stderr_fd: int,
+    memory_mb: int,
+    cpu_seconds: int,
+    child_environment: dict[str, str],
+) -> None:
+    os.environ.update(child_environment)
+    os.dup2(stdout_fd, 1)
+    os.dup2(stderr_fd, 2)
+    limiter = _resource_limiter(memory_mb, cpu_seconds)
+    if limiter:
+        limiter()
+    from app.workers.run_child import execute
+    code = execute(Path(snapshot_path), Path(result_path), Path(progress_path), Path(cancel_path))
+    raise SystemExit(code)
 
 
 @dataclass
 class ActiveRun:
     run_id: int
-    process: subprocess.Popen[str]
+    process: Any
     started_monotonic: float
+    timeout_seconds: int
     paths: dict[str, Path]
     stdout_handle: IO[str]
     stderr_handle: IO[str]
+    last_state_check_monotonic: float = 0.0
+    last_heartbeat_monotonic: float = 0.0
+    progress_mtime_ns: int = 0
     cancellation_sent_at: float | None = None
 
 
-def _terminate_process(process: subprocess.Popen[str]) -> None:
+def _terminate_process(process: Any) -> None:
     if process.poll() is not None:
         return
     try:
@@ -158,28 +277,63 @@ def start_run(run_id: int, worker_id: str) -> ActiveRun:
         _snapshot_run(db, run, paths)
         stdout_handle = paths['stdout'].open('w', encoding='utf-8')
         stderr_handle = paths['stderr'].open('w', encoding='utf-8')
-        command = [
-            sys.executable,
-            '-m',
-            'app.workers.run_child',
-            str(paths['snapshot']),
-            str(paths['result']),
-            str(paths['progress']),
-            str(paths['cancel']),
-        ]
-        process = subprocess.Popen(
-            command,
-            cwd=paths['root'],
-            env=_child_environment(paths),
-            stdout=stdout_handle,
-            stderr=stderr_handle,
-            text=True,
-            preexec_fn=_resource_limiter(get_settings().job_memory_limit_mb, min(run.timeout_seconds + 5, get_settings().job_cpu_limit_seconds)),
-        )
+        settings = get_settings()
+        cpu_seconds = min(run.timeout_seconds + 5, settings.job_cpu_limit_seconds)
+        use_fork = settings.job_use_fork_fast_path and os.name == 'posix' and 'fork' in multiprocessing.get_all_start_methods()
+        if use_fork:
+            context = multiprocessing.get_context('fork')
+            raw_process = context.Process(
+                target=_run_forked_child,
+                args=(
+                    str(paths['snapshot']),
+                    str(paths['result']),
+                    str(paths['progress']),
+                    str(paths['cancel']),
+                    stdout_handle.fileno(),
+                    stderr_handle.fileno(),
+                    settings.job_memory_limit_mb,
+                    cpu_seconds,
+                    _child_environment(paths),
+                ),
+                daemon=False,
+            )
+            raw_process.start()
+            process = ForkedProcessAdapter(raw_process)
+            launch_mode = 'warm-fork'
+        else:
+            command = [
+                sys.executable,
+                '-m',
+                'app.workers.run_child',
+                str(paths['snapshot']),
+                str(paths['result']),
+                str(paths['progress']),
+                str(paths['cancel']),
+            ]
+            process = subprocess.Popen(
+                command,
+                cwd=paths['root'],
+                env=_child_environment(paths),
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                text=True,
+                preexec_fn=_resource_limiter(settings.job_memory_limit_mb, cpu_seconds),
+            )
+            launch_mode = 'subprocess'
         run.process_pid = process.pid
-        run.logs = append_log(run.logs, 'info', 'Isolated execution process started.', pid=process.pid)
+        run.logs = append_log(run.logs, 'info', 'Isolated execution process started.', pid=process.pid, launch_mode=launch_mode)
         db.commit()
-        return ActiveRun(run.id, process, time.monotonic(), paths, stdout_handle, stderr_handle)
+        started = time.monotonic()
+        return ActiveRun(
+            run_id=run.id,
+            process=process,
+            started_monotonic=started,
+            timeout_seconds=run.timeout_seconds,
+            paths=paths,
+            stdout_handle=stdout_handle,
+            stderr_handle=stderr_handle,
+            last_heartbeat_monotonic=started,
+        )
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -189,12 +343,25 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
-def _sync_progress(db, run: Run, active: ActiveRun) -> None:
-    payload = _read_json(active.paths['progress'])
+def _sync_progress(db, run: Run, active: ActiveRun, *, force: bool = False) -> bool:
+    progress_path = active.paths['progress']
+    try:
+        mtime_ns = progress_path.stat().st_mtime_ns
+    except OSError:
+        return False
+    if not force and mtime_ns == active.progress_mtime_ns:
+        return False
+
+    payload = _read_json(progress_path)
     if not payload:
-        return
+        return False
+    active.progress_mtime_ns = mtime_ns
     run.node_statuses = payload.get('node_statuses') or run.node_statuses
-    run.progress = payload.get('progress') or progress_payload(run.workflow_graph or {}, run.node_statuses or {})
+    next_progress = dict(payload.get('progress') or run.progress or {})
+    if payload.get('updated_at') is not None:
+        next_progress['updated_at'] = payload['updated_at']
+    run.progress = next_progress
+    return True
 
 
 def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forced_error: str | None = None) -> None:
@@ -208,7 +375,7 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
         run = db.get(Run, active.run_id)
         if run is None:
             return
-        _sync_progress(db, run, active)
+        _sync_progress(db, run, active, force=True)
         run.worker_exit_code = active.process.returncode
         status = forced_status or str(result.get('status') or ('succeeded' if active.process.returncode == 0 else 'failed'))
         if forced_status is None and active.process.returncode == -getattr(signal, 'SIGXCPU', 24):
@@ -260,33 +427,62 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
 
 def monitor_active(active: ActiveRun, worker_id: str) -> bool:
     now_mono = time.monotonic()
-    with SessionLocal() as db:
-        run = db.get(Run, active.run_id)
-        if run is None:
-            _terminate_process(active.process)
-            return True
-        if run.locked_by != worker_id:
-            _terminate_process(active.process)
-            return True
-        run.heartbeat_at = utcnow()
-        _sync_progress(db, run, active)
-        elapsed = now_mono - active.started_monotonic
-        if run.cancel_requested:
-            active.paths['cancel'].touch(exist_ok=True)
-            _terminate_process(active.process)
-            db.commit()
-            finalize_active(active, forced_status='cancelled', forced_error='Cancelled by user.')
-            return True
-        if elapsed > run.timeout_seconds:
-            active.paths['cancel'].touch(exist_ok=True)
-            _terminate_process(active.process)
-            db.commit()
-            finalize_active(active, forced_status='timed_out', forced_error=f'Run exceeded timeout of {run.timeout_seconds} seconds.')
-            return True
-        db.commit()
+    settings = get_settings()
 
+    # Process completion and wall-clock timeout are checked every fast worker tick,
+    # while database heartbeat/progress writes are deliberately throttled.
     if active.process.poll() is not None:
         finalize_active(active)
+        return True
+
+    elapsed = now_mono - active.started_monotonic
+    if elapsed > active.timeout_seconds:
+        active.paths['cancel'].touch(exist_ok=True)
+        _terminate_process(active.process)
+        finalize_active(
+            active,
+            forced_status='timed_out',
+            forced_error=f'Run exceeded timeout of {active.timeout_seconds} seconds.',
+        )
+        return True
+
+    if now_mono - active.last_state_check_monotonic < settings.job_state_poll_interval_seconds:
+        return False
+    active.last_state_check_monotonic = now_mono
+
+    should_cancel = False
+    with SessionLocal() as db:
+        run = db.execute(
+            select(Run)
+            .options(load_only(
+                Run.id,
+                Run.locked_by,
+                Run.cancel_requested,
+                Run.heartbeat_at,
+                Run.node_statuses,
+                Run.progress,
+            ))
+            .where(Run.id == active.run_id)
+        ).scalar_one_or_none()
+        if run is None or run.locked_by != worker_id:
+            _terminate_process(active.process)
+            active.stdout_handle.close()
+            active.stderr_handle.close()
+            return True
+
+        dirty = _sync_progress(db, run, active)
+        if now_mono - active.last_heartbeat_monotonic >= settings.job_heartbeat_interval_seconds:
+            run.heartbeat_at = utcnow()
+            active.last_heartbeat_monotonic = now_mono
+            dirty = True
+        should_cancel = bool(run.cancel_requested)
+        if dirty:
+            db.commit()
+
+    if should_cancel:
+        active.paths['cancel'].touch(exist_ok=True)
+        _terminate_process(active.process)
+        finalize_active(active, forced_status='cancelled', forced_error='Cancelled by user.')
         return True
     return False
 
@@ -317,6 +513,7 @@ def cleanup_old_runtime_directories() -> int:
 
 def run_worker() -> None:
     settings = get_settings()
+    _preload_execution_runtime()
     worker_id = os.getenv('WORKER_ID') or f'{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:8]}'
     stopping = False
 
@@ -329,6 +526,10 @@ def run_worker() -> None:
     active: dict[int, ActiveRun] = {}
     last_recovery = 0.0
     last_cleanup = 0.0
+    last_health_publish = 0.0
+    last_queue_poll = 0.0
+    queue_woken = True
+    wakeup = WorkerWakeup()
 
     while not stopping or active:
         now = time.monotonic()
@@ -348,24 +549,33 @@ def run_worker() -> None:
             if monitor_active(item, worker_id):
                 active.pop(run_id, None)
 
-        while not stopping and len(active) < settings.job_worker_concurrency:
-            with SessionLocal.begin() as db:
-                run = claim_next_run(db, worker_id)
-                run_id = run.id if run else None
-            if run_id is None:
-                break
-            try:
-                active[run_id] = start_run(run_id, worker_id)
-            except Exception as exc:
-                with SessionLocal() as db:
-                    failed = db.get(Run, run_id)
-                    if failed:
-                        fail_or_requeue(db, failed, error=f'Failed to start isolated process: {exc}')
-                        db.commit()
+        can_claim = not stopping and len(active) < settings.job_worker_concurrency
+        queue_poll_due = queue_woken or now - last_queue_poll >= settings.job_poll_interval_seconds
+        if can_claim and queue_poll_due:
+            last_queue_poll = now
+            queue_woken = False
+            while len(active) < settings.job_worker_concurrency:
+                with SessionLocal.begin() as db:
+                    run = claim_next_run(db, worker_id)
+                    run_id = run.id if run else None
+                if run_id is None:
+                    break
+                try:
+                    active[run_id] = start_run(run_id, worker_id)
+                except Exception as exc:
+                    with SessionLocal() as db:
+                        failed = db.get(Run, run_id)
+                        if failed:
+                            fail_or_requeue(db, failed, error=f'Failed to start isolated process: {exc}')
+                            db.commit()
 
-        publish_worker_health(worker_id, len(active))
-        time.sleep(settings.job_poll_interval_seconds)
+        if now - last_health_publish >= settings.job_worker_health_interval_seconds:
+            publish_worker_health(worker_id, len(active))
+            last_health_publish = now
+        wait_timeout = settings.job_active_poll_interval_seconds if active else settings.job_poll_interval_seconds
+        queue_woken = wakeup.wait(wait_timeout) or queue_woken
 
+    wakeup.close()
     for item in active.values():
         _terminate_process(item.process)
         finalize_active(item, forced_status='failed', forced_error='Worker shut down during execution.')

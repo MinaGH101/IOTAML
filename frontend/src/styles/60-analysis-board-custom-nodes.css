@@ -3,7 +3,7 @@ position:absolute;
 inset:0;
 overflow:hidden;
 direction:ltr;
-background:radial-gradient(circle at 12% 10%,var(--theme-secondary-soft),var(--theme-transparent) 28%),radial-gradient(circle at 90% 20%,var(--theme-primary-soft),var(--theme-transparent) 28%),radial-gradient(circle,var(--theme-canvas-dot) 1.05px,var(--theme-transparent) 1.25px) 0 0 / 24px 24px,var(--theme-board-bg)
+background:radial-gradient(circle at 12% 10%,var(--theme-secondary-soft),var(--theme-transparent) 28%),radial-gradient(circle at 90% 20%,var(--theme-primary-soft),var(--theme-transparent) 28%),radial-gradient(circle,var(--theme-canvas-dot) 1.05px,var(--theme-transparent) 1.25px) 0 0 / 18px 18px,var(--theme-board-bg)
 }
 
 .analysis-board-toolbar {
@@ -1534,4 +1534,242 @@ button.tiny-action:not(.icon-only,.icon-action,.danger):disabled {
 opacity:.5!important;
 cursor:not-allowed!important;
 transform:none!important
+}
+
+/* Board performance: isolate expensive tables/charts from pan and drag layout work. */
+.analysis-board-canvas {
+contain:layout paint style
+}
+
+.analysis-board-world {
+contain:layout style
+}
+
+.analysis-board-card {
+contain:layout paint style;
+transform:translate3d(0,0,0)
+}
+
+.analysis-board-interacting,
+.analysis-board-interacting * {
+user-select:none!important
+}
+
+.analysis-board-interacting .analysis-board-card-body {
+pointer-events:none
+}
+
+/* Fixed canvas grid and board tabs. The dot layer never follows the viewport. */
+.workflow-flow-layer {
+background-color:var(--theme-board-bg);
+background-image:radial-gradient(circle,var(--theme-canvas-dot) 1.35px,var(--theme-transparent) 1.55px);
+background-position:0 0;
+background-size:18px 18px
+}
+
+.workflow-flow-layer .react-flow,
+.workflow-flow-layer .react-flow__renderer,
+.workflow-flow-layer .react-flow__pane {
+background:var(--theme-transparent)!important
+}
+
+.workflow-flow-layer.is-hidden {
+content-visibility:hidden
+}
+
+.workflow-flow-layer.is-hidden .react-flow__edge.animated path {
+animation-play-state:paused!important
+}
+
+.react-flow__edge.animated path {
+stroke-dasharray:6 5;
+animation-duration:1.35s
+}
+
+.analysis-board-canvas {
+inset:76px 0 0!important;
+background-color:var(--theme-board-bg);
+background-image:radial-gradient(circle,var(--theme-canvas-dot) 1.35px,var(--theme-transparent) 1.55px);
+background-position:0 0;
+background-size:18px 18px
+}
+
+.analysis-board-toolbar-direct {
+position:fixed!important;
+top:78px!important;
+left:50%!important;
+right:auto!important;
+width:min(760px,calc(100vw - 720px));
+min-width:440px;
+transform:translateX(-50%);
+z-index:35!important;
+display:grid;
+gap:7px;
+padding:8px 10px;
+border:var(--theme-border-width) solid var(--theme-divider);
+background:var(--theme-panel-bg)!important
+}
+
+.analysis-board-toolbar-main {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+min-width:0
+}
+
+.analysis-board-tabs-row {
+display:flex;
+align-items:center;
+gap:6px;
+min-width:0;
+direction:rtl
+}
+
+.analysis-board-tabs-scroll {
+flex:1 1 auto;
+min-width:0;
+display:flex;
+align-items:center;
+gap:5px;
+overflow-x:auto;
+overflow-y:hidden;
+scrollbar-width:thin
+}
+
+.analysis-board-tab {
+flex:0 0 auto;
+display:flex;
+align-items:center;
+gap:2px;
+height:30px;
+padding:2px 4px;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-control);
+background:var(--theme-control-bg);
+color:var(--theme-text-muted)
+}
+
+.analysis-board-tab.active {
+border-color:color-mix(in srgb,var(--theme-primary) 52%,var(--theme-control-border));
+background:var(--theme-selected-bg);
+color:var(--theme-text)
+}
+
+.analysis-board-tab-select {
+display:flex;
+align-items:center;
+gap:6px;
+min-width:76px;
+max-width:170px;
+height:24px;
+padding:0 5px;
+border:0;
+background:var(--theme-transparent);
+color:inherit
+}
+
+.analysis-board-tab-select span {
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+font-size:10.5px;
+font-weight:800
+}
+
+.analysis-board-tab-select small {
+color:var(--theme-text-muted);
+font-size:9px
+}
+
+.analysis-board-tab input {
+width:118px;
+height:24px;
+padding:0 6px;
+border:var(--theme-border-width) solid var(--theme-primary);
+border-radius:var(--theme-radius-control);
+background:var(--theme-control-bg);
+color:var(--theme-text);
+font-size:10.5px
+}
+
+.analysis-board-tab-action,
+.analysis-board-add-tab {
+width:24px!important;
+height:24px!important;
+min-width:24px!important;
+min-height:24px!important;
+display:inline-grid!important;
+place-items:center!important;
+padding:0!important;
+border:0!important;
+background:var(--theme-transparent)!important;
+color:var(--theme-text-muted)!important
+}
+
+.analysis-board-tab-action:hover,
+.analysis-board-add-tab:hover {
+color:var(--theme-primary)!important
+}
+
+.analysis-board-tab-action.danger:hover {
+color:var(--theme-danger)!important
+}
+
+.analysis-output-picker {
+top:164px!important;
+right:calc(var(--theme-results-panel-width) + 28px)!important
+}
+
+.analysis-board-card {
+content-visibility:auto;
+contain-intrinsic-size:440px 330px
+}
+
+.analysis-board-node-launcher {
+width:42px!important;
+height:42px!important;
+min-width:42px!important;
+min-height:42px!important;
+display:grid!important;
+place-items:center!important;
+padding:0!important;
+border:var(--theme-border-width) solid var(--theme-divider)!important;
+border-radius:var(--theme-radius-panel)!important;
+background:var(--theme-panel-bg)!important;
+color:var(--theme-primary)!important
+}
+
+.analysis-board-node-launcher:hover {
+background:var(--theme-hover-bg)!important;
+color:var(--theme-primary-hover)!important
+}
+
+.workflow-nodes-list-panel .workflow-float-toggle-left {
+left:12px!important;
+right:auto!important;
+top:12px!important;
+transform:none!important
+}
+
+@media (width <= 1280px) {
+.analysis-board-toolbar-direct {
+width:min(620px,calc(100vw - 500px));
+min-width:360px
+}
+}
+
+@media (width <= 900px) {
+.analysis-board-toolbar-direct {
+left:78px!important;
+right:78px!important;
+width:auto;
+min-width:0;
+transform:none
+}
+
+.analysis-board-title span,
+.analysis-board-dirty {
+display:none
+}
 }

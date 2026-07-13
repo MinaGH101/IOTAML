@@ -1,5 +1,5 @@
 import { Download, Maximize2, PanelRightClose, PanelRightOpen, Pin, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -108,19 +108,29 @@ function MuiChartShell({ children, height = 280 }: { children: React.ReactNode; 
   return <div className="mui-chart-wrap" style={{ height }}>{children}</div>;
 }
 
-function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns?: string[] }) {
-  const cols = columns?.length ? columns : Object.keys(rows[0] || {});
+const DATA_GRID_PAGE_SIZES = [5, 10, 12, 25, 50, 100];
+
+function initialPageSize(rowCount: number) {
+  if (rowCount <= 5) return 5;
+  if (rowCount <= 10) return 10;
+  if (rowCount <= 12) return 12;
+  return 25;
+}
+
+const TableView = memo(function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns?: string[] }) {
+  const cols = useMemo(() => columns?.length ? columns : Object.keys(rows[0] || {}), [columns, rows]);
   const c = plotColors();
-  const gridRows = rows.map((row, index) => ({ __iota_row_id: index, ...row }));
-  const gridColumns: GridColDef[] = cols.map((field) => ({
+  const gridRows = useMemo(() => rows.map((row, index) => ({ __iota_row_id: index, ...row })), [rows]);
+  const gridColumns = useMemo<GridColDef[]>(() => cols.map((field) => ({
     field,
     headerName: field,
     minWidth: 130,
     flex: 1,
     sortable: true,
     valueGetter: (_value, row) => (row as Record<string, unknown>)[field],
-    valueFormatter: (value: unknown) => fmt(value)
-  }));
+    valueFormatter: (value: unknown) => fmt(value),
+  })), [cols]);
+  const pageSize = initialPageSize(rows.length);
 
   return (
     <div className="mui-table-wrap">
@@ -130,8 +140,8 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
         getRowId={(row) => row.__iota_row_id as number}
         density="compact"
         disableRowSelectionOnClick
-        pageSizeOptions={[25, 50, 100]}
-        initialState={{ pagination: { paginationModel: { pageSize: Math.min(25, Math.max(5, rows.length || 5)), page: 0 } } }}
+        pageSizeOptions={DATA_GRID_PAGE_SIZES}
+        initialState={{ pagination: { paginationModel: { pageSize, page: 0 } } }}
         sx={{
           border: 0,
           color: c.text,
@@ -177,7 +187,7 @@ function TableView({ rows, columns }: { rows: Record<string, unknown>[]; columns
       />
     </div>
   );
-}
+});
 
 function MetricsView({ metrics }: { metrics: Record<string, unknown> }) {
   return <div className="metric-grid">{Object.entries(metrics).map(([key, value]) => <div className="metric-card workflow-shell-card" key={key}><span>{key}</span><b>{fmt(value)}</b></div>)}</div>;
@@ -360,7 +370,7 @@ function PlotGroupView({ output, onAddToBoard }: { output: Output; onAddToBoard?
   );
 }
 
-export function OutputBody({ output, onAddToBoard }: { output: Output; onAddToBoard?: (output: Output, index: number) => void }) {
+export const OutputBody = memo(function OutputBody({ output, onAddToBoard }: { output: Output; onAddToBoard?: (output: Output, index: number) => void }) {
   const kind = String(output.kind || 'json');
   if (kind === 'table') return <TableView rows={(output.rows as Record<string, unknown>[] | undefined) || []} columns={output.columns as string[] | undefined} />;
   if (kind === 'metrics') return <MetricsView metrics={(output.metrics as Record<string, unknown> | undefined) || {}} />;
@@ -372,9 +382,9 @@ export function OutputBody({ output, onAddToBoard }: { output: Output; onAddToBo
   if (kind === 'matrix') return <MatrixView output={output} />;
   if (kind === 'boxplot') return <BoxView output={output} />;
   return <pre>{JSON.stringify(output.value ?? output, null, 2)}</pre>;
-}
+});
 
-export function OutputCard({ output, index, variant = 'panel', onAddToBoard }: { output: Output; index: number; variant?: 'panel' | 'modal'; onAddToBoard?: (output: Output, index: number) => void }) {
+export const OutputCard = memo(function OutputCard({ output, index, variant = 'panel', onAddToBoard }: { output: Output; index: number; variant?: 'panel' | 'modal'; onAddToBoard?: (output: Output, index: number) => void }) {
   const [focused, setFocused] = useState(false);
   const title = displayTitle(output, index);
   const cardClass = variant === 'modal' ? 'modal-output-card output-card workflow-shell-card' : 'output-card workflow-shell-card';
@@ -408,7 +418,7 @@ export function OutputCard({ output, index, variant = 'panel', onAddToBoard }: {
       )}
     </>
   );
-}
+});
 
 function displayTitle(output: Output, index: number) {
   const base = String(output.title || `خروجی ${index + 1}`);
@@ -416,7 +426,7 @@ function displayTitle(output: Output, index: number) {
   return source ? `${base} · ${source}` : base;
 }
 
-export function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddToBoard }: { run: Run | null; selectedNodeId: string | null; collapsed: boolean; onToggle: () => void; onAddToBoard?: (output: Output, index: number) => void }) {
+export const ResultsPanel = memo(function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddToBoard }: { run: Run | null; selectedNodeId: string | null; collapsed: boolean; onToggle: () => void; onAddToBoard?: (output: Output, index: number) => void }) {
   const comparison = (run?.artifacts?.comparison || []) as Array<Record<string, unknown>>;
   const outputs = useMemo(() => normalizeOutputs(run, selectedNodeId), [run, selectedNodeId]);
 
@@ -453,4 +463,4 @@ export function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddTo
       </div>
     </section>
   );
-}
+});

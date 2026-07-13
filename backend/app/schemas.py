@@ -87,6 +87,25 @@ class RunOut(BaseModel):
         from_attributes = True
 
 
+class RunSummaryOut(BaseModel):
+    id: int
+    status: str
+    workflow_name: str
+    project_id: int | None = None
+    attempts: int
+    max_attempts: int
+    cancel_requested: bool
+    progress: dict | None
+    error: str | None
+    created_at: datetime
+    queued_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
 class ProjectBase(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str = ""

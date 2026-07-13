@@ -1,5 +1,5 @@
 import { API_URL, ApiError } from '../api';
-import type { Project, ProjectPayload, Run, UserProfile } from '../types';
+import type { Project, ProjectPayload, UserProfile } from '../types';
 
 export type Theme = 'light' | 'dark';
 export type UiMessage = { text: string; tone: 'success' | 'error' | 'info' } | null;
@@ -91,7 +91,7 @@ export function sameStringArray(a: string[], b: string[]) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
-export function runDuration(run: Run) {
+export function runDuration(run: { started_at: string | null; finished_at: string | null }) {
   if (!run.started_at || !run.finished_at) return '—';
   const ms = new Date(run.finished_at).getTime() - new Date(run.started_at).getTime();
   if (!Number.isFinite(ms) || ms < 0) return '—';

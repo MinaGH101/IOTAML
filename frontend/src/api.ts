@@ -1,4 +1,4 @@
-import type { Artifact, ArtifactUsage, CustomNodeDefinition, CustomNodePayload, Dataset, LoginResponse, NodeCatalogResponse, Project, ProjectPayload, RegistryNode, Run, UserProfile, Workflow, WorkflowValidationResult } from './types';
+import type { Artifact, ArtifactUsage, CustomNodeDefinition, CustomNodePayload, Dataset, LoginResponse, NodeCatalogResponse, Project, ProjectPayload, RegistryNode, Run, RunProgressSnapshot, RunSummary, UserProfile, Workflow, WorkflowValidationResult } from './types';
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const AUTH_KEY = 'iota-auth-token';
@@ -108,13 +108,13 @@ export const api = {
   createRun: (payload: Record<string, unknown>) =>
     request<Run>('/api/runs', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
   getRun: (id: number) => request<Run>(`/api/runs/${id}`),
-  runProgress: (id: number) => request<Record<string, unknown>>(`/api/runs/${id}/progress`),
+  runProgress: (id: number) => request<RunProgressSnapshot>(`/api/runs/${id}/progress`),
   nodePreview: (runId: number, nodeId: string) => request<Record<string, unknown>>(`/api/runs/${runId}/nodes/${nodeId}/preview`),
   cancelRun: (id: number) => request<Run>(`/api/runs/${id}/cancel`, { method: 'POST' }),
   retryRun: (id: number) => request<Run>(`/api/runs/${id}/retry`, { method: 'POST' }),
   runLogs: (id: number) => request<{ run_id: number; status: string; logs: Run['logs'] }>(`/api/runs/${id}/logs`),
   queueHealth: () => request<Record<string, unknown>>('/api/runs/queue/health'),
-  listRuns: (projectId?: number | null) => request<Run[]>(`/api/runs${projectQuery(projectId)}`),
+  listRuns: (projectId?: number | null) => request<RunSummary[]>(`/api/runs${projectQuery(projectId)}`),
 
   artifacts: (projectId?: number | null) => request<Artifact[]>(`/api/artifacts${projectQuery(projectId)}`),
   artifactUsage: (projectId?: number | null) => request<ArtifactUsage>(`/api/artifacts/usage${projectQuery(projectId)}`),

@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     auth_token_ttl_seconds: int = 60 * 60 * 12
 
     job_poll_interval_seconds: float = 1.0
+    job_active_poll_interval_seconds: float = 0.05
+    job_state_poll_interval_seconds: float = 0.75
+    job_use_fork_fast_path: bool = True
     job_heartbeat_interval_seconds: int = 10
+    job_worker_health_interval_seconds: float = 5.0
     job_stale_after_seconds: int = 45
     job_default_timeout_seconds: int = 7200
     job_default_max_attempts: int = 3

@@ -34,12 +34,12 @@
   /* Page and component surfaces */
   --theme-app-bg: #07080a;
   --theme-workspace-bg: #090b0e;
-  --theme-board-bg: #212428;
+  --theme-board-bg: #292e2f;
   --theme-topbar-bg: #0c0e12;
   --theme-panel-bg: #0f1217;
   --theme-panel-muted: #12161c;
   --theme-panel-raised: #161b22;
-  --theme-control-bg: #0b0d11;
+  --theme-control-bg: #0c0b11;
   --theme-popup-bg: #101319;
   --theme-hover-bg: #151a21;
   --theme-selected-bg: #121d2a;
@@ -78,7 +78,7 @@
   --theme-chart-grid: var(--theme-divider);
 
   /* Workflow palette items */
-  --theme-node-menu-item-bg: #181c23;
+  --theme-node-menu-item-bg: #1e2228;
   --theme-node-menu-item-hover-bg: #23313a;
 }
 
@@ -216,7 +216,7 @@
   /* Workflow and data presentation roles */
   --theme-results-panel-width: 380px;
   --theme-page-max-width: 1500px;
-  --theme-canvas-dot: color-mix(in srgb, var(--theme-text-muted) 32%, transparent);
+  --theme-canvas-dot: color-mix(in srgb, var(--theme-text-secondary) 15%, transparent);
   --theme-node-bg: var(--theme-panel-muted);
   --theme-node-bg-hover: var(--theme-hover-bg);
   --theme-node-text: var(--theme-text);

@@ -1162,7 +1162,7 @@ background-image:none
 
 .workspace,.manager-page {
 background:radial-gradient(circle,color-mix(in srgb,var(--theme-control-border) 0%,var(--theme-transparent)) 0,var(--theme-transparent) 0),var(--theme-workspace-bg);
-background-size:24px 24px,auto
+background-size:18px 18px,auto
 }
 
 .board {
@@ -1213,7 +1213,7 @@ z-index:-2!important
 .ml-node::after {
 inset:var(--theme-border-width)!important;
 z-index:-1!important;
-background:var(--theme-node-bg)
+background:var(--theme-node-menu-item-bg)
 }
 
 .ml-node:hover::after,.ml-node.selected::after {
