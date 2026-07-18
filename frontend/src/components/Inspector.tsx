@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Ungroup } from 'lucide-react';
 import { useState } from 'react';
 import type { Dataset, RegistryNode } from '../types';
 import { categoryLabel } from './NodePalette';
@@ -12,13 +12,16 @@ type Props = {
   aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
+  availableRows?: Record<string, unknown>[];
   onChange: (nodeId: string, params: Record<string, unknown>) => void;
   onRename: (nodeId: string, label: string) => void;
   onDelete: () => void;
+  onUngroupComponent?: (node: Node) => void;
   embedded?: boolean;
+  readOnly?: boolean;
 };
 
-export function Inspector({ selectedNode, selectedEdge, registry, aliases, datasets, availableColumns, onChange, onRename, onDelete, embedded = false }: Props) {
+export function Inspector({ selectedNode, selectedEdge, registry, aliases, datasets, availableColumns, availableRows = [], onChange, onRename, onDelete, onUngroupComponent, embedded = false, readOnly = false }: Props) {
   const [collapsed, setCollapsed] = useState(true);
 
   const edgeBody = selectedEdge ? (
@@ -26,7 +29,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
       <span>اتصال انتخاب‌شده</span>
       <div className="inspector-name-row">
         <b>{selectedEdge.source} → {selectedEdge.target}</b>
-        <button className="danger icon-only compact-danger" title="حذف اتصال" aria-label="حذف اتصال" type="button" onClick={onDelete}><Trash2 size={13} /></button>
+        {!readOnly && <button className="danger icon-only compact-danger" title="حذف اتصال" aria-label="حذف اتصال" type="button" onClick={onDelete}><Trash2 size={13} /></button>}
       </div>
       <p>برای حذف اتصال می‌توانید کلید Delete را هم بزنید.</p>
     </div>
@@ -40,11 +43,18 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
         <span>{categoryLabel(String(selectedNode.data.category))}</span>
         <div className="inspector-name-row">
           <b>{String(selectedNode.data.typeLabel || selectedNode.data.label)} · {String(selectedNode.data.label)}</b>
-          <button className="danger icon-only compact-danger" title="حذف نود" aria-label="حذف نود" type="button" onClick={onDelete}><Trash2 size={13} /></button>
+          {!readOnly && <button className="danger icon-only compact-danger" title="حذف نود" aria-label="حذف نود" type="button" onClick={onDelete}><Trash2 size={13} /></button>}
         </div>
         <p>برای پنجره کامل شبیه n8n روی نود دابل‌کلیک کنید.</p>
+        {!readOnly && Boolean(selectedNode.data?.componentSnapshot) && onUngroupComponent && (
+          <button type="button" className="secondary-button compact inspector-component-ungroup" onClick={() => onUngroupComponent(selectedNode)}>
+            <Ungroup size={14} /> بازگرداندن به نودهای اصلی
+          </button>
+        )}
       </div>
-      <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
+      <fieldset className="inspector-readonly-fieldset" disabled={readOnly}>
+        <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableRows={availableRows} onParamsChange={onChange} onRename={onRename} />
+      </fieldset>
     </>
   ) : null;
 
@@ -61,7 +71,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
             <span>اتصال انتخاب‌شده</span>
             <div className="inspector-name-row">
               <b>{selectedEdge.source} → {selectedEdge.target}</b>
-              <button className="danger icon-only compact-danger" title="حذف اتصال" aria-label="حذف اتصال" type="button" onClick={onDelete}><Trash2 size={13} /></button>
+              {!readOnly && <button className="danger icon-only compact-danger" title="حذف اتصال" aria-label="حذف اتصال" type="button" onClick={onDelete}><Trash2 size={13} /></button>}
             </div>
             <p>برای حذف اتصال می‌توانید کلید Delete را هم بزنید.</p>
           </div>
@@ -87,11 +97,13 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
           <span>{categoryLabel(String(selectedNode.data.category))}</span>
           <div className="inspector-name-row">
             <b>{String(selectedNode.data.typeLabel || selectedNode.data.label)} · {String(selectedNode.data.label)}</b>
-            <button className="danger icon-only compact-danger" title="حذف نود" aria-label="حذف نود" type="button" onClick={onDelete}><Trash2 size={13} /></button>
+            {!readOnly && <button className="danger icon-only compact-danger" title="حذف نود" aria-label="حذف نود" type="button" onClick={onDelete}><Trash2 size={13} /></button>}
           </div>
           <p>برای پنجره کامل شبیه n8n روی نود دابل‌کلیک کنید.</p>
         </div>
-        <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onChange} onRename={onRename} />
+        <fieldset className="inspector-readonly-fieldset" disabled={readOnly}>
+          <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableRows={availableRows} onParamsChange={onChange} onRename={onRename} />
+        </fieldset>
       </>}
     </aside>
   );

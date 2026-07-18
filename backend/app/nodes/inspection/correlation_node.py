@@ -51,7 +51,7 @@ class CorrelationMatrixNode(BaseNode):
         matrix_output = output(
             str(node['id']),
             f'{node_label(node)} · heatmap',
-            'matrix',
+            'heatmap',
             labels=plot_labels,
             matrix=plot_corr.values.tolist(),
             method=method,

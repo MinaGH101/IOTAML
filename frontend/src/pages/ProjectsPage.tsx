@@ -95,7 +95,7 @@ export function ProjectsPanel({
 
             <label className="project-filter-field">
               نام پروژه
-              <div className="project-filter-search"><Search size={14} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="جستجو بر اساس نام، مدیر، توضیح" /></div>
+              <div className="project-filter-search"><Search size={17}/><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="جستجو بر اساس نام، مدیر، توضیح" /></div>
             </label>
 
             <label className="project-filter-field">
@@ -188,6 +188,8 @@ export function ProjectDetailPanel({
   const [message, setMessage] = useState<UiMessage>(null);
   const [busy, setBusy] = useState(false);
   const [importingWorkflow, setImportingWorkflow] = useState(false);
+  const [workflowNameDrafts, setWorkflowNameDrafts] = useState<Record<number, string>>({});
+  const [workflowActionId, setWorkflowActionId] = useState<number | null>(null);
   const workflowImportRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -200,6 +202,9 @@ export function ProjectDetailPanel({
     onProjectUpdated(nextProject);
     setDatasets(datasetList);
     setWorkflows(workflowList);
+    setWorkflowNameDrafts((current) => Object.fromEntries(
+      workflowList.map((workflow) => [workflow.id, current[workflow.id] ?? workflow.name])
+    ));
     setArtifactUsage(usage);
   }, [onProjectUpdated, project.id]);
 
@@ -284,6 +289,48 @@ export function ProjectDetailPanel({
     }
   };
 
+  const saveWorkflowName = async (workflow: Workflow) => {
+    const name = (workflowNameDrafts[workflow.id] ?? workflow.name).trim();
+    if (!name) {
+      setMessage({ text: 'نام جریان نمی‌تواند خالی باشد', tone: 'error' });
+      return;
+    }
+    if (name === workflow.name) return;
+
+    setWorkflowActionId(workflow.id);
+    try {
+      const saved = await api.renameWorkflow(workflow.id, name);
+      setWorkflows((current) => current.map((item) => item.id === saved.id ? saved : item));
+      setWorkflowNameDrafts((current) => ({ ...current, [saved.id]: saved.name }));
+      setMessage({ text: 'نام جریان ذخیره شد', tone: 'success' });
+    } catch (error) {
+      setMessage(messageFromError(error, 'ذخیره نام جریان ناموفق بود'));
+    } finally {
+      setWorkflowActionId(null);
+    }
+  };
+
+  const deleteWorkflow = async (workflow: Workflow) => {
+    const ok = window.confirm(`جریان «${workflow.name}» حذف شود؟ تاریخچه اجراهای قبلی پروژه حفظ می‌شود.`);
+    if (!ok) return;
+
+    setWorkflowActionId(workflow.id);
+    try {
+      await api.deleteWorkflow(workflow.id);
+      setWorkflows((current) => current.filter((item) => item.id !== workflow.id));
+      setWorkflowNameDrafts((current) => {
+        const next = { ...current };
+        delete next[workflow.id];
+        return next;
+      });
+      setMessage({ text: 'جریان حذف شد', tone: 'success' });
+    } catch (error) {
+      setMessage(messageFromError(error, 'حذف جریان ناموفق بود'));
+    } finally {
+      setWorkflowActionId(null);
+    }
+  };
+
   return (
     <div className="app-shell manager-shell">
       <AppTopNav user={user} title={project.name} subtitle="جزئیات پروژه، داده‌ها و جریان‌های ذخیره‌شده" onBack={onBack} onProfile={onProfile} onLogout={onLogout} />
@@ -318,7 +365,7 @@ export function ProjectDetailPanel({
               {artifactUsage && (
                 <div className="artifact-usage-summary">
                   <div className="artifact-usage-head">
-                    <span><HardDrive size={14} /> فضای ذخیره‌سازی پروژه</span>
+                    <span><HardDrive size={17}/> فضای ذخیره‌سازی پروژه</span>
                     <b>{formatBytes(artifactUsage.total_bytes)} از {formatBytes(artifactUsage.quota_bytes)}</b>
                   </div>
                   <div className="artifact-usage-track" aria-label="میزان استفاده از فضای ذخیره‌سازی">
@@ -340,10 +387,43 @@ export function ProjectDetailPanel({
               </div>
               <div className="workflow-card-grid workflow-card-grid-reference">
                 {workflows.map((workflow) => (
-                  <button key={workflow.id} className="workflow-card workflow-card-reference" type="button" onClick={() => onOpenEditor(workflow.id)}>
-                    <WorkflowIcon />
-                    <div><b>{workflow.name}</b><span>آخرین تغییر: {formatDate(workflow.updated_at)}</span></div>
-                  </button>
+                  <article key={workflow.id} className="workflow-card workflow-card-reference workflow-manage-card">
+                    <button className="workflow-card-open" type="button" onClick={() => onOpenEditor(workflow.id)} title="باز کردن جریان">
+                      <WorkflowIcon />
+                      <div><b>باز کردن جریان</b><span>آخرین تغییر: {formatDate(workflow.updated_at)}</span></div>
+                    </button>
+                    <div className="workflow-name-editor">
+                      <input
+                        value={workflowNameDrafts[workflow.id] ?? workflow.name}
+                        maxLength={255}
+                        aria-label={`نام جریان ${workflow.name}`}
+                        onChange={(event) => setWorkflowNameDrafts((current) => ({ ...current, [workflow.id]: event.target.value }))}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void saveWorkflowName(workflow);
+                        }}
+                      />
+                      <button
+                        className="workflow-row-action"
+                        type="button"
+                        disabled={workflowActionId === workflow.id || (workflowNameDrafts[workflow.id] ?? workflow.name).trim() === workflow.name}
+                        onClick={() => { void saveWorkflowName(workflow); }}
+                        title="ذخیره نام جریان"
+                        aria-label="ذخیره نام جریان"
+                      >
+                        {workflowActionId === workflow.id ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
+                      </button>
+                      <button
+                        className="workflow-row-action danger-action"
+                        type="button"
+                        disabled={workflowActionId === workflow.id}
+                        onClick={() => { void deleteWorkflow(workflow); }}
+                        title="حذف جریان"
+                        aria-label="حذف جریان"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </article>
                 ))}
                 {workflows.length === 0 && <div className="empty-manager">هنوز جریانی برای این پروژه ذخیره نشده است.</div>}
               </div>

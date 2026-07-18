@@ -144,8 +144,8 @@ export function CustomNodeBuilder({ definition, workflowNodes, registry, busy, o
         <header className="custom-node-builder-head">
           <div><span>USER NODE BUILDER</span><h2>{definition ? `ویرایش ${definition.label}` : 'ساخت نود سفارشی'}</h2><p>پورت‌های تایپ‌شده، template تست و اجرای Python sandboxed</p></div>
           <div className="custom-node-builder-actions">
-            {definition && onDelete && <button className="danger" type="button" disabled={busy} onClick={() => onDelete().catch((reason) => setError(reason instanceof Error ? reason.message : 'حذف ناموفق بود'))}><Trash2 size={14} /> حذف</button>}
-            <button className="primary" type="button" disabled={busy} onClick={submit}><Save size={14} /> ذخیره نود</button>
+            {definition && onDelete && <button className="danger" type="button" disabled={busy} onClick={() => onDelete().catch((reason) => setError(reason instanceof Error ? reason.message : 'حذف ناموفق بود'))}><Trash2 size={17}/> حذف</button>}
+            <button className="primary" type="button" disabled={busy} onClick={submit}><Save size={17}/> ذخیره نود</button>
             <button className="icon-button icon-only" type="button" onClick={onClose}><X size={15} /></button>
           </div>
         </header>
@@ -169,7 +169,7 @@ export function CustomNodeBuilder({ definition, workflowNodes, registry, busy, o
               </div>
               <PortEditor title="Input ports" ports={inputs} onChange={setInputs} kind="input" />
               <div className="custom-template-box workflow-shell-card">
-                <b><FileJson size={14} /> Template ورودی</b>
+                <b><FileJson size={17}/> Template ورودی</b>
                 <span>CSV یا JSON برای تعریف نمونه ورودی و تست کد؛ حداکثر 512KB.</span>
                 <input ref={fileRef} type="file" accept=".csv,.json,text/csv,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); event.currentTarget.value = ''; }} />
                 <button className="tiny-action" type="button" onClick={() => fileRef.current?.click()}><Upload size={13} /> آپلود template</button>

@@ -143,3 +143,30 @@ Run `npm run check:theme` after theme changes.
 - The worker preloads the scientific runtime and uses a warm Linux fork for each isolated run, with the previous subprocess path as a fallback.
 - Redis wakes idle workers immediately; PostgreSQL queue polling is throttled while idle, and active process monitoring remains fast.
 - Set `JOB_USE_FORK_FAST_PATH=false` to disable warm-fork execution when debugging or on an incompatible host.
+
+## Node cache, lineage, autosave, and versions
+
+- Persisted project workflows use deterministic node-output caching backed by internal artifacts.
+- Cache keys include node implementation version, normalized parameters, upstream artifact digests, relevant dataset fingerprints, task type, and target column.
+- Cache artifacts are checksum-verified in both the parent worker and isolated child before deserialization.
+- Each node run records execution status, duration, cache hit/source run, output artifact, and lineage.
+- The canvas shows queued, running, cached, succeeded, and failed states on the corresponding node.
+- Workflow editing uses a 900 ms debounced, serialized, optimistic-concurrency autosave. Unchanged drafts produce no database write.
+- Explicit Save creates an immutable named version. Versions can be previewed, restored, or deleted from the right panel.
+- Only successful workflow results are attached to a draft/version; inspecting historical runs does not alter saved results.
+
+Detailed design and operations: [`docs/ARTIFACT_CACHE_AND_VERSIONING.md`](docs/ARTIFACT_CACHE_AND_VERSIONING.md)
+
+## Reusable workflow components
+
+- Multiple connected nodes can be grouped and replaced by one reusable typed component node.
+- Components have private, project, or organization visibility and appear in the node palette and right-panel library.
+- Public input/output ports are detected from boundary connections and can be renamed, typed, reordered, hidden, or marked optional.
+- Internal settings remain private unless explicitly exposed as component parameters.
+- Component versions are immutable and semantic-versioned. Existing workflow instances stay pinned until explicitly upgraded.
+- Nested components execute with namespaced progress states and use the artifact cache at internal-node granularity.
+- Import/export packages include nested dependencies and remap them transactionally.
+- Usage tracking prevents destructive deletion of components or versions referenced by workflows or other components.
+- Workflow and component version naming use styled in-app dialogs rather than browser prompts.
+
+Detailed usage and API behavior: [`docs/REUSABLE_COMPONENTS.md`](docs/REUSABLE_COMPONENTS.md)

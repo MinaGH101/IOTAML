@@ -20,9 +20,10 @@ from sqlalchemy.orm import load_only
 
 from app.config import get_settings
 from app.database import SessionLocal
-from app.models import CustomNode, Dataset, Run
+from app.models import CustomNode, Dataset, Run, Workflow
 from app.domains.datasets.service import materialize_dataset
 from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths
+from app.services.node_cache import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
 from app.services.jobs import QUEUE_NAME
 from app.services.run_queue import claim_next_run, fail_or_requeue, recover_stale_runs
 from app.services.run_state import append_log, progress_payload, utcnow
@@ -202,15 +203,46 @@ def _runtime_paths(run: Run) -> dict[str, Path]:
         'stdout': root / 'stdout.log',
         'stderr': root / 'stderr.log',
         'custom_nodes': root / 'custom_nodes.json',
+        'cache_input': root / 'cache-input',
+        'cache_output': root / 'cache-output',
     }
 
 
 def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
     dataset_path = None
+    external_inputs: dict[str, Any] = {"datasets": {}, "primary_dataset_id": run.dataset_id}
+    dataset_ids: set[int] = set()
     if run.dataset_id:
-        dataset = db.get(Dataset, run.dataset_id)
-        if dataset:
-            dataset_path = str(materialize_dataset(db, dataset))
+        dataset_ids.add(int(run.dataset_id))
+
+    def collect_dataset_ids(value: Any, key: str | None = None) -> None:
+        if isinstance(value, dict):
+            for child_key, child in value.items():
+                collect_dataset_ids(child, str(child_key))
+        elif isinstance(value, list):
+            for child in value:
+                collect_dataset_ids(child, key)
+        elif key and key.endswith("dataset_id"):
+            try:
+                dataset_ids.add(int(value))
+            except (TypeError, ValueError):
+                pass
+
+    collect_dataset_ids(run.workflow_graph or {})
+    for dataset_id in sorted(dataset_ids):
+        dataset = db.get(Dataset, dataset_id)
+        if not dataset:
+            continue
+        materialized = materialize_dataset(db, dataset)
+        if dataset_id == run.dataset_id:
+            dataset_path = str(materialized)
+        external_inputs["datasets"][str(dataset_id)] = {
+            "checksum_sha256": dataset.checksum_sha256,
+            "artifact_id": dataset.artifact_id,
+            "size_bytes": dataset.size_bytes,
+            "row_count": dataset.row_count,
+            "columns": dataset.columns,
+        }
 
     custom_ids = {
         str((node.get('data') or {}).get('registryId') or node.get('type') or '')
@@ -234,9 +266,12 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         }
     paths['custom_nodes'].write_text(json.dumps(custom_payload, ensure_ascii=False), encoding='utf-8')
 
+    cache_manifest = prepare_cache_manifest(db, run, paths['cache_input'])
     snapshot = {
         'run_id': run.id,
         'workflow_graph': run.workflow_graph,
+        'workflow_id': run.workflow_id,
+        'workflow_revision': run.workflow_revision,
         'dataset_id': run.dataset_id,
         'dataset_path': dataset_path,
         'project_id': run.project_id,
@@ -244,6 +279,9 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         'task_type': run.task_type,
         'run_path': str(Path(get_settings().storage_dir) / 'runs' / str(run.id)),
         'network_disabled': get_settings().job_network_disabled,
+        'external_inputs': external_inputs,
+        'cache_manifest': cache_manifest,
+        'cache_output_dir': str(paths['cache_output']),
     }
     paths['snapshot'].write_text(json.dumps(snapshot, ensure_ascii=False), encoding='utf-8')
 
@@ -383,6 +421,16 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
         error = forced_error or result.get('error') or (stderr.strip()[-3000:] if status != 'succeeded' else None)
         if status == 'timed_out' and not error:
             error = 'Run exceeded its CPU or wall-clock timeout.'
+        cache_records = result.get('cache_records')
+        if not cache_records:
+            progress_payload_file = _read_json(active.paths['progress']) or {}
+            cache_records = progress_payload_file.get('cache_records') or []
+        cache_stats = {'hits': 0, 'writes': 0, 'bytes_written': 0}
+        try:
+            cache_stats = persist_run_cache_records(db, run, list(cache_records or []))
+        except Exception as cache_exc:
+            run.logs = append_log(run.logs, 'warning', 'Node cache metadata could not be fully persisted.', error=str(cache_exc))
+
         artifacts = result.get('artifacts')
         if stdout or stderr:
             artifacts = dict(artifacts or {})
@@ -391,7 +439,7 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
             artifacts = ingest_run_artifact_paths(db, run, artifacts)
         except Exception as artifact_exc:
             run.logs = append_log(run.logs, 'warning', 'Some run artifact files could not be persisted.', error=str(artifact_exc))
-        run.metrics = result.get('metrics')
+        run.metrics = {**(result.get('metrics') or {}), 'cache': cache_stats}
         run.artifacts = artifacts
         if status in {'cancelled', 'timed_out'}:
             updated_statuses = dict(run.node_statuses or {})
@@ -407,6 +455,10 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
 
         if status == 'succeeded':
             run.status = 'succeeded'
+            if run.workflow_id is not None:
+                workflow = db.get(Workflow, run.workflow_id)
+                if workflow and workflow.owner_username == run.owner_username:
+                    workflow.last_run_id = run.id
             run.error = None
             run.finished_at = utcnow()
             run.progress = {**(run.progress or {}), 'percent': 100.0}
@@ -542,6 +594,7 @@ def run_worker() -> None:
             cleanup_old_runtime_directories()
             with SessionLocal() as db:
                 cleanup_expired_artifacts(db)
+                cleanup_node_cache(db)
                 db.commit()
             last_cleanup = now
 

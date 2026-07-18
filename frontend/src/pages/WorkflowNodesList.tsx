@@ -52,7 +52,7 @@ export function WorkflowNodesList({ nodes, selectedId, collapsed, setCollapsed, 
 
       <div className="workflow-node-list-shell">
         <div className="workflow-node-list-head">
-          <span><ListTree size={14} /> نودهای Workflow</span>
+          <span><ListTree size={17}/> نودهای Workflow</span>
           <small>{nodes.length.toLocaleString('fa-IR')} نود</small>
         </div>
         <div className="workflow-node-list-scroll">

@@ -32,6 +32,17 @@ def topological_sort(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -
     return order
 
 
+def output_for_handle(value: Any, source_handle: str | None) -> Any:
+    handle = str(source_handle or 'output')
+    if isinstance(value, dict):
+        by_port = value.get('outputs_by_port')
+        if isinstance(by_port, dict) and handle in by_port:
+            return by_port[handle]
+        if handle in value and handle not in {'output', 'outputs'}:
+            return value[handle]
+    return value
+
+
 def upstream_outputs(node_id: str, edges: list[dict[str, Any]], outputs: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {'_by_port': {}, '_edges': []}
     by_port: dict[str, list[Any]] = result['_by_port']
@@ -41,10 +52,10 @@ def upstream_outputs(node_id: str, edges: list[dict[str, Any]], outputs: dict[st
         source = str(edge.get('source'))
         if source not in outputs:
             continue
-        value = outputs[source]
+        source_handle = str(edge.get('sourceHandle') or 'output')
+        value = output_for_handle(outputs[source], source_handle)
         result[source] = value
         target_handle = str(edge.get('targetHandle') or 'input')
-        source_handle = str(edge.get('sourceHandle') or 'output')
         by_port.setdefault(target_handle, []).append(value)
         result['_edges'].append({'source': source, 'sourceHandle': source_handle, 'targetHandle': target_handle})
     return result

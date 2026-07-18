@@ -366,7 +366,7 @@ color:var(--theme-primary)
 }
 
 .auth-input-wrap input {
-color:var(--theme-text);
+/* color:var(--theme-text); */
 font-size:13px!important
 }
 

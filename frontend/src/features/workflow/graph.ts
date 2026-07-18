@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import type { AnalysisBoardItem, AnalysisBoardTab } from '../../components/AnalysisBoard';
+import type { AnalysisBoardItem, AnalysisBoardTab, BoardViewport } from '../../components/AnalysisBoard';
 import type { Output } from '../../components/ResultsPanel';
 import type { Dataset, RegistryNode } from '../../types';
 import { resolveRegistryId, type LegacyNodeAliases } from './catalog';
@@ -36,6 +36,32 @@ function paramsFromRegistry(node: RegistryNode) {
   return Object.fromEntries(schema.map((param) => [param.name, param.default]));
 }
 
+function normalizedStoredParams(registryId: string, value: unknown) {
+  const params = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  if (registryId === 'TR-014') {
+    return {
+      id_column: params.id_column ?? params.index_column ?? null,
+      first_column_name: params.first_column_name ?? params.output_label_column ?? 'variable',
+    };
+  }
+  if (registryId === 'VZ-005') {
+    const selectedRows = parseColumnParam(params.selected_rows);
+    const oldColor = String(params.color || '').trim();
+    const currentColors = params.series_colors && typeof params.series_colors === 'object' && !Array.isArray(params.series_colors)
+      ? params.series_colors as Record<string, unknown>
+      : {};
+    return {
+      x_columns: parseColumnParam(params.x_columns),
+      selected_rows: selectedRows,
+      series_colors: Object.keys(currentColors).length ? currentColors : Object.fromEntries(selectedRows.map((row) => [row, oldColor]).filter(([, color]) => Boolean(color))),
+      orientation: params.orientation ?? 'vertical',
+      guideline_values: params.guideline_values ?? '',
+      guideline_labels: params.guideline_labels ?? '',
+    };
+  }
+  return params;
+}
+
 export function makeNode(registryNode: RegistryNode, index: number, position?: { x: number; y: number }): Node {
   return {
     id: `${registryNode.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -53,6 +79,11 @@ export function makeNode(registryNode: RegistryNode, index: number, position?: {
       executionMode: registryNode.executionMode,
       comingSoon: registryNode.comingSoon,
       params: paramsFromRegistry(registryNode),
+      componentSnapshot: registryNode.template?.componentSnapshot,
+      isComponent: registryNode.isComponent || false,
+      componentId: registryNode.componentId,
+      componentVersionId: registryNode.componentVersionId,
+      componentVersion: registryNode.componentVersion,
     },
   };
 }
@@ -90,8 +121,23 @@ export function normalizeFlowNodes(
         outputs: registryNode?.outputs || node.data?.outputs || [],
         executionMode: registryNode?.executionMode || node.data?.executionMode || 'instant',
         comingSoon: registryNode?.comingSoon ?? node.data?.comingSoon ?? false,
+        params: normalizedStoredParams(canonicalId, node.data?.params),
       },
     };
+  });
+}
+
+export function normalizeEdgeHandles(nodes: Node[], edges: Edge[]): Edge[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  return edges.map((edge) => {
+    const sourceNode = byId.get(edge.source);
+    const targetNode = byId.get(edge.target);
+    const sourcePorts = Array.isArray(sourceNode?.data?.outputs) ? sourceNode.data.outputs as Array<{ id?: unknown }> : [];
+    const targetPorts = Array.isArray(targetNode?.data?.inputs) ? targetNode.data.inputs as Array<{ id?: unknown }> : [];
+    const sourceHandle = String(edge.sourceHandle || sourcePorts[0]?.id || 'output');
+    const targetHandle = String(edge.targetHandle || targetPorts[0]?.id || 'input');
+    if (edge.sourceHandle === sourceHandle && edge.targetHandle === targetHandle) return edge;
+    return { ...edge, sourceHandle, targetHandle };
   });
 }
 
@@ -111,9 +157,10 @@ export function defaultGraph(registry: RegistryNode[], aliases: LegacyNodeAliase
   for (let index = 0; index < nodes.length - 1; index += 1) {
     edges.push({ id: `e${index}`, source: nodes[index].id, target: nodes[index + 1].id, animated: true });
   }
+  const normalizedNodes = normalizeFlowNodes(nodes, registry, aliases);
   return {
-    nodes: normalizeFlowNodes(nodes, registry, aliases),
-    edges,
+    nodes: normalizedNodes,
+    edges: normalizeEdgeHandles(normalizedNodes, edges),
     meta: { targetColumn: 'target', taskType: 'auto', datasetId: null },
   };
 }
@@ -172,8 +219,15 @@ function flowNodeRegistryId(node: Node | undefined, aliases: LegacyNodeAliases) 
   return resolveRegistryId(raw, aliases);
 }
 
-function parentNodeIds(edges: Edge[], nodeId: string) {
-  return edges.filter((edge) => edge.target === nodeId).map((edge) => edge.source);
+function incomingEdges(edges: Edge[], nodeId: string) {
+  return edges.filter((edge) => edge.target === nodeId);
+}
+
+function selectedSourcePortType(node: Node | undefined, edge: Edge) {
+  const ports = (node?.data?.outputs || []) as Array<{ id?: string; type?: string }>;
+  if (!ports.length) return 'any';
+  const selected = ports.find((port) => String(port.id || '') === String(edge.sourceHandle || '')) || ports[0];
+  return String(selected?.type || 'any');
 }
 
 function datasetColumnsForFlowNode(
@@ -210,9 +264,12 @@ function outputColumnsForNode(
   const sourceColumns = datasetColumnsForFlowNode(node, datasets, workflowDatasetId, aliases);
   if (sourceColumns.length) return uniqColumns(sourceColumns);
 
-  const parentColumns = uniqColumns(parentNodeIds(edges, nodeId).flatMap((parentId) => (
-    outputColumnsForNode(parentId, nodes, edges, datasets, workflowDatasetId, aliases, new Set(visiting))
-  )));
+  const parentColumns = uniqColumns(incomingEdges(edges, nodeId).flatMap((edge) => {
+    const parent = nodes.find((item) => item.id === edge.source);
+    const portType = selectedSourcePortType(parent, edge);
+    if (!['dataframe', 'any'].includes(portType)) return [];
+    return outputColumnsForNode(edge.source, nodes, edges, datasets, workflowDatasetId, aliases, new Set(visiting));
+  }));
 
   if (catalogId === 'CL-006') {
     const selected = parseColumnParam(params.columns);
@@ -229,6 +286,17 @@ function outputColumnsForNode(
     const target = String(params.target_column || '');
     const features = parseColumnParam(params.columns).filter((column) => column !== target && parentColumns.includes(column));
     return uniqColumns([...features, ...(target && parentColumns.includes(target) ? [target] : [])]);
+  }
+
+  if (catalogId === 'IN-008') {
+    const metrics = parseColumnParam(params.metrics);
+    return uniqColumns(['column', ...metrics]);
+  }
+
+  if (catalogId === 'TR-014') {
+    // New output columns depend on the runtime values of the selected ID column.
+    // Do not incorrectly expose the original dataframe schema before this node runs.
+    return [];
   }
 
   return parentColumns;
@@ -248,9 +316,12 @@ export function inputColumnsForNode(
   if (flowNodeRegistryId(node, aliases) === 'DI-002') {
     return datasetColumnsForFlowNode(node, datasets, workflowDatasetId, aliases);
   }
-  return uniqColumns(parentNodeIds(edges, nodeId).flatMap((parentId) => (
-    outputColumnsForNode(parentId, nodes, edges, datasets, workflowDatasetId, aliases)
-  )));
+  return uniqColumns(incomingEdges(edges, nodeId).flatMap((edge) => {
+    const parent = nodes.find((item) => item.id === edge.source);
+    const portType = selectedSourcePortType(parent, edge);
+    if (!['dataframe', 'any'].includes(portType)) return [];
+    return outputColumnsForNode(edge.source, nodes, edges, datasets, workflowDatasetId, aliases);
+  }));
 }
 
 export function boardOutputTitle(output: Output, index: number) {
@@ -281,7 +352,10 @@ export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
 }
 
 export function serializeAnalysisBoardItems(items: AnalysisBoardItem[]) {
-  return items.map(({ snapshot: _snapshot, ...item }) => item);
+  // Board cards are pinned result snapshots. Persisting the already bounded
+  // visible output keeps plots available after tab/page changes without
+  // reloading large internal dataframe artifacts.
+  return items.map((item) => ({ ...item, snapshot: item.snapshot }));
 }
 
 
@@ -292,7 +366,20 @@ export function createMainAnalysisBoard(items: AnalysisBoardItem[] = []): Analys
     id: MAIN_ANALYSIS_BOARD_ID,
     name: 'برد اصلی',
     items,
+    viewport: { x: 0, y: 0, scale: 1 },
     createdAt: new Date().toISOString(),
+  };
+}
+
+function restoreBoardViewport(value: unknown): BoardViewport {
+  const item = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<BoardViewport> : {};
+  const x = Number(item.x);
+  const y = Number(item.y);
+  const scale = Number(item.scale);
+  return {
+    x: Number.isFinite(x) ? x : 0,
+    y: Number.isFinite(y) ? y : 0,
+    scale: Number.isFinite(scale) ? Math.min(2.25, Math.max(0.35, scale)) : 1,
   };
 }
 
@@ -306,6 +393,7 @@ export function restoreAnalysisBoardTabs(value: unknown, legacyItems?: unknown):
       id: String(item.id || (index === 0 ? MAIN_ANALYSIS_BOARD_ID : `analysis-board-${Date.now()}-${index}`)),
       name: String(item.name || (index === 0 ? 'برد اصلی' : `برد ${index + 1}`)).trim() || `برد ${index + 1}`,
       items: restoreAnalysisBoardItems(item.items),
+      viewport: restoreBoardViewport(item.viewport),
       createdAt: String(item.createdAt || new Date().toISOString()),
     }));
 
@@ -320,6 +408,7 @@ export function serializeAnalysisBoardTabs(tabs: AnalysisBoardTab[]) {
     id: tab.id,
     name: tab.name,
     items: serializeAnalysisBoardItems(tab.items),
+    viewport: restoreBoardViewport(tab.viewport),
     createdAt: tab.createdAt,
   }));
 }

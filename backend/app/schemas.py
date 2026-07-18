@@ -30,12 +30,64 @@ class WorkflowCreate(BaseModel):
     name: str = Field(default="Untitled Workflow", min_length=1, max_length=255)
     graph: dict
     project_id: int | None = None
+    last_run_id: int | None = None
+
+
+class WorkflowAutosaveIn(WorkflowCreate):
+    base_revision: int | None = Field(default=None, ge=1)
+    client_graph_hash: str | None = Field(default=None, min_length=64, max_length=64)
+
+
+class WorkflowRenameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
 
 
 class WorkflowOut(WorkflowCreate):
     id: int
+    owner_username: str
+    revision: int
+    graph_hash: str
+    last_autosaved_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowVersionCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=2000)
+    run_id: int | None = None
+
+
+class WorkflowVersionOut(BaseModel):
+    id: int
+    workflow_id: int
+    version_number: int
+    name: str
+    description: str
+    graph: dict
+    graph_hash: str
+    source_revision: int
+    run_id: int | None
+    owner_username: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowVersionSummaryOut(BaseModel):
+    id: int
+    workflow_id: int
+    version_number: int
+    name: str
+    description: str
+    graph_hash: str
+    source_revision: int
+    run_id: int | None
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -44,6 +96,8 @@ class WorkflowOut(WorkflowCreate):
 class RunCreate(BaseModel):
     workflow_name: str = Field(default="Untitled Run", min_length=1, max_length=255)
     workflow_graph: dict
+    workflow_id: int | None = None
+    workflow_revision: int | None = None
     dataset_id: int | None = None
     project_id: int | None = None
     target_column: str | None = None
@@ -52,6 +106,7 @@ class RunCreate(BaseModel):
     max_attempts: int | None = Field(default=None, ge=1, le=10)
     timeout_seconds: int | None = Field(default=None, ge=10, le=86400)
     idempotency_key: str | None = Field(default=None, min_length=8, max_length=128)
+    bypass_cache: bool = False
 
 
 class RunOut(BaseModel):
@@ -59,11 +114,14 @@ class RunOut(BaseModel):
     status: str
     workflow_name: str
     workflow_graph: dict
+    workflow_id: int | None
+    workflow_revision: int | None
     dataset_id: int | None
     project_id: int | None = None
     owner_username: str
     target_column: str | None
     task_type: str
+    bypass_cache: bool
     priority: int
     attempts: int
     max_attempts: int

@@ -34,6 +34,7 @@ import {
   Trees,
   UserRoundCog,
   Workflow,
+  Layers3,
   Zap
 } from 'lucide-react';
 import type { DragEvent, ReactNode } from 'react';
@@ -61,7 +62,8 @@ export const categoryOrder: NodeCategory[] = [
   'ML Model Analysis',
   'Export or Report',
   'Utilities / Advanced',
-  'User Nodes'
+  'User Nodes',
+  'Components'
 ];
 
 const categoryMeta: Record<NodeCategory, { fa: string; icon: ReactNode }> = {
@@ -77,7 +79,8 @@ const categoryMeta: Record<NodeCategory, { fa: string; icon: ReactNode }> = {
   'ML Model Analysis': { fa: 'تحلیل مدل', icon: <SearchCheck size={15} /> },
   'Export or Report': { fa: 'خروجی و گزارش', icon: <Download size={15} /> },
   'Utilities / Advanced': { fa: 'ابزارهای پیشرفته', icon: <Zap size={15} /> },
-  'User Nodes': { fa: 'نودهای سفارشی', icon: <UserRoundCog size={15} /> }
+  'User Nodes': { fa: 'نودهای سفارشی', icon: <UserRoundCog size={15} /> },
+  Components: { fa: 'کامپوننت‌ها', icon: <Layers3 size={15} /> }
 };
 
 export function categoryLabel(category: string) { return categoryMeta[category as NodeCategory]?.fa ?? category; }
@@ -86,6 +89,7 @@ export function categoryClassName(category: string) { return `cat-${category.toL
 
 export function nodeIcon(node: RegistryNode, size = 15): ReactNode {
   const key = `${node.id} ${node.label} ${node.description}`.toLowerCase();
+  if (node.isComponent) return <Layers3 size={size} />;
   if (node.isCustom) return <UserRoundCog size={size} />;
   if (/python|code/.test(key)) return <Code2 size={size} />;
   if (/csv|excel|file|upload|import/.test(key)) return <FileUp size={size} />;
@@ -208,7 +212,7 @@ export function NodePalette({ nodes, collapsed, onCreateCustomNode, onEditCustom
       <div className="palette-header">
         <div className="palette-title-block"><span>جعبه نودها</span><small>{nodes.length} نود علمی</small></div>
       </div>
-      <label className="search-box palette-search workflow-shell-card"><Search size={14} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجوی نود، دسته یا توضیح..." /></label>
+      <label className="search-box palette-search workflow-shell-card"><Search size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجوی نود، دسته یا توضیح..." /></label>
       <div className="palette-groups">
         {categoryOrder.map((category) => {
           const items = grouped.get(category) || [];
@@ -218,7 +222,7 @@ export function NodePalette({ nodes, collapsed, onCreateCustomNode, onEditCustom
             <section className={`palette-group node-group ${categoryClassName(category)}`} key={category}>
               <button className="group-toggle workflow-shell-item" type="button" onClick={() => setOpen((state) => ({ ...state, [category]: !isOpen }))}>
                 <span className="group-title-main">{categoryIcon(category)} {categoryLabel(category)}</span>
-                {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {isOpen ? <ChevronUp size={17}/> : <ChevronDown size={17}/>}
               </button>
               {isOpen && (
                 <div className="palette-grid">

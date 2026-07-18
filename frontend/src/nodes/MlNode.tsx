@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { categoryClassName, nodeIcon } from '../components/NodePalette';
-import type { PortDefinition } from '../types';
+import type { PortDefinition, RunNodeStatus } from '../types';
 
 type EditableNodeData = Record<string, unknown> & {
   label?: string;
@@ -13,6 +13,7 @@ type EditableNodeData = Record<string, unknown> & {
   comingSoon?: boolean;
   executionMode?: string;
   onRename?: (nodeId: string, label: string) => void;
+  runtimeStatus?: RunNodeStatus['status'] | null;
 };
 
 function shapeClass(category: string) {
@@ -33,9 +34,12 @@ function MlNodeComponent({ id, data, selected }: NodeProps) {
   const label = String(nodeData.label || 'Node');
   const typeLabel = String(nodeData.typeLabel || nodeData.label || 'Node Type');
   const iconNode = { id: String(nodeData.registryId || ''), label: typeLabel, description: String(nodeData.description || ''), category } as any;
+  const runtimeStatus = nodeData.runtimeStatus || null;
+
+  const visualRuntimeStatus = runtimeStatus && !['cached', 'succeeded', 'skipped'].includes(runtimeStatus) ? runtimeStatus : null;
 
   return (
-    <div className={`ml-node ${categoryClassName(category)} ${shapeClass(category)} ${selected ? 'selected' : ''} ${nodeData.comingSoon ? 'node-coming-soon' : ''}`}>
+    <div className={`ml-node ${categoryClassName(category)} ${shapeClass(category)} ${selected ? 'selected' : ''} ${nodeData.comingSoon ? 'node-coming-soon' : ''} ${visualRuntimeStatus ? `runtime-${visualRuntimeStatus}` : ''}`}>
       <PortHandles ports={(nodeData.inputs as PortDefinition[]) || []} type="target" />
       <div className="node-content">
         <div className="node-topline"><span className="node-icon">{nodeIcon(iconNode)}</span><span className="node-type-label">{typeLabel}</span></div>

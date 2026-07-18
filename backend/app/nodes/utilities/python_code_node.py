@@ -75,6 +75,7 @@ def _run_code(code: str, input_data: Any, timeout: int, memory_mb: int) -> dict[
 
 
 class PythonCodeNode(BaseNode):
+    cacheable = False
     id = 'UT-001'
     name = 'Python Code'
     category = 'Utilities / Advanced'

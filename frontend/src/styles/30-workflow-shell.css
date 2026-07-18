@@ -1001,3 +1001,204 @@ min-height:280px!important
 }
 }
 
+
+
+/* Keep the original full-width workflow topbar, but reflow it on smaller screens. */
+@media (width <= 900px) {
+  .workflow-topbar-pro.workflow-topbar {
+    min-height: 98px !important;
+    height: 98px !important;
+    padding: 7px 9px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    grid-template-rows: 38px 38px !important;
+    grid-template-areas:
+      ". center right"
+      "left left left" !important;
+    align-items: center !important;
+    gap: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-left,
+  .workflow-topbar-pro .workflow-topbar-center,
+  .workflow-topbar-pro .workflow-topbar-right {
+    position: static !important;
+    transform: none !important;
+    max-width: none !important;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-left {
+    grid-area: left;
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+    padding-bottom: 1px;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-left::-webkit-scrollbar {
+    display: none;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-center {
+    grid-area: center;
+    justify-self: center;
+    width: max-content;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-right {
+    grid-area: right;
+    justify-self: end;
+    width: min(100%, 250px);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-right .workflow-name-input {
+    width: min(148px, 34vw) !important;
+    min-width: 92px !important;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-right .workflow-breadcrumb {
+    display: none !important;
+  }
+
+  .workflow-shell-page .left-stack,
+  .workflow-shell-page .right-stack-wrap {
+    top: 120px !important;
+  }
+}
+
+@media (width <= 520px) {
+  .workflow-topbar-pro.workflow-topbar {
+    left: 8px !important;
+    right: 8px !important;
+    top: 8px !important;
+    grid-template-columns: auto minmax(96px, 1fr) !important;
+    grid-template-areas:
+      "center right"
+      "left left" !important;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-center {
+    justify-self: start;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-right {
+    width: 100%;
+  }
+
+  .workflow-topbar-pro .workflow-topbar-right .workflow-name-input {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .workflow-shell-page .left-stack,
+  .workflow-shell-page .right-stack-wrap {
+    top: 116px !important;
+  }
+}
+
+/* Autosave is a lightweight draft indicator; named versions remain explicit. */
+.workflow-autosave-status {
+  flex:0 0 auto;
+  max-width:138px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  padding:3px 7px;
+  border-radius:var(--theme-radius-pill);
+  background:color-mix(in srgb,var(--theme-panel-muted) 84%,var(--theme-transparent));
+  color:var(--theme-text-muted);
+  font-size:9px;
+  line-height:1.2;
+  direction:rtl
+}
+
+.workflow-autosave-status.saving,.workflow-autosave-status.idle {
+  color:var(--theme-warning)
+}
+
+.workflow-autosave-status.saved {
+  color:var(--theme-success)
+}
+
+.workflow-autosave-status.error,.workflow-autosave-status.conflict {
+  color:var(--theme-danger)
+}
+
+.workflow-autosave-status.preview {
+  color:var(--theme-primary)
+}
+
+/* Runtime states are rendered on the actual workflow node. */
+.ml-node.runtime-running::before {
+  border-color:var(--theme-primary);
+  outline:2px solid color-mix(in srgb,var(--theme-primary) 20%,var(--theme-transparent));
+  outline-offset:1px;
+  animation:iota-node-running-pulse 1.35s ease-in-out infinite
+}
+
+.ml-node.runtime-cached::before {
+  border-color:color-mix(in srgb,var(--theme-primary) 72%,var(--theme-control-border))
+}
+
+.ml-node.runtime-succeeded::before {
+  border-color:color-mix(in srgb,var(--theme-success) 72%,var(--theme-control-border))
+}
+
+.ml-node.runtime-failed::before,.ml-node.runtime-cancelled::before {
+  border-color:color-mix(in srgb,var(--theme-danger) 72%,var(--theme-control-border))
+}
+
+.node-runtime-state {
+  max-width:100%;
+  min-height:16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  color:var(--theme-text-muted);
+  font-size:8px;
+  line-height:1;
+  direction:rtl;
+  white-space:nowrap
+}
+
+.node-runtime-state.running,.node-runtime-state.cached {
+  color:var(--theme-primary)
+}
+
+.node-runtime-state.succeeded {
+  color:var(--theme-success)
+}
+
+.node-runtime-state.failed,.node-runtime-state.cancelled {
+  color:var(--theme-danger)
+}
+
+.node-runtime-state small {
+  color:inherit;
+  opacity:.72;
+  font-size:7px
+}
+
+@keyframes iota-node-running-pulse {
+  0%,100% { outline-color:color-mix(in srgb,var(--theme-primary) 16%,var(--theme-transparent));opacity:.9 }
+  50% { outline-color:color-mix(in srgb,var(--theme-primary) 44%,var(--theme-transparent));opacity:1 }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-node.runtime-running::before {
+    animation:none
+  }
+}
+
+@media (width <= 1180px) {
+  .workflow-autosave-status {
+    display:none
+  }
+}

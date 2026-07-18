@@ -1,18 +1,22 @@
 import type { Edge, Node } from '@xyflow/react';
 import { useMemo, useRef, useState } from 'react';
 import { Pin, PinOff, Play, RefreshCw, X } from 'lucide-react';
-import type { Dataset, RegistryNode, Run } from '../types';
+import type { Dataset, PortDefinition, RegistryNode, Run } from '../types';
 import { categoryClassName, categoryLabel, nodeIcon } from './NodePalette';
 import { ParamEditor } from './ParamEditor';
 import { OutputCard, normalizeOutputs, type Output } from './ResultsPanel';
+import { compatiblePorts, resolveRegistryId } from '../features/workflow/catalog';
 
 type Props = {
   node: Node;
+  workflowNodes: Node[];
   edges: Edge[];
   registry: RegistryNode[];
   aliases: Record<string, string>;
+  portCompatibility: Record<string, string[]>;
   datasets: Dataset[];
   availableColumns: string[];
+  availableRows?: Record<string, unknown>[];
   run: Run | null;
   busy: boolean;
   onRunNode: () => void;
@@ -20,6 +24,7 @@ type Props = {
   onRename: (nodeId: string, label: string) => void;
   onPinnedChange: (nodeId: string, pinned: { enabled?: boolean; sample?: string }) => void;
   onAddOutputToBoard?: (output: Output, index: number) => void;
+  onInputSourceHandleChange: (edgeId: string, sourceHandle: string) => void;
   onClose: () => void;
 };
 
@@ -96,13 +101,29 @@ function translateRegistryLabels<T>(value: T): T {
   return result as T;
 }
 
-export function NodeModal({ node, edges, registry, aliases, datasets, availableColumns, run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onClose }: Props) {
+export function NodeModal({ node, workflowNodes, edges, registry, aliases, portCompatibility, datasets, availableColumns, availableRows = [], run, busy, onRunNode, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onInputSourceHandleChange, onClose }: Props) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState<ColumnWidths>({ output: 32, settings: 36, input: 32 });
 
   const incoming = edges.filter((edge) => edge.target === node.id);
-  const inputOutputs = incoming.flatMap((edge) => normalizeOutputs(run, edge.source));
   const currentOutputs = normalizeOutputs(run, node.id);
+  const targetRegistryId = resolveRegistryId(node.data.catalogId || node.data.registryId, aliases);
+  const targetDefinition = registry.find((item) => item.id === targetRegistryId);
+  const inputGroups = incoming.map((edge) => {
+    const sourceNode = workflowNodes.find((item) => item.id === edge.source);
+    const sourceRegistryId = resolveRegistryId(sourceNode?.data?.catalogId || sourceNode?.data?.registryId, aliases);
+    const sourceDefinition = registry.find((item) => item.id === sourceRegistryId);
+    const targetPort = targetDefinition?.inputs.find((port) => port.id === edge.targetHandle) || targetDefinition?.inputs[0];
+    const sourcePorts = sourceDefinition?.outputs || (sourceNode?.data?.outputs as PortDefinition[] | undefined) || [];
+    const compatibleSourcePorts = sourcePorts.filter((port) => compatiblePorts(String(port.type || 'any'), String(targetPort?.type || 'any'), portCompatibility));
+    const configuredHandle = String(edge.sourceHandle || '');
+    const selectedHandle = sourcePorts.some((port) => port.id === configuredHandle) ? configuredHandle : String(compatibleSourcePorts[0]?.id || sourcePorts[0]?.id || 'output');
+    const sourceOutputs = normalizeOutputs(run, edge.source);
+    const annotated = sourceOutputs.filter((output) => String(output.source_handle || '').trim());
+    const selectedOutputs = sourceOutputs.filter((output) => String(output.source_handle || '') === selectedHandle);
+    const visibleOutputs = selectedOutputs.length ? selectedOutputs : (annotated.length ? [] : sourceOutputs);
+    return { edge, sourceNode, sourceDefinition, sourcePorts, targetPort, selectedHandle, visibleOutputs };
+  });
   const pinned = (node.data.pinned || {}) as { enabled?: boolean; sample?: string };
   const updatePinned = (next: Partial<{ enabled: boolean; sample: string }>) => onPinnedChange(node.id, { ...pinned, ...next });
   const typeLabel = String(node.data.typeLabel || node.data.label || '');
@@ -186,7 +207,7 @@ export function NodeModal({ node, edges, registry, aliases, datasets, availableC
           <section className="node-modal-section settings-section workflow-shell-card n8n-node-panel n8n-params-panel">
             <div className="section-title n8n-panel-title n8n-settings-title">پارامترها</div>
             <div className="n8n-panel-body n8n-params-body">
-              <ParamEditor selectedNode={node} registry={translatedRegistry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} onParamsChange={onParamsChange} onRename={onRename} />
+              <ParamEditor selectedNode={node} registry={translatedRegistry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableRows={availableRows} onParamsChange={onParamsChange} onRename={onRename} />
               <div className="pinned-data-box workflow-shell-card n8n-pinned-box">
                 <div className="pinned-data-head">
                   <div><b>داده نمونه ثابت‌شده</b><span>برای تست مرحله‌های بعدی، خروجی نمونه این نود را ثابت نگه دارید.</span></div>
@@ -205,11 +226,32 @@ export function NodeModal({ node, edges, registry, aliases, datasets, availableC
           <section className="node-modal-section workflow-shell-card n8n-node-panel n8n-io-panel n8n-input-panel">
             <div className="section-title n8n-panel-title">ورودی</div>
             <div className="n8n-panel-body">
-              {incoming.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نودهای قبلی را اجرا کنید تا داده ورودی نمایش داده شود</small></div>}
-              {incoming.length > 0 && !run && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نودهای قبلی را اجرا کنید تا داده ورودی نمایش داده شود</small></div>}
-              {incoming.length > 0 && run && inputOutputs.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی پیدا نشد.</div>}
-              {inputOutputs.map((output, index) => (
-                <OutputCard output={output} index={index} variant="modal" onAddToBoard={onAddOutputToBoard} key={`input-${index}-${output.node_id}-${output.path_index}`} />
+              {incoming.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود را به یک خروجی قبلی وصل کنید.</small></div>}
+              {inputGroups.map(({ edge, sourceNode, sourceDefinition, sourcePorts, targetPort, selectedHandle, visibleOutputs }) => (
+                <div className="node-input-source workflow-shell-card" key={edge.id}>
+                  <div className="node-input-source-head">
+                    <span><b>{String(sourceNode?.data?.label || sourceDefinition?.label || edge.source)}</b><small>{String(edge.targetHandle || 'input')}</small></span>
+                    {sourcePorts.length > 1 && <em>انتخاب خروجی ورودی</em>}
+                  </div>
+                  {sourcePorts.length > 1 && (
+                    <div className="node-input-port-radios" role="radiogroup" aria-label={`خروجی ورودی از ${String(sourceNode?.data?.label || edge.source)}`}>
+                      {sourcePorts.map((port) => {
+                        const allowed = compatiblePorts(String(port.type || 'any'), String(targetPort?.type || 'any'), portCompatibility);
+                        return (
+                          <label className={`node-input-port-radio ${selectedHandle === port.id ? 'active' : ''} ${allowed ? '' : 'disabled'}`} key={port.id}>
+                            <input type="radio" name={`input-source-${edge.id}`} value={port.id} checked={selectedHandle === port.id} disabled={!allowed} onChange={() => onInputSourceHandleChange(edge.id, port.id)} />
+                            <span><b>{port.name}</b><small>{port.type}{allowed ? '' : ' · ناسازگار با این ورودی'}</small></span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!run && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود قبلی را اجرا کنید.</small></div>}
+                  {run && visibleOutputs.length === 0 && <div className="empty-state n8n-empty-state">برای خروجی انتخاب‌شده داده قابل نمایش پیدا نشد.</div>}
+                  {visibleOutputs.map((output, index) => (
+                    <OutputCard output={output} index={index} variant="modal" onAddToBoard={onAddOutputToBoard} key={`input-${edge.id}-${index}-${output.node_id}-${output.path_index}`} />
+                  ))}
+                </div>
               ))}
             </div>
           </section>

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, load_only
 from app.config import get_settings
 from app.database import get_db
 from app.domains.runs.models import Run
+from app.domains.artifacts.models import NodeExecution
+from app.models import Workflow
 from app.schemas import RunCreate, RunOut, RunSummaryOut
 from app.domains.runs.service import (
     TERMINAL_STATUSES, append_log, enqueue_run, enforce_run_quotas, find_idempotent_run,
@@ -40,6 +42,17 @@ def create_run(
     if existing:
         return existing
 
+    workflow_revision = payload.workflow_revision
+    if payload.workflow_id is not None:
+        workflow = db.query(Workflow).filter(Workflow.id == payload.workflow_id, Workflow.owner_username == username).first()
+        if not workflow:
+            raise HTTPException(status_code=404, detail='Workflow not found.')
+        if workflow.project_id != payload.project_id:
+            raise HTTPException(status_code=400, detail='Workflow and run project do not match.')
+        if workflow_revision is not None and workflow_revision != workflow.revision:
+            raise HTTPException(status_code=409, detail='Workflow revision is stale. Autosave the current draft before running.')
+        workflow_revision = workflow.revision
+
     graph = payload.workflow_graph or {}
     graph_size = len(json.dumps(graph, ensure_ascii=False, default=str).encode('utf-8'))
     if graph_size > settings.max_workflow_payload_bytes:
@@ -61,11 +74,14 @@ def create_run(
     run = Run(
         workflow_name=payload.workflow_name,
         workflow_graph=graph,
+        workflow_id=payload.workflow_id,
+        workflow_revision=workflow_revision,
         dataset_id=payload.dataset_id,
         project_id=payload.project_id,
         owner_username=username,
         target_column=payload.target_column,
         task_type=payload.task_type,
+        bypass_cache=payload.bypass_cache,
         priority=payload.priority,
         max_attempts=payload.max_attempts or settings.job_default_max_attempts,
         timeout_seconds=payload.timeout_seconds or settings.job_default_timeout_seconds,
@@ -138,6 +154,28 @@ def get_queue_health(
 ) -> dict:
     del current_user
     return queue_metrics(db)
+
+
+@router.get('/{run_id}/node-executions')
+def get_node_executions(
+    run_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> list[dict]:
+    run = _owned_run(db, run_id, str(current_user['username']))
+    records = db.query(NodeExecution).filter(NodeExecution.run_id == run.id).order_by(NodeExecution.id.asc()).all()
+    return [{
+        'node_id': record.node_id,
+        'node_type': record.node_type,
+        'status': record.status,
+        'cache_hit': record.cache_hit,
+        'cache_key': record.cache_key,
+        'artifact_id': record.artifact_id,
+        'source_run_id': (record.metadata_json or {}).get('source_run_id'),
+        'duration_ms': record.duration_ms,
+        'output_digest': record.output_digest,
+        'error': record.error,
+    } for record in records]
 
 
 @router.get('/{run_id}', response_model=RunOut)

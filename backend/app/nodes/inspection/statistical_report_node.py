@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import coerce_numeric_series, dataframe_payload, ensure_df, node_label, selected_columns, table_output
+from app.nodes.io import coerce_numeric_series, dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
 
 
 METRICS = ['count', 'missing', 'missing_percent', 'unique', 'mean', 'std', 'variance', 'min', 'q1', 'median', 'q3', 'max', 'skew', 'kurtosis', 'mode']
@@ -26,7 +26,7 @@ class StatisticalReportNode(BaseNode):
     description = 'Calculates selected statistical metrics for selected columns.'
 
     inputs = [port('data', 'DataFrame', 'dataframe')]
-    outputs = [port('report', 'Statistical Report', 'json')]
+    outputs = [port('report', 'Statistical Report', 'dataframe')]
 
     settings_schema = [
         setting('columns', 'Columns', 'columns', []),
@@ -66,5 +66,8 @@ class StatisticalReportNode(BaseNode):
                 row[metric] = None if pd.isna(value) else (round(float(value), 6) if isinstance(value, (int, float)) and metric not in {'count', 'missing', 'unique'} else value)
             rows.append(row)
 
-        report = {'metrics': metrics, 'columns': columns, 'rows': rows}
-        return {'report': report, 'json': report, 'output': table_output(str(node['id']), node_label(node), pd.DataFrame(rows), 500)}
+        report_df = pd.DataFrame(rows)
+        return {
+            'report': dataframe_result(report_df, id_column='column'),
+            'output': table_output(str(node['id']), node_label(node), report_df, 500),
+        }

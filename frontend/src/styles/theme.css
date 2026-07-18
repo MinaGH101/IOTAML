@@ -169,6 +169,7 @@
   --theme-radius-pill: 999px;
   --theme-radius-round: 50%;
   --theme-radius-brand: 4px 7px;
+  --workflow-left-panel-offset: 76px;
   --theme-border-width: 1px;
   --theme-border-width-strong: 2px;
   --theme-control-height: 32px;
@@ -400,7 +401,7 @@ body,
 .analysis-output-picker,
 .plot-group-item,
 .mui-table-wrap,
-.mui-chart-wrap {
+.amchart-wrap {
   background: var(--theme-panel-muted) !important;
   background-image: none !important;
   border: 0 !important;
@@ -504,7 +505,6 @@ textarea,
 .node-title-input,
 .node-modal-name,
 .pinned-data-box textarea,
-.auth-input-wrap,
 .project-filter-search {
   background: var(--theme-control-bg) !important;
   background-image: none !important;
@@ -530,7 +530,7 @@ textarea:hover,
   border-color: transparent !important;
 }
 
-input:focus,
+
 select:focus,
 textarea:focus,
 .field input:focus,
@@ -629,7 +629,7 @@ button.danger:hover {
   background-image: none !important;
   border: 0 !important;
   outline: 0 !important;
-  color: var(--theme-icon) !important;
+  color: var(--button-icon-color, var(--theme-icon)) !important;
   border-radius: var(--theme-radius-control) !important;
 }
 
@@ -658,42 +658,14 @@ button.danger:hover {
   transform: none !important;
 }
 
-/* Workflow topbar actions are icons only: never framed or filled. */
-.workflow-topbar-pro .workflow-topbar-left > button,
-.workflow-topbar-pro .workflow-topbar-center > button,
-.workflow-topbar-pro .workflow-topbar-right > button {
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  color: var(--theme-icon) !important;
+/* Workflow topbar action colors use the shared icon variable. */
+.workflow-topbar-center-mini .topbar-primary-action,
+.workflow-topbar-center-mini .icon-button.active {
+  --button-icon-color: var(--theme-primary);
 }
 
-.workflow-topbar-pro .workflow-topbar-left > button:hover,
-.workflow-topbar-pro .workflow-topbar-center > button:hover,
-.workflow-topbar-pro .workflow-topbar-right > button:hover,
-.workflow-topbar-pro .workflow-topbar-left > button:focus-visible,
-.workflow-topbar-pro .workflow-topbar-center > button:focus-visible,
-.workflow-topbar-pro .workflow-topbar-right > button:focus-visible {
-  background: transparent !important;
-  border: 0 !important;
-  color: var(--theme-icon-hover) !important;
-}
-
-.workflow-topbar-pro .topbar-primary-action {
-  color: var(--theme-primary) !important;
-}
-
-.workflow-topbar-pro .topbar-danger-action,
-.workflow-topbar-pro .danger-nav {
-  color: var(--theme-danger) !important;
-}
-
-.workflow-topbar-pro .icon-button.active {
-  background: transparent !important;
-  border: 0 !important;
-  color: var(--theme-primary) !important;
+.workflow-topbar-left-menu .topbar-danger-action {
+  --button-icon-color: var(--theme-danger);
 }
 
 /* Status roles */
@@ -769,11 +741,6 @@ tbody tr:hover,
   border-radius: var(--theme-radius-panel) !important;
 }
 
-.MuiChartsTooltip-paper {
-  background: var(--theme-popup-bg) !important;
-  border: 0 !important;
-  border-radius: var(--theme-radius-control) !important;
-}
 
 /* Decorative layers from earlier themes are disabled. */
 .app-shell::before,

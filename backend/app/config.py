@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     max_workflow_nodes: int = 500
     max_workflow_payload_bytes: int = 5_000_000
 
+    node_cache_enabled: bool = True
+    node_cache_retention_days: int = 30
+    node_cache_candidates_per_fingerprint: int = 8
+    node_cache_max_bytes_per_project: int = 3 * 1024 * 1024 * 1024
+    node_cache_compression: int = 3
+    node_cache_cleanup_batch_size: int = 200
+    workflow_version_limit: int = 100
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

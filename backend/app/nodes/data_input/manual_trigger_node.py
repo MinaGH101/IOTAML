@@ -5,6 +5,7 @@ from app.nodes.io import json_output, node_label
 
 
 class ManualTriggerNode(BaseNode):
+    cacheable = False
     id = 'DI-010'
     name = 'Manual Trigger'
     category = 'Data Input'

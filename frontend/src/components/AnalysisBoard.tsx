@@ -1,4 +1,4 @@
-import { Copy, Download, GripHorizontal, Maximize2, Minus, Move, Pencil, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
+import { Copy, Download, GripHorizontal, Maximize2, Minus, Move, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
 import {
   memo,
   useCallback,
@@ -28,10 +28,13 @@ export type AnalysisBoardItem = {
   createdAt: string;
 };
 
+export type BoardViewport = { x: number; y: number; scale: number };
+
 export type AnalysisBoardTab = {
   id: string;
   name: string;
   items: AnalysisBoardItem[];
+  viewport: BoardViewport;
   createdAt: string;
 };
 
@@ -46,16 +49,15 @@ type AnalysisBoardProps = {
   onRun: () => void;
   onSelectBoard: (id: string) => void;
   onCreateBoard: () => void;
-  onRenameBoard: (id: string, name: string) => void;
-  onRemoveBoard: (id: string) => void;
   onAddOutput: (output: Output, outputIndex: number) => void;
   onUpdateItem: (id: string, patch: Partial<AnalysisBoardItem>) => void;
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (item: AnalysisBoardItem) => void;
   onClear: () => void;
+  onViewportChange: (boardId: string, viewport: BoardViewport) => void;
+  readOnly?: boolean;
 };
 
-type BoardViewport = { x: number; y: number; scale: number };
 type FocusedOutput = { output: Output; index: number; title: string };
 
 type BoardCardProps = {
@@ -68,6 +70,7 @@ type BoardCardProps = {
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (item: AnalysisBoardItem) => void;
   onFocus: (focused: FocusedOutput) => void;
+  readOnly: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -207,6 +210,7 @@ const BoardCard = memo(function BoardCard({
   onRemoveItem,
   onDuplicateItem,
   onFocus,
+  readOnly,
 }: BoardCardProps) {
   return (
     <article
@@ -216,24 +220,25 @@ const BoardCard = memo(function BoardCard({
     >
       <div
         className="analysis-board-card-head"
-        onPointerDown={(event) => startBoardPointerAction(event, item, 'move', getViewportScale, onUpdateItem)}
+        onPointerDown={(event) => { if (!readOnly) startBoardPointerAction(event, item, 'move', getViewportScale, onUpdateItem); }}
       >
-        <GripHorizontal size={14} />
+        <GripHorizontal size={17}/>
         <div>
-          <b>{item.outputTitle}</b>
+          <b>{item.sourceLabel ? `${item.sourceLabel} · ${item.outputTitle}` : item.outputTitle}</b>
           <span>{item.outputKind} · {item.nodeId || 'node'} {stale ? '· قدیمی/نیازمند Run' : `· Run #${runId}`}</span>
         </div>
         {output && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => downloadOutput(output, item.outputIndex)} title="Download"><Download size={12} /></button>}
-        {output && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onFocus({ output, index: item.outputIndex, title: item.outputTitle })} title="Maximize"><Maximize2 size={12} /></button>}
-        <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onDuplicateItem(item)} title="Duplicate"><Copy size={12} /></button>
-        <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onRemoveItem(item.id)} title="Remove"><X size={12} /></button>
+        {output && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onFocus({ output, index: item.outputIndex, title: item.sourceLabel ? `${item.sourceLabel} · ${item.outputTitle}` : item.outputTitle })} title="Maximize"><Maximize2 size={12} /></button>}
+        {!readOnly && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onDuplicateItem(item)} title="Duplicate"><Copy size={12} /></button>}
+        {!readOnly && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onRemoveItem(item.id)} title="Remove"><X size={12} /></button>}
       </div>
       <div className="analysis-board-card-body">
         {output ? <OutputBody output={output} /> : <div className="empty-state small">این خروجی در اجرای فعلی پیدا نشد. Workflow را Run کنید.</div>}
       </div>
       <div
         className="analysis-board-resize"
-        onPointerDown={(event) => startBoardPointerAction(event, item, 'resize', getViewportScale, onUpdateItem)}
+        onPointerDown={(event) => { if (!readOnly) startBoardPointerAction(event, item, 'resize', getViewportScale, onUpdateItem); }}
+        aria-hidden={readOnly}
       />
     </article>
   );
@@ -250,23 +255,24 @@ export function AnalysisBoard({
   onRun,
   onSelectBoard,
   onCreateBoard,
-  onRenameBoard,
-  onRemoveBoard,
   onAddOutput,
   onUpdateItem,
   onRemoveItem,
   onDuplicateItem,
   onClear,
+  onViewportChange,
+  readOnly = false,
 }: AnalysisBoardProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [focusedOutput, setFocusedOutput] = useState<FocusedOutput | null>(null);
-  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
-  const [editingBoardName, setEditingBoardName] = useState('');
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<BoardViewport>({ x: 0, y: 0, scale: 1 });
+  const viewportByBoardRef = useRef<Record<string, BoardViewport>>({});
+  const activeBoardIdRef = useRef(activeBoardId);
   const transformFrameRef = useRef(0);
+  const viewportPersistTimerRef = useRef(0);
 
   const outputs = useMemo(() => normalizeOutputs(run, null), [run]);
   const outputLookup = useMemo(() => buildOutputLookup(outputs), [outputs]);
@@ -275,10 +281,27 @@ export function AnalysisBoard({
     const currentOutput = findCurrentOutput(item, outputLookup);
     return {
       item,
-      output: currentOutput || item.snapshot,
+      currentOutput,
+      // While settings are dirty, retain the last valid snapshot and mark it
+      // stale. After a successful rerun, the matching current output becomes
+      // authoritative and immediately replaces the pinned result.
+      output: workflowDirty ? (item.snapshot || currentOutput) : (currentOutput || item.snapshot),
       stale: workflowDirty || !currentOutput,
     };
   }), [items, outputLookup, workflowDirty]);
+
+  useEffect(() => {
+    if (workflowDirty || run?.status !== 'succeeded' || !run.id) return;
+    resolvedItems.forEach(({ item, currentOutput }) => {
+      if (!currentOutput || item.runId === run.id) return;
+      onUpdateItem(item.id, {
+        snapshot: currentOutput,
+        runId: run.id,
+        outputKind: String(currentOutput.kind || item.outputKind || 'json'),
+        outputTitle: outputTitle(currentOutput, item.outputIndex),
+      });
+    });
+  }, [onUpdateItem, resolvedItems, run?.id, run?.status, workflowDirty]);
 
   const renderViewport = useCallback(() => {
     transformFrameRef.current = 0;
@@ -296,18 +319,43 @@ export function AnalysisBoard({
     renderViewport();
     return () => {
       if (transformFrameRef.current) window.cancelAnimationFrame(transformFrameRef.current);
+      if (viewportPersistTimerRef.current) window.clearTimeout(viewportPersistTimerRef.current);
+      onViewportChange(activeBoardIdRef.current, { ...viewportRef.current });
       setCardInteractionState(false);
     };
-  }, [renderViewport]);
+  }, [onViewportChange, renderViewport]);
+
+  const scheduleViewportPersistence = useCallback((boardId: string, viewport: BoardViewport) => {
+    if (viewportPersistTimerRef.current) window.clearTimeout(viewportPersistTimerRef.current);
+    viewportPersistTimerRef.current = window.setTimeout(() => {
+      viewportPersistTimerRef.current = 0;
+      onViewportChange(boardId, { ...viewport });
+    }, 180);
+  }, [onViewportChange]);
 
   const applyViewport = useCallback((next: BoardViewport, updateZoomLabel = false) => {
     viewportRef.current = next;
+    viewportByBoardRef.current[activeBoardIdRef.current] = { ...next };
     scheduleViewportRender();
+    scheduleViewportPersistence(activeBoardIdRef.current, next);
     if (updateZoomLabel) {
       const nextPercent = Math.round(next.scale * 100);
       setZoomPercent((current) => current === nextPercent ? current : nextPercent);
     }
-  }, [scheduleViewportRender]);
+  }, [scheduleViewportPersistence, scheduleViewportRender]);
+
+  useEffect(() => {
+    const previousId = activeBoardIdRef.current;
+    viewportByBoardRef.current[previousId] = { ...viewportRef.current };
+    if (previousId !== activeBoardId) onViewportChange(previousId, { ...viewportRef.current });
+    activeBoardIdRef.current = activeBoardId;
+    const persisted = tabs.find((tab) => tab.id === activeBoardId)?.viewport;
+    const next = viewportByBoardRef.current[activeBoardId] || persisted || { x: 0, y: 0, scale: 1 };
+    viewportRef.current = { ...next };
+    viewportByBoardRef.current[activeBoardId] = { ...next };
+    setZoomPercent(Math.round(next.scale * 100));
+    scheduleViewportRender();
+  }, [activeBoardId, onViewportChange, scheduleViewportRender, tabs]);
 
   const getViewportScale = useCallback(() => viewportRef.current.scale, []);
 
@@ -391,18 +439,6 @@ export function AnalysisBoard({
     window.addEventListener('pointercancel', finish);
   }, [applyViewport]);
 
-  const beginRename = (tab: AnalysisBoardTab) => {
-    setEditingBoardId(tab.id);
-    setEditingBoardName(tab.name);
-  };
-
-  const finishRename = () => {
-    const name = editingBoardName.trim();
-    if (editingBoardId && name) onRenameBoard(editingBoardId, name);
-    setEditingBoardId(null);
-    setEditingBoardName('');
-  };
-
   return (
     <div className="analysis-board" dir="rtl">
       <div className="analysis-board-toolbar analysis-board-toolbar-direct workflow-shell-card">
@@ -422,7 +458,7 @@ export function AnalysisBoard({
             <button className="tiny-action" type="button" onClick={() => setPickerOpen((value) => !value)} title="افزودن خروجی"><Plus size={13} />خروجی</button>
             <button className="tiny-action" type="button" disabled={busy} onClick={onRun} title="اجرای دوباره"><RefreshCw size={13} className={busy ? 'spin' : ''} />Run</button>
             <button className="tiny-action icon-action" type="button" disabled={items.length === 0} onClick={onClear} title="پاک کردن برد"><Trash2 size={13} /></button>
-            <button className="icon-button icon-only" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={14} /></button>
+            <button className="icon-button icon-only" type="button" onClick={onClose} title="بازگشت به Workflow"><X size={17}/></button>
           </div>
         </div> */}
 
@@ -430,34 +466,14 @@ export function AnalysisBoard({
           <div className="analysis-board-tabs-scroll">
             {tabs.map((tab) => (
               <div className={`analysis-board-tab ${tab.id === activeBoardId ? 'active' : ''}`} key={tab.id}>
-                {editingBoardId === tab.id ? (
-                  <input
-                    autoFocus
-                    value={editingBoardName}
-                    onChange={(event) => setEditingBoardName(event.target.value)}
-                    onBlur={finishRename}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') finishRename();
-                      if (event.key === 'Escape') { setEditingBoardId(null); setEditingBoardName(''); }
-                    }}
-                    aria-label="نام برد"
-                  />
-                ) : (
-                  <button type="button" className="analysis-board-tab-select" onClick={() => onSelectBoard(tab.id)} onDoubleClick={() => beginRename(tab)}>
-                    <span>{tab.name}</span>
-                    <small>{tab.items.length.toLocaleString('fa-IR')}</small>
-                  </button>
-                )}
-                {tab.id === activeBoardId && editingBoardId !== tab.id && (
-                  <button className="analysis-board-tab-action" type="button" onClick={() => beginRename(tab)} title="تغییر نام"><Pencil size={11} /></button>
-                )}
-                {tab.id !== 'analysis-board-main' && tab.id === activeBoardId && (
-                  <button className="analysis-board-tab-action danger" type="button" onClick={() => onRemoveBoard(tab.id)} title="حذف برد"><X size={11} /></button>
-                )}
+                <button type="button" className="analysis-board-tab-select" onClick={() => onSelectBoard(tab.id)}>
+                  <span>{tab.name}</span>
+                  <small>{tab.items.length.toLocaleString('fa-IR')}</small>
+                </button>
               </div>
             ))}
           </div>
-          <button className="analysis-board-add-tab" type="button" onClick={onCreateBoard} title="برد جدید"><Plus size={13} /></button>
+          {!readOnly && <button className="analysis-board-add-tab" type="button" onClick={onCreateBoard} title="برد جدید"><Plus size={13} /></button>}
         </div>
       </div>
 
@@ -473,7 +489,7 @@ export function AnalysisBoard({
             {outputs.map((output, index) => {
               const key = outputKey(output);
               return (
-                <button className="analysis-output-choice" type="button" key={`${key}-${index}`} onClick={() => onAddOutput(output, index)}>
+                <button className="analysis-output-choice" type="button" key={`${key}-${index}`} disabled={readOnly} onClick={() => onAddOutput(output, index)}>
                   <span>{outputTitle(output, index)}</span>
                   <small>{String(output.kind || 'json')} · {String(output.node_id || 'node')}</small>
                   {pinnedKeys.has(key) && <em>روی این برد هست</em>}
@@ -505,6 +521,7 @@ export function AnalysisBoard({
               onRemoveItem={onRemoveItem}
               onDuplicateItem={onDuplicateItem}
               onFocus={setFocusedOutput}
+              readOnly={readOnly}
             />
           ))}
         </div>

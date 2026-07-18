@@ -28,6 +28,7 @@ ARTIFACT_TYPES = {
     "plot",
     "report",
     "node_output",
+    "node_cache",
     "temporary",
     "log",
     "profile_image",
@@ -175,11 +176,17 @@ def create_artifact_from_path(
     run_id: int | None = None,
     node_id: str | None = None,
     expires_in_days: int | None = None,
+    logical_name: str | None = None,
+    content_type_override: str | None = None,
+    cache_key: str | None = None,
+    schema_json: dict[str, Any] | None = None,
+    metadata_json: dict[str, Any] | None = None,
+    pinned: bool = False,
 ) -> Artifact:
     artifact_type = _validate_artifact_type(artifact_type)
     if not source_path.is_file():
         raise ValidationAppError("ARTIFACT_SOURCE_MISSING", "Artifact source file does not exist.")
-    content_type = mimetypes.guess_type(source_path.name)[0] or "application/octet-stream"
+    content_type = content_type_override or mimetypes.guess_type(source_path.name)[0] or "application/octet-stream"
     size_bytes = source_path.stat().st_size
     _enforce_quota(db, owner_username=owner_username, project_id=project_id, incoming_bytes=size_bytes)
     digest = hashlib.sha256()
@@ -195,7 +202,7 @@ def create_artifact_from_path(
         raise StorageUnavailableError(details={"backend": backend.name}) from exc
     expires_at = utcnow() + timedelta(days=expires_in_days) if expires_in_days else None
     previous = artifact_repository.latest_version(
-        db, owner_username=owner_username, project_id=project_id, artifact_type=artifact_type, logical_name=source_path.name
+        db, owner_username=owner_username, project_id=project_id, artifact_type=artifact_type, logical_name=logical_name or source_path.name
     )
     artifact = Artifact(
         project_id=project_id,
@@ -208,12 +215,16 @@ def create_artifact_from_path(
         bucket=get_settings().artifact_bucket if backend.name == "minio" else None,
         object_key=object_key,
         original_filename=source_path.name,
-        logical_name=source_path.name,
+        logical_name=logical_name or source_path.name,
         version=(previous.version + 1) if previous else 1,
         parent_artifact_id=previous.id if previous else None,
         content_type=content_type,
         size_bytes=size_bytes,
         checksum_sha256=checksum,
+        cache_key=cache_key,
+        schema_json=schema_json,
+        metadata_json=metadata_json,
+        pinned=pinned,
         status="available",
         expires_at=expires_at,
     )
@@ -237,9 +248,23 @@ def materialize_artifact(db: Session, artifact_id: int, *, cache_group: str = "a
         raise NotFoundError("ARTIFACT_NOT_FOUND", "Artifact not found.", {"artifact_id": artifact_id})
     target = Path(get_settings().storage_dir) / "cache" / cache_group / str(artifact.id) / artifact.original_filename
     if target.exists() and target.stat().st_size == artifact.size_bytes:
+        artifact.last_accessed_at = utcnow()
+        db.flush()
         return target
     try:
-        return get_storage_backend().download_file(artifact.object_key, target)
+        downloaded = get_storage_backend().download_file(artifact.object_key, target)
+        digest = hashlib.sha256()
+        with downloaded.open("rb") as source:
+            while chunk := source.read(1024 * 1024):
+                digest.update(chunk)
+        if digest.hexdigest() != artifact.checksum_sha256:
+            downloaded.unlink(missing_ok=True)
+            raise StorageUnavailableError("Artifact checksum verification failed.", {"artifact_id": artifact.id})
+        artifact.last_accessed_at = utcnow()
+        db.flush()
+        return downloaded
+    except StorageUnavailableError:
+        raise
     except Exception as exc:
         raise StorageUnavailableError(details={"artifact_id": artifact.id}) from exc
 

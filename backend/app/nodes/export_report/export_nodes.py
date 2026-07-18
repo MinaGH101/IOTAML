@@ -6,6 +6,7 @@ from app.nodes.io import ensure_df, first_upstream_df, node_label, output, run_f
 
 
 class ExportCsvNode(BaseNode):
+    cacheable = False
     id = 'EX-001'
     name = 'Export CSV'
     category = 'Export or Report'
@@ -24,6 +25,7 @@ class ExportCsvNode(BaseNode):
 
 
 class ExportJsonNode(BaseNode):
+    cacheable = False
     id = 'EX-005'
     name = 'Export JSON'
     category = 'Export or Report'
@@ -39,6 +41,7 @@ class ExportJsonNode(BaseNode):
 
 
 class SimpleReportNode(BaseNode):
+    cacheable = False
     id = 'EX-006'
     name = 'Simple Report'
     category = 'Export or Report'

@@ -109,7 +109,7 @@ export function ProfilePage({
             <div className="profile-form-grid-reference">
               <label>
                 نام
-                <div className="input-with-icon-reference"><User size={14} /><input value={draft.first_name || ''} onChange={(event) => setField('first_name', event.target.value)} /></div>
+                <div className="input-with-icon-reference"><User size={17}/><input value={draft.first_name || ''} onChange={(event) => setField('first_name', event.target.value)} /></div>
               </label>
               <label>
                 نام خانوادگی
@@ -117,11 +117,11 @@ export function ProfilePage({
               </label>
               <label>
                 ایمیل
-                <div className="input-with-icon-reference"><Mail size={14} /><input value={draft.email || ''} onChange={(event) => setField('email', event.target.value)} /></div>
+                <div className="input-with-icon-reference"><Mail size={17}/><input value={draft.email || ''} onChange={(event) => setField('email', event.target.value)} /></div>
               </label>
               <label>
                 شماره تماس
-                <div className="input-with-icon-reference"><Phone size={14} /><input value={draft.phone_number || ''} onChange={(event) => setField('phone_number', event.target.value)} /></div>
+                <div className="input-with-icon-reference"><Phone size={17}/><input value={draft.phone_number || ''} onChange={(event) => setField('phone_number', event.target.value)} /></div>
               </label>
               <label>
                 عنوان
@@ -129,7 +129,7 @@ export function ProfilePage({
               </label>
               <label>
                 واحد
-                <div className="input-with-icon-reference"><Building2 size={14} /><input value={draft.department || ''} onChange={(event) => setField('department', event.target.value)} /></div>
+                <div className="input-with-icon-reference"><Building2 size={17}/><input value={draft.department || ''} onChange={(event) => setField('department', event.target.value)} /></div>
               </label>
             </div>
 

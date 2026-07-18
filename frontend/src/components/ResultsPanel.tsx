@@ -1,15 +1,12 @@
 import { Download, Maximize2, PanelRightClose, PanelRightOpen, Pin, X } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { BarChart } from '@mui/x-charts/BarChart';
-import { LineChart } from '@mui/x-charts/LineChart';
-import { ScatterChart } from '@mui/x-charts/ScatterChart';
 import type { Run } from '../types';
 
-export type Output = Record<string, unknown> & { kind?: string; title?: string; node_id?: string; source_label?: string; branch?: string };
+export type Output = Record<string, unknown> & { kind?: string; title?: string; node_id?: string; source_label?: string; branch?: string; source_handle?: string; source_port_name?: string };
 
-type ChartPoint = { id: string | number; x: number; y: number };
+const AmChartsOutput = lazy(() => import('./charts/AmChartsOutput'));
 
 function fmt(value: unknown): string {
   if (typeof value === 'number') return Number.isInteger(value) ? value.toLocaleString('fa-IR') : value.toFixed(4);
@@ -55,57 +52,20 @@ export function normalizeOutputs(run: Run | null, selectedNodeId: string | null)
 }
 
 function plotColors() {
-  // Keep MUI X colors bound to CSS variables so theme changes and page refreshes
-  // cannot leave charts/tables with colors captured from the previous theme.
+  // Keep table colors bound to CSS variables so theme changes remain consistent.
   return {
     text: 'var(--theme-text)',
     muted: 'var(--theme-text-muted)',
     purple: 'var(--theme-secondary)',
     blue: 'var(--theme-secondary)',
     cyan: 'var(--theme-primary)',
+    success: 'var(--theme-success)',
+    warning: 'var(--theme-warning)',
     panel: 'var(--theme-popup-bg, var(--theme-popup-bg))',
     line: 'var(--theme-divider)',
     lineStrong: 'var(--theme-control-border)',
     bg: 'var(--theme-popup-bg, var(--theme-popup-bg))'
   };
-}
-
-function axisValue(value: unknown) {
-  if (value === null || value === undefined || value === '') return undefined;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : undefined;
-}
-
-function chartColor(output: Output, fallbackIndex = 0) {
-  const c = plotColors();
-  const palette = [c.cyan, c.blue, c.purple];
-  const color = String(output.color || '').trim();
-  return color || palette[fallbackIndex % palette.length];
-}
-
-function chartSx() {
-  const c = plotColors();
-  return {
-    direction: 'ltr',
-    color: c.text,
-    backgroundColor: 'transparent',
-    '& .MuiChartsAxis-line, & .MuiChartsAxis-tick': { stroke: c.lineStrong },
-    '& .MuiChartsAxis-root text, & .MuiChartsAxis-tickLabel, & .MuiChartsAxis-label, & .MuiChartsLegend-label': {
-      fill: `${c.muted} !important`,
-      color: `${c.muted} !important`,
-      fontSize: '12px !important'
-    },
-    '& .MuiChartsGrid-line': { stroke: c.line, strokeDasharray: '3 3' },
-    '& .MuiChartsTooltip-paper': { background: c.panel, color: c.text, border: `1px solid ${c.lineStrong}` }
-  };
-}
-
-function chartMargin() {
-  return { left: 64, right: 22, top: 32, bottom: 58 };
-}
-
-function MuiChartShell({ children, height = 280 }: { children: React.ReactNode; height?: number }) {
-  return <div className="mui-chart-wrap" style={{ height }}>{children}</div>;
 }
 
 const DATA_GRID_PAGE_SIZES = [5, 10, 12, 25, 50, 100];
@@ -193,156 +153,53 @@ function MetricsView({ metrics }: { metrics: Record<string, unknown> }) {
   return <div className="metric-grid">{Object.entries(metrics).map(([key, value]) => <div className="metric-card workflow-shell-card" key={key}><span>{key}</span><b>{fmt(value)}</b></div>)}</div>;
 }
 
-function ScatterView({ output, points, xKey, yKey, label }: { output: Output; points: Record<string, unknown>[]; xKey: string; yKey: string; label?: string }) {
-  const clean: ChartPoint[] = points
-    .map((p, index) => ({ id: index, x: Number(p[xKey]), y: Number(p[yKey]) }))
-    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
-  if (clean.length === 0) return <div className="empty-state">داده‌ای برای رسم نمودار وجود ندارد.</div>;
+function ChartLoadingPlaceholder() {
+  return <div className="amchart-loading" aria-live="polite"><span/><span/><span/></div>;
+}
 
+function AmChartBody({ output, collectionMode = false }: { output: Output; collectionMode?: boolean }) {
   return (
-    <MuiChartShell>
-      <ScatterChart
-        series={[{ label: label || yKey, data: clean, color: chartColor(output), markerSize: Number(output.point_size || 7) } as any]}
-        xAxis={[{ label: xKey, min: axisValue(output.x_min), max: axisValue(output.x_max) } as any]}
-        yAxis={[{ label: yKey, min: axisValue(output.y_min), max: axisValue(output.y_max) } as any]}
-        margin={chartMargin()}
-        grid={{ vertical: true, horizontal: true }}
-        sx={chartSx()}
-      />
-    </MuiChartShell>
+    <Suspense fallback={<ChartLoadingPlaceholder />}>
+      <AmChartsOutput output={output} collectionMode={collectionMode} />
+    </Suspense>
   );
-}
-
-function BarView({ output, rows, xKey, yKey }: { output: Output; rows: Record<string, unknown>[]; xKey: string; yKey: string }) {
-  const limited = rows.slice(0, 35);
-  if (limited.length === 0) return <div className="empty-state">داده‌ای برای نمایش وجود ندارد.</div>;
-  const labels = limited.map((r) => String(r[xKey]));
-  const values = limited.map((r) => Number(r[yKey] ?? 0));
-  const height = Math.max(280, Math.min(620, labels.length * 24 + 120));
-
-  return (
-    <MuiChartShell height={height}>
-      <BarChart
-        layout="horizontal"
-        yAxis={[{ scaleType: 'band', data: labels, label: xKey } as any]}
-        xAxis={[{ label: yKey } as any]}
-        series={[{ label: yKey, data: values, color: chartColor(output) }]}
-        margin={{ left: 132, right: 24, top: 28, bottom: 44 }}
-        grid={{ vertical: true }}
-        sx={chartSx()}
-      />
-    </MuiChartShell>
-  );
-}
-
-function HistogramView({ output }: { output: Output }) {
-  const counts = (output.counts as number[] | undefined) || [];
-  const edges = (output.edges as number[] | undefined) || [];
-  const labels = counts.map((_, index) => edges.length > index + 1 ? `${fmt(edges[index])} - ${fmt(edges[index + 1])}` : String(index + 1));
-  if (!counts.length) return <div className="empty-state">داده‌ای برای رسم Histogram وجود ندارد.</div>;
-
-  return (
-    <MuiChartShell>
-      <BarChart
-        xAxis={[{ scaleType: 'band', data: labels, label: String(output.column || 'bin'), tickLabelStyle: { angle: 35, textAnchor: 'start', fontSize: 10 } } as any]}
-        yAxis={[{ label: 'count' } as any]}
-        series={[{ label: String(output.column || 'histogram'), data: counts, color: chartColor(output) }]}
-        margin={chartMargin()}
-        grid={{ horizontal: true }}
-        sx={chartSx()}
-      />
-    </MuiChartShell>
-  );
-}
-
-function LineView({ output }: { output: Output }) {
-  const xs = (output.train_sizes as number[] | undefined) || [];
-  const train = (output.train_score_mean as number[] | undefined) || [];
-  const test = (output.test_score_mean as number[] | undefined) || [];
-  if (!xs.length) return <div className="empty-state">داده‌ای برای رسم Line chart وجود ندارد.</div>;
-  const c = plotColors();
-  return (
-    <MuiChartShell>
-      <LineChart
-        xAxis={[{ scaleType: 'point', data: xs.map(String), label: 'train size' } as any]}
-        yAxis={[{ label: 'score', min: axisValue(output.y_min), max: axisValue(output.y_max) } as any]}
-        series={[
-          { label: 'train', data: train, color: chartColor(output, 0), curve: 'linear' },
-          { label: 'test', data: test, color: String(output.color_secondary || '') || c.purple, curve: 'linear' }
-        ] as any}
-        margin={chartMargin()}
-        grid={{ vertical: true, horizontal: true }}
-        sx={chartSx()}
-      />
-    </MuiChartShell>
-  );
-}
-
-function MatrixView({ output }: { output: Output }) {
-  const rawMatrix = output.matrix as unknown;
-  const rawRows = output.rows as unknown;
-  let labels = ((output.labels as unknown[] | undefined) || []).map(String);
-  let matrix: number[][] = [];
-
-  if (Array.isArray(rawMatrix) && rawMatrix.every((row) => Array.isArray(row))) {
-    matrix = rawMatrix.map((row) => (row as unknown[]).map((value) => Number(value)));
-  } else {
-    const objectRows =
-      Array.isArray(rawMatrix) && rawMatrix.every((row) => row && typeof row === 'object' && !Array.isArray(row))
-        ? rawMatrix as Record<string, unknown>[]
-        : Array.isArray(rawRows) && rawRows.every((row) => row && typeof row === 'object' && !Array.isArray(row))
-          ? rawRows as Record<string, unknown>[]
-          : [];
-    if (!labels.length && objectRows.length) labels = Object.keys(objectRows[0]).filter((key) => key !== 'column' && key !== 'index');
-    matrix = objectRows.map((row) => labels.map((label) => Number(row[label])));
-  }
-
-  if (!labels.length && matrix.length) labels = matrix.map((_, index) => String(index));
-  if (!labels.length || !matrix.length) return <div className="empty-state">داده‌ای برای نمایش ماتریس وجود ندارد.</div>;
-
-  const rows = matrix.map((values, index) => ({ column: labels[index] || String(index), ...Object.fromEntries(labels.map((label, colIndex) => [label, values[colIndex]])) }));
-  return <TableView rows={rows} columns={['column', ...labels]} />;
-}
-
-function BoxView({ output }: { output: Output }) {
-  const q = (output.quantiles || {}) as Record<string, unknown>;
-  const rows = Object.keys(q).length
-    ? Object.entries(q).map(([stat, value]) => ({ stat, value }))
-    : [
-        { stat: 'min', value: output.min },
-        { stat: 'q1', value: output.q1 },
-        { stat: 'median', value: output.median },
-        { stat: 'q3', value: output.q3 },
-        { stat: 'max', value: output.max },
-      ].filter((row) => row.value !== undefined);
-
-  if (rows.length === 0) return <div className="empty-state">داده‌ای برای نمایش باکس‌پلات وجود ندارد.</div>;
-
-  const values = rows.map((row) => Number(row.value));
-  if (values.every(Number.isFinite)) {
-    return (
-      <MuiChartShell height={240}>
-        <BarChart
-          xAxis={[{ scaleType: 'band', data: rows.map((row) => row.stat) } as any]}
-          yAxis={[{} as any]}
-          series={[{ label: String(output.column || 'boxplot'), data: values, color: chartColor(output) }]}
-          margin={{ left: 54, right: 18, top: 24, bottom: 38 }}
-          grid={{ horizontal: true }}
-          sx={chartSx()}
-        />
-      </MuiChartShell>
-    );
-  }
-
-  return <TableView rows={rows} columns={['stat', 'value']} />;
 }
 
 function plotSubtitle(plot: Output) {
   const kind = String(plot.kind || 'plot');
   if (kind === 'scatter') return `${String(plot.x || 'x')} × ${String(plot.y || 'y')}`;
-  if (kind === 'histogram' || kind === 'boxplot') return String(plot.column || kind);
+  if (['histogram', 'boxplot', 'pp_plot', 'stair_outlier'].includes(kind)) return String(plot.column || kind);
+  if (kind === 'bar_plot') return String(plot.category_column || kind);
   return kind;
 }
+
+
+const LazyPlotItem = memo(function LazyPlotItem({ plot, index, onAddToBoard }: { plot: Output; index: number; onAddToBoard?: (output: Output, index: number) => void }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(index < 3);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setVisible(entry.isIntersecting);
+    }, { rootMargin: '650px 0px', threshold: 0 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="plot-group-item" style={{ minHeight: 360 }}>
+      <div className="plot-group-item-head">
+        <b>{String(plot.title || `Plot ${index + 1}`)}</b>
+        <span>{plotSubtitle(plot)}</span>
+        <button className="tiny-action icon-action" type="button" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(plot, index)}><Download size={12} /></button>
+        {onAddToBoard && <button className="tiny-action icon-action" type="button" title="افزودن همین نمودار به برد" aria-label="افزودن همین نمودار به برد" onClick={() => onAddToBoard(plot, index)}><Pin size={12} /></button>}
+      </div>
+      {visible ? <OutputBody output={plot} onAddToBoard={onAddToBoard} collectionMode /> : <div className="plot-group-lazy-placeholder">نمودار نزدیک محدوده دید فعال می‌شود.</div>}
+    </div>
+  );
+});
 
 function PlotGroupView({ output, onAddToBoard }: { output: Output; onAddToBoard?: (output: Output, index: number) => void }) {
   const plots = Array.isArray(output.plots) ? output.plots.filter((plot): plot is Output => Boolean(plot && typeof plot === 'object' && !Array.isArray(plot))) : [];
@@ -355,32 +212,21 @@ function PlotGroupView({ output, onAddToBoard }: { output: Output; onAddToBoard?
       </div>
       <div className="plot-group-scroll">
         {plots.map((plot, index) => (
-          <div className="plot-group-item" key={`${String(plot.title || plot.kind || 'plot')}-${index}`}>
-            <div className="plot-group-item-head">
-              <b>{String(plot.title || `Plot ${index + 1}`)}</b>
-              <span>{plotSubtitle(plot)}</span>
-              <button className="tiny-action icon-action" type="button" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(plot, index)}><Download size={12} /></button>
-              {onAddToBoard && <button className="tiny-action icon-action" type="button" title="افزودن همین نمودار به برد" aria-label="افزودن همین نمودار به برد" onClick={() => onAddToBoard(plot, index)}><Pin size={12} /></button>}
-            </div>
-            <OutputBody output={plot} onAddToBoard={onAddToBoard} />
-          </div>
+          <LazyPlotItem plot={plot} index={index} onAddToBoard={onAddToBoard} key={`${String(plot.title || plot.kind || 'plot')}-${index}`} />
         ))}
       </div>
     </div>
   );
 }
 
-export const OutputBody = memo(function OutputBody({ output, onAddToBoard }: { output: Output; onAddToBoard?: (output: Output, index: number) => void }) {
+const AMCHART_KINDS = new Set(['scatter', 'histogram', 'bar', 'line', 'heatmap', 'matrix', 'boxplot', 'bar_plot', 'pp_plot', 'stair_outlier']);
+
+export const OutputBody = memo(function OutputBody({ output, onAddToBoard, collectionMode = false }: { output: Output; onAddToBoard?: (output: Output, index: number) => void; collectionMode?: boolean }) {
   const kind = String(output.kind || 'json');
   if (kind === 'table') return <TableView rows={(output.rows as Record<string, unknown>[] | undefined) || []} columns={output.columns as string[] | undefined} />;
   if (kind === 'metrics') return <MetricsView metrics={(output.metrics as Record<string, unknown> | undefined) || {}} />;
-  if (kind === 'scatter') return <ScatterView output={output} points={(output.points as Record<string, unknown>[] | undefined) || (output.rows as Record<string, unknown>[] | undefined) || []} xKey={String(output.x || 'x')} yKey={String(output.y || 'y')} label={String(output.source_label || output.branch || output.title || '')} />;
   if (kind === 'plot_group') return <PlotGroupView output={output} onAddToBoard={onAddToBoard} />;
-  if (kind === 'histogram') return <HistogramView output={output} />;
-  if (kind === 'bar') return <BarView output={output} rows={(output.rows as Record<string, unknown>[] | undefined) || []} xKey={String(output.xKey || 'feature')} yKey={String(output.yKey || 'importance')} />;
-  if (kind === 'line') return <LineView output={output} />;
-  if (kind === 'matrix') return <MatrixView output={output} />;
-  if (kind === 'boxplot') return <BoxView output={output} />;
+  if (AMCHART_KINDS.has(kind)) return <AmChartBody output={output} collectionMode={collectionMode} />;
   return <pre>{JSON.stringify(output.value ?? output, null, 2)}</pre>;
 });
 

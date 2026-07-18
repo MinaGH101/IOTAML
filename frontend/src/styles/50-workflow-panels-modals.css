@@ -1222,3 +1222,596 @@ grid-column:1 / -1;
 color:var(--theme-text-muted);
 font-size:9px
 }
+
+/* Immutable named workflow versions. */
+.workflow-versions-tab,.workflow-versions-panel {
+  height:100%;
+  min-height:0
+}
+
+.workflow-versions-panel {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-divider) 78%,var(--theme-transparent));
+  border-radius:var(--theme-radius-panel);
+  background:color-mix(in srgb,var(--theme-popup-bg) 58%,var(--theme-transparent))
+}
+
+.workflow-version-list {
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  display:grid;
+  align-content:start;
+  gap:6px;
+  padding:9px
+}
+
+.workflow-version-row {
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 30px;
+  align-items:start;
+  gap:4px;
+  border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-divider) 72%,var(--theme-transparent));
+  border-radius:var(--theme-radius-panel);
+  background:color-mix(in srgb,var(--theme-control-bg) 76%,var(--theme-transparent))
+}
+
+.workflow-version-row:hover,.workflow-version-row.active {
+  border-color:color-mix(in srgb,var(--theme-primary) 42%,var(--theme-divider));
+  background:color-mix(in srgb,var(--theme-primary) 5%,var(--theme-control-bg))
+}
+
+.workflow-version-main {
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:3px 7px;
+  padding:9px 8px;
+  text-align:right;
+  direction:rtl;
+  border:0;
+  background:var(--theme-transparent);
+  color:var(--theme-text)
+}
+
+.workflow-version-main b {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11px
+}
+
+.workflow-version-main small {
+  grid-column:1 / -1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--theme-text-muted);
+  font-size:9px
+}
+
+.workflow-version-number {
+  padding:3px 6px;
+  border-radius:var(--theme-radius-pill);
+  background:var(--theme-primary-soft);
+  color:var(--theme-primary);
+  font-size:9px;
+  direction:ltr
+}
+
+.workflow-version-delete {
+  margin:5px 3px 0 0;
+  color:var(--theme-text-muted)
+}
+
+.workflow-version-delete:hover {
+  color:var(--theme-danger)
+}
+
+.workflow-version-preview-banner {
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 10px;
+  border-bottom:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 28%,var(--theme-divider));
+  background:color-mix(in srgb,var(--theme-primary) 8%,var(--theme-panel-muted));
+  direction:rtl
+}
+
+.workflow-version-preview-banner > div:first-child {
+  min-width:0;
+  display:grid;
+  gap:2px
+}
+
+.workflow-version-preview-banner b {
+  color:var(--theme-primary);
+  font-size:10px
+}
+
+.workflow-version-preview-banner small {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--theme-text-muted);
+  font-size:9px
+}
+
+.workflow-version-preview-actions {
+  display:inline-flex;
+  align-items:center;
+  gap:3px
+}
+
+.inspector-readonly-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.inspector-readonly-fieldset:disabled {
+  opacity: .72;
+}
+
+/* Connected-output selection in the node Input panel. */
+.node-input-source {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--theme-panel-muted);
+  border: 1px solid var(--theme-divider);
+}
+
+.node-input-source-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.node-input-source-head > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.node-input-source-head b,
+.node-input-source-head small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-input-source-head small,
+.node-input-source-head em {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.node-input-port-radios {
+  display: grid;
+  gap: 6px;
+}
+
+.node-input-port-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 9px;
+  cursor: pointer;
+  background: var(--theme-control-bg);
+  border: 1px solid var(--theme-divider);
+  border-radius: var(--theme-radius-control);
+}
+
+.node-input-port-radio:hover,
+.node-input-port-radio.active {
+  background: var(--theme-hover-bg);
+  border-color: var(--theme-primary);
+}
+
+.node-input-port-radio input {
+  flex: 0 0 auto;
+  accent-color: var(--theme-primary);
+}
+
+.node-input-port-radio span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.node-input-port-radio b,
+.node-input-port-radio small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-input-port-radio small {
+  color: var(--theme-text-muted);
+  font-size: 10px;
+}
+
+.series-colors-editor {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  background: var(--theme-control-bg);
+  border: 1px solid var(--theme-divider);
+}
+
+.series-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.series-color-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.series-color-row input[type='color'] {
+  width: 36px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.node-input-port-radio.disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.node-input-port-radio.disabled:hover {
+  background: var(--theme-control-bg);
+  border-color: var(--theme-divider);
+}
+
+.workflow-assistant-float {
+position:fixed;
+top:76px;
+right:16px;
+z-index:90;
+width:min(390px,calc(100vw - 32px));
+height:min(620px,calc(100vh - 92px))
+}
+
+.workflow-assistant-float[hidden] {
+display:none!important
+}
+
+.assistant-panel {
+height:100%;
+min-height:0;
+display:flex;
+flex-direction:column;
+overflow:hidden;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+background:var(--theme-panel-bg);
+box-shadow:none;
+color:var(--theme-text)
+}
+
+.assistant-panel-header {
+flex:0 0 auto;
+min-height:54px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+padding:8px 10px 8px 14px;
+border-bottom:var(--theme-border-width) solid var(--theme-divider);
+background:var(--theme-panel-muted)
+}
+
+.assistant-panel-title,.assistant-panel-actions {
+display:flex;
+align-items:center
+}
+
+.assistant-panel-title {
+min-width:0;
+gap:9px;
+color:var(--theme-primary)
+}
+
+.assistant-panel-title > div {
+min-width:0;
+display:flex;
+flex-direction:column;
+gap:2px
+}
+
+.assistant-panel-title strong {
+color:var(--theme-text);
+font-size:12px
+}
+
+.assistant-panel-title span {
+overflow:hidden;
+color:var(--theme-text-muted);
+font-size:10px;
+white-space:nowrap;
+text-overflow:ellipsis
+}
+
+.assistant-panel-actions {
+gap:2px
+}
+
+.assistant-panel-actions .icon-button {
+width:30px;
+min-width:30px;
+height:30px;
+padding:0!important;
+border-color:var(--theme-transparent);
+background:var(--theme-transparent)
+}
+
+.assistant-panel-actions .icon-button:hover {
+color:var(--theme-primary);
+background:var(--theme-transparent);
+border-color:var(--theme-transparent)
+}
+
+.assistant-message-list {
+flex:1 1 auto;
+min-height:0;
+display:flex;
+flex-direction:column;
+gap:10px;
+overflow:auto;
+padding:14px;
+scrollbar-color:var(--theme-control-border) var(--theme-transparent);
+scrollbar-width:thin
+}
+
+.assistant-empty-state {
+flex:1 1 auto;
+min-height:220px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:8px;
+text-align:center;
+color:var(--theme-text-muted)
+}
+
+.assistant-empty-state svg {
+color:var(--theme-primary)
+}
+
+.assistant-empty-state strong {
+color:var(--theme-text);
+font-size:13px
+}
+
+.assistant-empty-state span {
+max-width:260px;
+font-size:11px;
+line-height:1.8
+}
+
+.assistant-message {
+max-width:88%;
+display:flex;
+flex-direction:column;
+gap:4px;
+padding:9px 11px;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+background:var(--theme-panel-muted)
+}
+
+.assistant-message.user {
+align-self:flex-start;
+border-color:color-mix(in srgb,var(--theme-primary) 32%,var(--theme-divider));
+background:color-mix(in srgb,var(--theme-primary) 9%,var(--theme-panel-muted))
+}
+
+.assistant-message.assistant {
+align-self:flex-end
+}
+
+.assistant-message > span {
+color:var(--theme-text-muted);
+font-size:9px;
+font-weight:700
+}
+
+.assistant-message p {
+margin:0;
+color:var(--theme-text);
+font-size:11px;
+line-height:1.85;
+white-space:pre-wrap;
+word-break:break-word;
+unicode-bidi:plaintext
+}
+
+.assistant-loading {
+display:flex;
+align-items:center;
+gap:7px;
+padding:2px 4px;
+color:var(--theme-text-muted);
+font-size:11px
+}
+
+.assistant-loading svg {
+color:var(--theme-primary)
+}
+
+.assistant-error {
+flex:0 0 auto;
+margin:0 12px 8px;
+padding:8px 10px;
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-danger) 50%,var(--theme-divider));
+border-radius:var(--theme-radius-control);
+background:color-mix(in srgb,var(--theme-danger) 10%,var(--theme-panel-bg));
+color:var(--theme-danger);
+font-size:10px;
+line-height:1.7
+}
+
+.assistant-input-wrap {
+position:relative;
+flex:0 0 auto;
+padding:10px;
+border-top:var(--theme-border-width) solid var(--theme-divider);
+background:var(--theme-panel-muted)
+}
+
+.assistant-input-wrap textarea {
+width:100%;
+min-height:76px;
+max-height:160px;
+resize:vertical;
+padding:10px 10px 10px 44px!important;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-panel);
+background:var(--theme-control-bg);
+color:var(--theme-text);
+font:inherit;
+font-size:11px;
+line-height:1.75;
+unicode-bidi:plaintext
+}
+
+.assistant-input-wrap textarea:focus {
+outline:none;
+border-color:color-mix(in srgb,var(--theme-primary) 70%,var(--theme-control-border))
+}
+
+.assistant-send-button {
+position:absolute;
+left:18px;
+bottom:18px;
+width:30px;
+height:30px;
+display:inline-grid;
+place-items:center;
+padding:0!important;
+border:0;
+border-radius:var(--theme-radius-control);
+background:var(--theme-primary);
+color:var(--theme-white)
+}
+
+.assistant-send-button:hover:not(:disabled) {
+background:color-mix(in srgb,var(--theme-primary) 86%,var(--theme-white) 14%)
+}
+
+.assistant-send-button:disabled {
+opacity:.45;
+cursor:not-allowed
+}
+
+@media (width <= 760px) {
+.workflow-assistant-float {
+top:68px;
+right:8px;
+width:calc(100vw - 16px);
+height:calc(100vh - 76px)
+}
+}
+
+
+/* Static project/workflow breadcrumb in the editor top bar. */
+.workflow-project-link,
+.workflow-current-name {
+  min-width: 0;
+  max-width: 170px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.workflow-project-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.workflow-project-link:hover {
+  color: var(--theme-primary);
+  background: transparent;
+}
+
+.workflow-current-name {
+  color: var(--theme-text);
+}
+
+/* Keep expensive tab contents mounted while the right panel is collapsed. */
+.workflow-shell-page .workspace {
+  transition: none !important;
+}
+
+.workflow-shell-page .right-stack-wrap,
+.workflow-shell-page .workflow-right-tabs-panel,
+.workflow-shell-page .workflow-right-tabs-content {
+  transition: none !important;
+}
+
+.workflow-right-tabs-collapsed .workflow-right-tabs-content {
+  display: none !important;
+}
+
+.workflow-right-tab-body[hidden] {
+  display: none !important;
+}
+
+.workflow-assistant-tab {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.workflow-assistant-tab .assistant-panel {
+  height: 100%;
+  border: 0;
+  border-radius: var(--theme-radius-none);
+  box-shadow: none;
+}
+
+.workflow-assistant-tab .assistant-panel-header {
+  min-height: 48px;
+}
+
+.assistant-input-wrap {
+  box-sizing: border-box;
+}
+
+.assistant-input-wrap textarea {
+  box-sizing: border-box;
+  padding-left: 46px !important;
+}
+
+.assistant-send-button {
+  left: 12px;
+  bottom: 12px;
+  width: 32px;
+  height: 32px;
+}

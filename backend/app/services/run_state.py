@@ -6,7 +6,7 @@ from typing import Any
 TERMINAL_STATUSES = frozenset({'succeeded', 'failed', 'cancelled', 'timed_out'})
 ACTIVE_STATUSES = frozenset({'queued', 'running'})
 VALID_STATUSES = frozenset({'queued', 'running', *TERMINAL_STATUSES})
-NODE_TERMINAL_STATUSES = frozenset({'succeeded', 'failed', 'skipped', 'cancelled'})
+NODE_TERMINAL_STATUSES = frozenset({'succeeded', 'cached', 'failed', 'skipped', 'cancelled'})
 
 
 def utcnow() -> datetime:

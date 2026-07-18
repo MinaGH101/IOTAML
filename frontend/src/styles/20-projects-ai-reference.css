@@ -331,7 +331,7 @@ border:var(--theme-border-width) solid var(--theme-divider);
 color:var(--theme-text)
 }
 
-input:focus,select:focus,textarea:focus,.auth-card input:focus,.project-form input:focus,.project-form select:focus,.project-form textarea:focus,.profile-card-main input:focus,.project-filter-search:focus-within {
+select:focus,textarea:focus,.auth-card input:focus,.project-form input:focus,.project-form select:focus,.project-form textarea:focus,.profile-card-main input:focus,.project-filter-search:focus-within {
 border-color:color-mix(in srgb,var(--theme-primary) 0%,var(--theme-control-border));
 background:color-mix(in srgb,var(--theme-workspace-bg) 46%,var(--theme-panel-muted))
 }
@@ -535,11 +535,12 @@ justify-content:center
 display:grid;
 grid-template-columns:auto minmax(0,1fr) auto;
 align-items:center;
-gap:8px
+gap:8px;
+border: 1px solid var(--theme-divider) !important;
 }
 
 .auth-input-wrap input {
-border:0;
+border: 0;
 padding-inline:0!important;
 background:var(--theme-transparent)
 }
@@ -1063,6 +1064,11 @@ width:min(var(--theme-page-max-width,1280px),100%);
 margin-inline:auto
 }
 
+.project-create-reference-layout button {
+  margin-top: 15px;
+}
+
+
 .section-label-reference {
 margin:0 0 18px;
 color:var(--theme-text-muted);
@@ -1488,6 +1494,7 @@ background:color-mix(in srgb,var(--theme-secondary) 88%,var(--theme-primary));
 grid-template-columns:1fr
 }
 
+
 .project-filter-panel-reference,.project-info-reference,.project-create-info-reference {
 position:static
 }
@@ -1569,4 +1576,107 @@ padding:14px!important
 
 .artifact-usage-summary small {
   color: var(--theme-text-muted);
+}
+
+/* Workflow management belongs to the project page. */
+.workflow-manage-card {
+  min-height: 104px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.workflow-card-open {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-text);
+  text-align: right;
+}
+
+.workflow-card-open > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.workflow-card-open b,
+.workflow-card-open span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.workflow-card-open:hover {
+  color: var(--theme-primary);
+  background: transparent;
+}
+
+.workflow-name-editor {
+  min-width: min(360px, 38vw);
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 32px 32px;
+  align-items: center;
+  gap: 6px;
+  direction: rtl;
+}
+
+.workflow-name-editor input {
+  width: 100%;
+  height: 34px;
+  padding: 6px 9px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-control-bg);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.workflow-name-editor input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+}
+
+.workflow-row-action {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--theme-radius-control);
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+.workflow-row-action:hover:not(:disabled) {
+  color: var(--theme-primary);
+  background: transparent;
+}
+
+.workflow-row-action.danger-action:hover:not(:disabled) {
+  color: var(--theme-danger);
+}
+
+.workflow-row-action:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+@media (width <= 900px) {
+  .workflow-manage-card {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-name-editor {
+    min-width: 0;
+    width: 100%;
+  }
 }

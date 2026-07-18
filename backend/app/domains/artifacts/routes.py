@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
+from app.domains.artifacts.models import Artifact, ArtifactLineage, NodeCacheEntry
 from app.domains.artifacts.repository import artifact_repository
 from app.domains.artifacts.schemas import ArtifactDownloadOut, ArtifactOut, ArtifactUsageOut
 from app.domains.artifacts.service import artifact_download_url, create_artifact_from_upload, delete_artifact, materialize_artifact, owned_artifact, usage_payload
+from app.services.node_cache import clear_project_cache
 from app.services.users import get_current_user
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
@@ -41,6 +44,7 @@ def list_artifacts(
     run_id: int | None = None,
     node_id: str | None = None,
     artifact_type: str | None = None,
+    include_internal: bool = False,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -51,6 +55,7 @@ def list_artifacts(
         run_id=run_id,
         node_id=node_id,
         artifact_type=artifact_type,
+        include_internal=include_internal,
     )
 
 
@@ -61,6 +66,58 @@ def artifact_usage(
     current_user: dict = Depends(get_current_user),
 ):
     return usage_payload(db, owner_username=str(current_user["username"]), project_id=project_id)
+
+
+@router.get("/cache/stats")
+def cache_stats(
+    project_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    username = str(current_user["username"])
+    query = db.query(
+        func.count(NodeCacheEntry.id),
+        func.coalesce(func.sum(NodeCacheEntry.size_bytes), 0),
+        func.coalesce(func.sum(NodeCacheEntry.hit_count), 0),
+    ).filter(NodeCacheEntry.owner_username == username, NodeCacheEntry.status == "available")
+    if project_id is not None:
+        query = query.filter(NodeCacheEntry.project_id == project_id)
+    count, size_bytes, hits = query.one()
+    return {"project_id": project_id, "entries": int(count or 0), "size_bytes": int(size_bytes or 0), "hits": int(hits or 0)}
+
+
+@router.delete("/cache")
+def clear_cache(
+    project_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    removed = clear_project_cache(db, owner_username=str(current_user["username"]), project_id=project_id)
+    db.commit()
+    return {"ok": True, "removed": removed}
+
+
+@router.get("/{artifact_id}/lineage")
+def artifact_lineage(artifact_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    artifact = owned_artifact(db, artifact_id, str(current_user["username"]))
+    username = str(current_user["username"])
+    parents = (
+        db.query(ArtifactLineage)
+        .join(Artifact, Artifact.id == ArtifactLineage.parent_artifact_id)
+        .filter(ArtifactLineage.child_artifact_id == artifact.id, Artifact.owner_username == username)
+        .all()
+    )
+    children = (
+        db.query(ArtifactLineage)
+        .join(Artifact, Artifact.id == ArtifactLineage.child_artifact_id)
+        .filter(ArtifactLineage.parent_artifact_id == artifact.id, Artifact.owner_username == username)
+        .all()
+    )
+    return {
+        "artifact_id": artifact.id,
+        "parents": [{"artifact_id": item.parent_artifact_id, "input_name": item.input_name, "source_node_id": item.source_node_id} for item in parents],
+        "children": [{"artifact_id": item.child_artifact_id, "input_name": item.input_name, "target_node_id": item.target_node_id} for item in children],
+    }
 
 
 @router.get("/{artifact_id}", response_model=ArtifactOut)

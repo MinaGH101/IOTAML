@@ -1,5 +1,6 @@
 import type { Node } from '@xyflow/react';
-import { CheckSquare, Code2, Plus, Trash2, Wand2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { CheckSquare, Code2, FileSpreadsheet, Plus, Trash2, Upload, Wand2 } from 'lucide-react';
 import { CustomSelect, type SelectOption } from './CustomSelect';
 import type { Dataset, NodeParam, RegistryNode } from '../types';
 import { resolveRegistryId } from '../features/workflow/catalog';
@@ -11,6 +12,7 @@ type ParamEditorProps = {
   aliases: Record<string, string>;
   datasets: Dataset[];
   availableColumns: string[];
+  availableRows?: Record<string, unknown>[];
   onParamsChange: (nodeId: string, params: Record<string, unknown>) => void;
   onRename?: (nodeId: string, label: string) => void;
 };
@@ -20,9 +22,88 @@ function uniq(values: string[]) { return [...new Set(values.filter(Boolean))]; }
 function parseArray(value: unknown): string[] { return Array.isArray(value) ? value.map(String) : String(value || '').split(',').map((v) => v.trim()).filter(Boolean); }
 function isDynamic(value: unknown): value is { mode: 'dynamic'; expression: string } { return Boolean(value && typeof value === 'object' && (value as { mode?: string }).mode === 'dynamic'); }
 function staticValue(value: unknown, fallback: unknown) { return isDynamic(value) ? fallback : value ?? fallback ?? ''; }
-function selectOptions(options: unknown[]): SelectOption[] { return options.map((option, index) => ({ value: option === null ? 'null' : String(option), label: option === null ? 'None' : String(option || `گزینه ${index + 1}`) })); }
+const FRIENDLY_OPTION_LABELS: Record<string, string> = {
+  pair_count: 'Pair count',
+  mae: 'MAE',
+  mae_pct: 'MAE (%)',
+  rmse: 'RMSE',
+  mean_bias: 'Mean bias',
+  median_absolute_error: 'Median absolute error',
+  mean_rpd_pct: 'Mean RPD (%)',
+  median_rpd_pct: 'Median RPD (%)',
+  max_rpd_pct: 'Maximum RPD (%)',
+  mean_relative_bias_pct: 'Mean relative bias (%)',
+  pearson_r: 'Pearson r',
+  spearman_rho: 'Spearman rho',
+  mean_pair_rsd_pct: 'Mean pair RSD (%)',
+  mean_numeric: 'Average numeric duplicates',
+  first: 'Use first matching row',
+  nearest_boundary: 'Nearest valid boundary',
+  keep: 'Keep values and flag only',
+  missing: 'Replace with missing',
+  hazen: 'Hazen',
+  weibull: 'Weibull',
+  blom: 'Blom',
+  none: 'No aggregation',
+};
+function friendlyOptionLabel(value: unknown, fallback: string) {
+  if (value === null) return 'None';
+  const key = String(value || '');
+  return FRIENDLY_OPTION_LABELS[key] || key || fallback;
+}
+function selectOptions(options: unknown[]): SelectOption[] { return options.map((option, index) => ({ value: option === null ? 'null' : String(option), label: friendlyOptionLabel(option, `گزینه ${index + 1}`) })); }
 function normalizeNumber(value: string, param: NodeParam) { if (value === '') return null; const n = Number(value); return param.type === 'integer' ? Math.round(n) : n; }
 function toggleItem(items: string[], item: string) { return items.includes(item) ? items.filter((value) => value !== item) : uniq([...items, item]); }
+
+type UploadedTableFile = { name: string; mime_type: string; size: number; data_url: string };
+
+function uploadedTableFile(value: unknown): UploadedTableFile | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const item = value as Partial<UploadedTableFile>;
+  if (!item.name || !item.data_url) return null;
+  return { name: String(item.name), mime_type: String(item.mime_type || 'application/octet-stream'), size: Number(item.size || 0), data_url: String(item.data_url) };
+}
+
+function formatFileSize(size: number) {
+  if (!Number.isFinite(size) || size <= 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DataFileInput({ value, onChange, help }: { value: unknown; onChange: (value: UploadedTableFile | null) => void; help?: string }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [error, setError] = useState('');
+  const current = uploadedTableFile(value);
+  const choose = (file?: File) => {
+    if (!file) return;
+    setError('');
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Mapping files must be 2 MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => onChange({ name: file.name, mime_type: file.type || 'application/octet-stream', size: file.size, data_url: String(reader.result || '') });
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div className="data-file-control workflow-shell-card">
+      <input ref={inputRef} hidden type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { choose(event.target.files?.[0]); event.currentTarget.value = ''; }} />
+      {current ? (
+        <div className="data-file-summary">
+          <FileSpreadsheet size={17} />
+          <span><b dir="ltr">{current.name}</b><small>{formatFileSize(current.size)}</small></span>
+          <button type="button" className="tiny-action icon-only" title="Replace file" aria-label="Replace file" onClick={() => inputRef.current?.click()}><Upload size={13} /></button>
+          <button type="button" className="tiny-action icon-only topbar-danger-action" title="Remove file" aria-label="Remove file" onClick={() => onChange(null)}><Trash2 size={13} /></button>
+        </div>
+      ) : (
+        <button type="button" className="data-file-upload-button" onClick={() => inputRef.current?.click()}><Upload size={14} /> Upload CSV / XLSX mapping</button>
+      )}
+      {error && <small className="data-file-error">{error}</small>}
+      <small>{help || 'The file is stored with this workflow. Use a compact two-column mapping table.'}</small>
+    </div>
+  );
+}
 
 
 function shouldShowParam(registryId: string, paramName: string, params: Record<string, unknown>) {
@@ -39,7 +120,24 @@ function shouldShowParam(registryId: string, paramName: string, params: Record<s
 
 function PillPicker({ items, selected, onChange, empty }: { items: string[]; selected: string[]; onChange: (items: string[]) => void; empty?: string }) {
   if (items.length === 0) return <div className="empty-state small">{empty || 'گزینه‌ای برای انتخاب وجود ندارد.'}</div>;
-  return <div className="pill-picker workflow-shell-card">{items.map((item) => <button type="button" key={item} className={`choice-pill ${selected.includes(item) ? 'active' : ''}`} onClick={() => onChange(toggleItem(selected, item))}>{item}</button>)}</div>;
+  return <div className="pill-picker workflow-shell-card">{items.map((item) => <button type="button" key={item} className={`choice-pill ${selected.includes(item) ? 'active' : ''}`} onClick={() => onChange(toggleItem(selected, item))}>{friendlyOptionLabel(item, item)}</button>)}</div>;
+}
+
+function seriesColorMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, color]) => [key, String(color || '')]));
+}
+
+function SeriesColorsEditor({ rows, value, onChange }: { rows: string[]; value: unknown; onChange: (colors: Record<string, string>) => void }) {
+  const colors = seriesColorMap(value);
+  const fallbacks = ['--theme-plot-default', '--theme-secondary', '--theme-success', '--theme-warning', '--theme-danger', '--theme-primary'].map(readThemeColor);
+  if (!rows.length) return <div className="empty-state small">ابتدا یک یا چند ردیف Y را انتخاب کنید.</div>;
+  return <div className="series-colors-editor workflow-shell-card">{rows.map((row, index) => (
+    <label className="series-color-row" key={row}>
+      <span dir="ltr">{row}</span>
+      <input type="color" value={colors[row] || fallbacks[index % fallbacks.length]} onChange={(event) => onChange({ ...colors, [row]: event.target.value })} />
+    </label>
+  ))}</div>;
 }
 
 
@@ -276,7 +374,7 @@ function DynamicToggle({ enabled, active, onMode }: { enabled: boolean; active: 
   );
 }
 
-export function ParamEditor({ selectedNode, registry, aliases, datasets, availableColumns, onParamsChange, onRename }: ParamEditorProps) {
+export function ParamEditor({ selectedNode, registry, aliases, datasets, availableColumns, availableRows = [], onParamsChange, onRename }: ParamEditorProps) {
   const registryId = resolveRegistryId(selectedNode.data.catalogId || selectedNode.data.registryId, aliases);
   const registryNode = registry.find((item) => item.id === registryId);
   const baseSchema = registryNode?.settingsSchema?.length ? registryNode.settingsSchema : registryNode?.params || [];
@@ -288,7 +386,7 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
     return param;
   });
   const hasPlotOutput = Boolean(registryNode?.outputs?.some((port) => ['plot', 'metrics'].includes(String(port.type)))) || ['VZ-002', 'VZ-003', 'VZ-004', 'MA-001', 'MA-006'].includes(registryId);
-  const schema = hasPlotOutput && !normalizedSchema.some((param) => param.name === 'color')
+  const schema = hasPlotOutput && registryId !== 'VZ-005' && !normalizedSchema.some((param) => param.name === 'color')
     ? [...normalizedSchema, { name: 'color', label: 'Color', type: 'color', default: readThemeColor('--theme-plot-default'), required: false, options: [], supportsDynamic: false, help: 'Plot color.' } as NodeParam]
     : normalizedSchema;
   const isCsvNode = registryId === 'DI-002';
@@ -327,6 +425,10 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
         const label = <div className="field-row"><span>{param.label}</span><DynamicToggle enabled={supportsDynamic} active={dyn} onMode={(mode) => setMode(param, mode)} /></div>;
         if (dyn) return <div className="field dynamic-field" key={param.name}>{label}{dynamicEditor}<small>{param.help || 'Examples: {{ $json.X }}, {{ $node.LoadData.output.row_count }}, {{ $execution.id }}'}</small></div>;
 
+        if (param.type === 'data_file') {
+          return <div className="field" key={param.name}>{label}<DataFileInput value={value} onChange={(next) => update(param.name, next)} help={param.help} /></div>;
+        }
+
         if (param.type === 'file') {
           return (
             <label className="field" key={param.name}>
@@ -360,6 +462,17 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
           const items = (param.options || []).map(String);
           return <div className="field" key={param.name}>{label}<button type="button" className="tiny-action icon-only" title="انتخاب همه" aria-label="انتخاب همه" onClick={() => update(param.name, items)}><CheckSquare size={12} /></button><PillPicker items={items} selected={selected} onChange={(next) => update(param.name, next)} /></div>;
         }
+        if (param.type === 'row_values') {
+          const selected = parseArray(value);
+          const firstRow = availableRows[0] || {};
+          const indexColumn = Object.keys(firstRow)[0] || '';
+          const items = indexColumn ? uniq(availableRows.map((row) => String(row[indexColumn] ?? '').trim()).filter(Boolean)) : [];
+          return <div className="field" key={param.name}>{label}<small>{indexColumn ? `شاخص ردیف: ${indexColumn} (اولین ستون ورودی)` : 'اولین ستون ورودی به‌صورت خودکار شاخص ردیف است.'}</small><button type="button" className="tiny-action icon-only" title="انتخاب همه" aria-label="انتخاب همه" disabled={!items.length} onClick={() => update(param.name, items)}><CheckSquare size={12} /></button><PillPicker items={items} selected={selected} onChange={(next) => update(param.name, next)} empty="ابتدا نود قبلی را اجرا کنید تا ردیف‌ها از خروجی انتخاب‌شده خوانده شوند." />{param.help && <small>{param.help}</small>}</div>;
+        }
+        if (param.type === 'series_colors') {
+          const rows = parseArray(params.selected_rows);
+          return <div className="field" key={param.name}>{label}<SeriesColorsEditor rows={rows} value={value} onChange={(next) => update(param.name, next)} />{param.help && <small>{param.help}</small>}</div>;
+        }
         if (param.type === 'replacement_blocks') {
           return <div className="field" key={param.name}>{label}<ReplacementBlocksEditor value={value} columns={allColumns} onChange={(next) => update(param.name, next)} />{param.help && <small>{param.help}</small>}</div>;
         }
@@ -383,7 +496,9 @@ export function ParamEditor({ selectedNode, registry, aliases, datasets, availab
         if (param.type === 'columns') {
           const selected = parseArray(value);
           const target = String(params.target_column || '');
-          const featureColumns = allColumns.filter((column) => column !== target);
+          const featureColumns = registryId === 'VZ-005'
+            ? allColumns.slice(1)
+            : allColumns.filter((column) => column !== target);
           return <div className="field" key={param.name}>{label}<button type="button" className="tiny-action icon-only" title="انتخاب همه" aria-label="انتخاب همه" onClick={() => update(param.name, featureColumns)}><CheckSquare size={12} /></button><PillPicker items={featureColumns} selected={selected} onChange={(next) => update(param.name, next)} empty="ستونی برای انتخاب پیدا نشد." /></div>;
         }
         if (param.type === 'color') {

@@ -21,6 +21,11 @@ class ArtifactOut(BaseModel):
     content_type: str
     size_bytes: int
     checksum_sha256: str
+    cache_key: str | None = None
+    schema_json: dict | None = None
+    metadata_json: dict | None = None
+    pinned: bool = False
+    last_accessed_at: datetime | None = None
     status: str
     expires_at: datetime | None
     created_at: datetime

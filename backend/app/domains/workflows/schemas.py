@@ -1,3 +1,19 @@
-from app.schemas import WorkflowCreate, WorkflowOut
+from app.schemas import (
+    WorkflowAutosaveIn,
+    WorkflowCreate,
+    WorkflowOut,
+    WorkflowRenameIn,
+    WorkflowVersionCreate,
+    WorkflowVersionOut,
+    WorkflowVersionSummaryOut,
+)
 
-__all__ = ["WorkflowCreate", "WorkflowOut"]
+__all__ = [
+    "WorkflowAutosaveIn",
+    "WorkflowCreate",
+    "WorkflowOut",
+    "WorkflowRenameIn",
+    "WorkflowVersionCreate",
+    "WorkflowVersionOut",
+    "WorkflowVersionSummaryOut",
+]

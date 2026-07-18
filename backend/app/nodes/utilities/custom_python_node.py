@@ -140,6 +140,7 @@ def _as_dataframe(value: Any) -> pd.DataFrame | None:
 
 
 class CustomPythonNode(BaseNode):
+    cacheable = False
     category = 'User Nodes'
     execution_mode = 'sandboxed'
     supports_dynamic_parameters = False

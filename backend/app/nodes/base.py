@@ -48,6 +48,8 @@ class NodeDefinition:
     comingSoon: bool = False
     priority: str = 'MVP'
     validationRules: str = ''
+    cacheable: bool = True
+    cacheVersion: str = '1'
 
     def to_api(self) -> dict[str, Any]:
         settings = [s.__dict__ for s in self.settingsSchema]
@@ -68,6 +70,8 @@ class NodeDefinition:
             'comingSoon': self.comingSoon,
             'priority': self.priority,
             'validationRules': self.validationRules,
+            'cacheable': self.cacheable,
+            'cacheVersion': self.cacheVersion,
         }
 
 
@@ -86,6 +90,8 @@ class BaseNode:
     coming_soon: bool = False
     priority: str = 'MVP'
     validation_rules: str = ''
+    cacheable: bool = True
+    cache_version: str = '1'
 
     def definition(self) -> NodeDefinition:
         return NodeDefinition(
@@ -103,6 +109,8 @@ class BaseNode:
             comingSoon=self.coming_soon,
             priority=self.priority,
             validationRules=self.validation_rules,
+            cacheable=self.cacheable,
+            cacheVersion=self.cache_version,
         )
 
     def to_api(self) -> dict[str, Any]:

@@ -1,5 +1,5 @@
 import '@xyflow/react/dist/style.css';
-import { useCallback, useEffect, useMemo, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   Controls,
   MiniMap,
@@ -15,11 +15,15 @@ import {
   type Node,
   type NodeChange
 } from '@xyflow/react';
-import { ArrowRight, Download, LayoutDashboard, LayoutGrid, LogOut, MoreHorizontal, Play, PlusCircle, RefreshCw, Save, Square, Trash2, UserCircle } from 'lucide-react';
-import { api } from '../api';
-import { CustomSelect } from '../components/CustomSelect';
+import { ArrowLeft, Download, KanbanSquare, Layers3, LayoutDashboard, LayoutGrid, LogOut, Pencil, Play, RefreshCw, Save, SlidersHorizontal, Square, Trash2, UserCircle } from 'lucide-react';
+import { ApiError, api } from '../api';
 import { CustomNodeBuilder } from '../components/CustomNodeBuilder';
-import { AnalysisBoard, type AnalysisBoardItem, type AnalysisBoardTab } from '../components/AnalysisBoard';
+import { AnalysisBoard, type AnalysisBoardItem, type AnalysisBoardTab, type BoardViewport } from '../components/AnalysisBoard';
+import { AppDialog, ConfirmDialog } from '../components/AppDialog';
+import { ComponentVersionDialog, CreateComponentDialog, type ComponentDefinitionDraft } from '../components/WorkflowComponentDialogs';
+import { ComponentDefinitionEditorDialog } from '../components/ComponentDefinitionEditorDialog';
+import { ComponentVersionsDialog, type ComponentVersionAction } from '../components/ComponentVersionsDialog';
+import { WorkflowVersionDialog } from '../components/WorkflowVersionDialog';
 import { NodeModal } from '../components/NodeModal';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { normalizeOutputs, type Output } from '../components/ResultsPanel';
@@ -27,7 +31,7 @@ import { NodeMenu } from './NodeMenu';
 import { WorkflowNodesList } from './WorkflowNodesList';
 import { RightPanel } from './RightPanel';
 import { MlNode } from '../nodes/MlNode';
-import type { CustomNodeDefinition, CustomNodePayload, Dataset, NodeCatalogResponse, Project, RegistryNode, Run, RunProgressSnapshot, RunSummary, UserProfile, Workflow } from '../types';
+import type { ComponentBoundaryPort, ComponentVersion, ComponentVersionSummary, CustomNodeDefinition, CustomNodePayload, Dataset, NodeCatalogResponse, Project, RegistryNode, Run, RunProgressSnapshot, RunSummary, UserProfile, Workflow, WorkflowComponent, WorkflowVersion, WorkflowVersionSummary } from '../types';
 import { sameStringArray } from '../utils/appShared';
 import { exportWorkflowJson } from '../utils/workflowJson';
 import { compatiblePorts, portTypeFor } from '../features/workflow/catalog';
@@ -39,6 +43,7 @@ import {
   isTextInput,
   makeNode,
   normalizeFlowNodes,
+  normalizeEdgeHandles,
   createMainAnalysisBoard,
   MAIN_ANALYSIS_BOARD_ID,
   restoreAnalysisBoardTabs,
@@ -75,6 +80,45 @@ function upsertRunSummary(items: RunSummary[], run: Run) {
   return [runToSummary(run), ...items.filter((item) => item.id !== run.id)].slice(0, 50);
 }
 
+function outputsForIncomingEdge(outputs: Output[], edge: Edge, nodes: Node[]) {
+  const candidates = outputs.filter((item) => String(item.node_id || '') === edge.source);
+  if (!candidates.length) return [] as Output[];
+  const selectedHandle = String(edge.sourceHandle || '');
+  const annotated = candidates.filter((item) => String(item.source_handle || '').trim());
+  if (selectedHandle) {
+    const exact = candidates.filter((item) => String(item.source_handle || '') === selectedHandle);
+    if (exact.length) return exact;
+    if (annotated.length) return [];
+  }
+  const sourceNode = nodes.find((item) => item.id === edge.source);
+  const ports = (sourceNode?.data?.outputs || []) as Array<{ id?: string }>;
+  if (ports.length <= 1 || annotated.length === 0) return candidates;
+  const fallbackHandle = String(ports[0]?.id || '');
+  return candidates.filter((item) => String(item.source_handle || '') === fallbackHandle);
+}
+
+function columnsFromOutputs(outputs: Output[]) {
+  for (let index = outputs.length - 1; index >= 0; index -= 1) {
+    const columns = outputs[index]?.columns;
+    if (Array.isArray(columns)) return columns.map(String);
+    const rows = outputs[index]?.rows;
+    if (Array.isArray(rows) && rows.length && rows[0] && typeof rows[0] === 'object' && !Array.isArray(rows[0])) {
+      return Object.keys(rows[0] as Record<string, unknown>);
+    }
+  }
+  return [] as string[];
+}
+
+function rowsFromOutputs(outputs: Output[]) {
+  for (let index = outputs.length - 1; index >= 0; index -= 1) {
+    const rows = outputs[index]?.rows;
+    if (Array.isArray(rows) && rows.every((row) => row && typeof row === 'object' && !Array.isArray(row))) {
+      return rows as Record<string, unknown>[];
+    }
+  }
+  return [] as Record<string, unknown>[];
+}
+
 function mergeRunProgress(run: Run, snapshot: RunProgressSnapshot): Run {
   const currentProgress = run.progress || {};
   const nextProgress = snapshot.progress || {};
@@ -83,7 +127,7 @@ function mergeRunProgress(run: Run, snapshot: RunProgressSnapshot): Run {
     && currentProgress.nodes_finished === nextProgress.nodes_finished
     && currentProgress.nodes_total === nextProgress.nodes_total
     && currentProgress.current_node_id === nextProgress.current_node_id;
-  const nodesUnchanged = progressUnchanged;
+  const nodesUnchanged = JSON.stringify(run.node_statuses || {}) === JSON.stringify(snapshot.node_statuses || {});
 
   if (
     run.status === snapshot.status
@@ -113,18 +157,15 @@ function mergeRunProgress(run: Run, snapshot: RunProgressSnapshot): Run {
   };
 }
 
-function BoardIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="16" rx="2.5" />
-      <path d="M9 4v16" />
-      <path d="M15 4v16" />
-      <rect x="5.5" y="7" width="2.8" height="3.2" rx=".7" fill="currentColor" stroke="none" />
-      <rect x="10.6" y="11" width="2.8" height="3.2" rx=".7" fill="currentColor" stroke="none" />
-      <rect x="16" y="8" width="2.8" height="3.2" rx=".7" fill="currentColor" stroke="none" />
-    </svg>
-  );
+function componentDraftSignature(nodes: Node[], edges: Edge[], version: Pick<ComponentVersion, 'interface_json' | 'exposed_parameters'>) {
+  return JSON.stringify({
+    nodes: nodes.map((node) => ({ ...node, selected: false, dragging: false })),
+    edges: edges.map((edge) => ({ ...edge, selected: false })),
+    interface: version.interface_json,
+    exposed: version.exposed_parameters,
+  });
 }
+
 type PinnedNodeData = { enabled?: boolean; sample?: string };
 type WorkflowPageProps = {
   project: Project;
@@ -149,21 +190,20 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
+  const [ctrlSelectionActive, setCtrlSelectionActive] = useState(false);
   const [modalNodeId, setModalNodeId] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('جریان IOTA ML');
   const [datasetId, setDatasetId] = useState<number | null>(null);
   const [targetColumn, setTargetColumn] = useState('target');
   const [taskType, setTaskType] = useState('auto');
   const [currentRun, setCurrentRun] = useState<Run | null>(null);
+  const [workflowLastRunId, setWorkflowLastRunId] = useState<number | null>(null);
   const [runHistory, setRunHistory] = useState<RunSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [resultsWidth, setResultsWidth] = useState(380);
   const [resultsCollapsed, setResultsCollapsed] = useState(false);
-  const [historyCollapsed, setHistoryCollapsed] = useState(false);
-  const [nodeResultsCollapsed, setNodeResultsCollapsed] = useState(false);
-  const [quickSettingsCollapsed, setQuickSettingsCollapsed] = useState(false);
   const [analysisBoardOpen, setAnalysisBoardOpen] = useState(false);
   const [analysisBoards, setAnalysisBoards] = useState<AnalysisBoardTab[]>(() => [createMainAnalysisBoard()]);
   const [activeBoardId, setActiveBoardId] = useState(MAIN_ANALYSIS_BOARD_ID);
@@ -172,10 +212,93 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   const [customBuilderDefinition, setCustomBuilderDefinition] = useState<CustomNodeDefinition | null>(null);
   const [customBuilderOpen, setCustomBuilderOpen] = useState(false);
   const [customBuilderBusy, setCustomBuilderBusy] = useState(false);
+  const [workflowRevision, setWorkflowRevision] = useState(1);
+  const [workflowVersions, setWorkflowVersions] = useState<WorkflowVersionSummary[]>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
+  const [versionPreview, setVersionPreview] = useState<WorkflowVersion | null>(null);
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
+  const [autosaveUpdatedAt, setAutosaveUpdatedAt] = useState<string | null>(null);
+  const [versionBusy, setVersionBusy] = useState(false);
+  const [workflowVersionDialogOpen, setWorkflowVersionDialogOpen] = useState(false);
+  const [components, setComponents] = useState<WorkflowComponent[]>([]);
+  const [componentBusy, setComponentBusy] = useState(false);
+  const [createComponentOpen, setCreateComponentOpen] = useState(false);
+  const [componentBoundary, setComponentBoundary] = useState<{ inputs: ComponentBoundaryPort[]; outputs: ComponentBoundaryPort[] }>({ inputs: [], outputs: [] });
+  const [componentVersionDialogOpen, setComponentVersionDialogOpen] = useState(false);
+  const [componentEditor, setComponentEditor] = useState<{ component: WorkflowComponent; version: ComponentVersion; parentNodes: Node[]; parentEdges: Edge[]; sourceNodeId: string | null; baselineSignature: string } | null>(null);
+  const [confirmDeleteComponent, setConfirmDeleteComponent] = useState<WorkflowComponent | null>(null);
+  const [confirmUngroupComponent, setConfirmUngroupComponent] = useState<Node | null>(null);
+  const [componentDefinitionDialogOpen, setComponentDefinitionDialogOpen] = useState(false);
+  const [managedComponent, setManagedComponent] = useState<WorkflowComponent | null>(null);
+  const [managedComponentVersions, setManagedComponentVersions] = useState<ComponentVersionSummary[]>([]);
+  const [confirmDeleteComponentVersion, setConfirmDeleteComponentVersion] = useState<ComponentVersionAction | null>(null);
+  const [pendingComponentUpgrade, setPendingComponentUpgrade] = useState<{ component: WorkflowComponent; version: ComponentVersion; registryNode: RegistryNode } | null>(null);
+  const [confirmLeaveComponentEditor, setConfirmLeaveComponentEditor] = useState(false);
+  const [renameBoardDialogOpen, setRenameBoardDialogOpen] = useState(false);
+  const [renameBoardDraft, setRenameBoardDraft] = useState('');
+  const [deleteBoardDialogOpen, setDeleteBoardDialogOpen] = useState(false);
+
+  const workflowIdRef = useRef<number | null>(null);
+  const workflowRevisionRef = useRef(1);
+  const autosaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const lastSavedSignatureRef = useRef('');
+  const skipNextAutosaveRef = useRef(true);
+  const editorSessionRef = useRef(1);
 
   const refreshRegistry = useCallback(async () => setCatalog(await api.nodeCatalog()), []);
   const refreshWorkflows = useCallback(async () => setWorkflows(await api.workflows(projectId)), [projectId]);
   const refreshRunHistory = useCallback(async () => setRunHistory(await api.listRuns(projectId)), [projectId]);
+  const refreshWorkflowVersions = useCallback(async (workflowId = workflowIdRef.current) => {
+    if (!workflowId) {
+      setWorkflowVersions([]);
+      return [];
+    }
+    const versions = await api.workflowVersions(workflowId);
+    setWorkflowVersions(versions);
+    return versions;
+  }, []);
+
+  const applyGraphToEditor = useCallback((graph: FlowGraph, nodeRegistry: RegistryNode[], aliases: Record<string, string>) => {
+    const normalizedNodes = normalizeFlowNodes(graph.nodes || [], nodeRegistry, aliases);
+    setNodes(normalizedNodes);
+    setEdges(normalizeEdgeHandles(normalizedNodes, graph.edges || []).map((edge) => ({ ...edge, animated: true })));
+    setDatasetId(graph.meta?.datasetId ?? null);
+    setTargetColumn(graph.meta?.targetColumn || 'target');
+    setTaskType(graph.meta?.taskType || 'auto');
+    const restoredBoards = restoreAnalysisBoardTabs(graph.meta?.analysisBoards, graph.meta?.analysisBoard);
+    const requestedBoardId = String(graph.meta?.activeAnalysisBoardId || MAIN_ANALYSIS_BOARD_ID);
+    const restoredActiveId = restoredBoards.some((tab) => tab.id === requestedBoardId) ? requestedBoardId : MAIN_ANALYSIS_BOARD_ID;
+    setAnalysisBoards(restoredBoards);
+    setActiveBoardId(restoredActiveId);
+    setBoardTargetId(restoredActiveId);
+    setAnalysisBoardOpen(false);
+    setSelectedId(null);
+    setSelectedIds([]);
+    setSelectedEdgeId(null);
+    setSelectedEdgeIds([]);
+    setModalNodeId(null);
+  }, []);
+
+  const refreshComponents = useCallback(async () => {
+    const items = await api.components(projectId);
+    setComponents(items);
+    return items;
+  }, [projectId]);
+
+  useEffect(() => {
+    const updateSelectionModifier = (event: KeyboardEvent) => {
+      setCtrlSelectionActive(event.ctrlKey || event.metaKey);
+    };
+    const clearSelectionModifier = () => setCtrlSelectionActive(false);
+    window.addEventListener('keydown', updateSelectionModifier);
+    window.addEventListener('keyup', updateSelectionModifier);
+    window.addEventListener('blur', clearSelectionModifier);
+    return () => {
+      window.removeEventListener('keydown', updateSelectionModifier);
+      window.removeEventListener('keyup', updateSelectionModifier);
+      window.removeEventListener('blur', clearSelectionModifier);
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -189,69 +312,550 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   }, []);
 
   useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 760px)');
+    const collapseFloatingPanels = () => {
+      if (!mobile.matches) return;
+      setPaletteCollapsed(true);
+      setResultsCollapsed(true);
+    };
+    collapseFloatingPanels();
+    mobile.addEventListener('change', collapseFloatingPanels);
+    return () => mobile.removeEventListener('change', collapseFloatingPanels);
+  }, []);
+
+  useEffect(() => {
     let alive = true;
-    Promise.all([api.nodeCatalog(), api.datasets(projectId), api.workflows(projectId), api.listRuns(projectId)])
-      .then(async ([catalogData, datasetList, workflowList, runList]) => {
-        const nodeRegistry = catalogData.nodes;
+    Promise.all([api.nodeCatalog(), api.datasets(projectId), api.workflows(projectId), api.listRuns(projectId), api.components(projectId)])
+      .then(async ([catalogData, datasetList, workflowList, runList, componentList]) => {
         if (!alive) return;
+        const nodeRegistry = catalogData.nodes;
         setCatalog(catalogData);
         setDatasets(datasetList);
         setWorkflows(workflowList);
         setRunHistory(runList);
+        setComponents(componentList);
         setDatasetId(datasetList[0]?.id ?? null);
 
         if (initialWorkflowId) {
           const workflow = await api.getWorkflow(initialWorkflowId);
+          const [versions, lastRun] = await Promise.all([
+            api.workflowVersions(workflow.id).catch(() => [] as WorkflowVersionSummary[]),
+            workflow.last_run_id ? api.getRun(workflow.last_run_id).catch(() => null) : Promise.resolve(null),
+          ]);
           if (!alive) return;
           const graph = workflow.graph as unknown as FlowGraph;
+          workflowIdRef.current = workflow.id;
+          workflowRevisionRef.current = workflow.revision;
           setCurrentWorkflowId(workflow.id);
+          setWorkflowRevision(workflow.revision);
           setWorkflowName(workflow.name);
-          setNodes(normalizeFlowNodes(graph.nodes || [], nodeRegistry, catalogData.aliases));
-          setEdges((graph.edges || []).map((edge) => ({ ...edge, animated: true })));
-          setDatasetId(graph.meta?.datasetId ?? datasetList[0]?.id ?? null);
-          setTargetColumn(graph.meta?.targetColumn || 'target');
-          setTaskType(graph.meta?.taskType || 'auto');
-          const restoredBoards = restoreAnalysisBoardTabs(graph.meta?.analysisBoards, graph.meta?.analysisBoard);
-          const restoredActiveId = restoredBoards.some((tab) => tab.id === graph.meta?.activeAnalysisBoardId) ? String(graph.meta?.activeAnalysisBoardId) : MAIN_ANALYSIS_BOARD_ID;
-          setAnalysisBoards(restoredBoards);
-          setActiveBoardId(restoredActiveId);
-          setBoardTargetId(restoredActiveId);
-          setAnalysisBoardOpen(false);
+          setWorkflowVersions(versions);
+          setAutosaveUpdatedAt(workflow.last_autosaved_at || workflow.updated_at);
+          setAutosaveState('saved');
+          setVersionPreview(null);
+          setSelectedVersionId(null);
+          applyGraphToEditor(graph, nodeRegistry, catalogData.aliases);
+          if (graph.meta?.datasetId == null) setDatasetId(datasetList[0]?.id ?? null);
+          setCurrentRun(lastRun);
+          setWorkflowLastRunId(workflow.last_run_id ?? null);
           setLastRunSignature('');
+          lastSavedSignatureRef.current = '';
+          skipNextAutosaveRef.current = true;
           setMessage('جریان بارگذاری شد');
           return;
         }
 
         const graph = defaultGraph(nodeRegistry, catalogData.aliases);
-        setNodes(graph.nodes); setEdges(graph.edges);
+        workflowIdRef.current = null;
+        workflowRevisionRef.current = 1;
+        setCurrentWorkflowId(null);
+        setWorkflowRevision(1);
+        setWorkflowVersions([]);
+        setVersionPreview(null);
+        setSelectedVersionId(null);
+        setWorkflowName('جریان IOTA ML');
+        setNodes(graph.nodes);
+        setEdges(graph.edges);
         setAnalysisBoards([createMainAnalysisBoard()]);
         setActiveBoardId(MAIN_ANALYSIS_BOARD_ID);
         setBoardTargetId(MAIN_ANALYSIS_BOARD_ID);
         setAnalysisBoardOpen(false);
+        setCurrentRun(null);
+        setWorkflowLastRunId(null);
         setLastRunSignature('');
-        setCurrentWorkflowId(null);
-        setWorkflowName('جریان IOTA ML');
+        setAutosaveState('idle');
+        setAutosaveUpdatedAt(null);
+        lastSavedSignatureRef.current = '';
+        skipNextAutosaveRef.current = true;
       })
-      .catch((error) => setMessage(error.message));
+      .catch((error) => setMessage(error instanceof Error ? error.message : 'بارگذاری پروژه ناموفق بود'));
     return () => { alive = false; };
-  }, [projectId, initialWorkflowId]);
+  }, [applyGraphToEditor, initialWorkflowId, projectId]);
 
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedId) || null, [nodes, selectedId]);
   const selectedEdge = useMemo(() => edges.find((edge) => edge.id === selectedEdgeId) || null, [edges, selectedEdgeId]);
   const selectedFlow = useMemo(() => connectedGraph(nodes, edges, selectedId), [nodes, edges, selectedId]);
-  const workflowOptions = useMemo(() => [{ value: '', label: 'جریان جدید/ذخیره‌نشده' }, ...workflows.map((wf) => ({ value: String(wf.id), label: wf.name }))], [workflows]);
   const modalNode = useMemo(() => nodes.find((node) => node.id === modalNodeId) || null, [nodes, modalNodeId]);
-
-  const availableColumns = useMemo(() => {
-    const editorNodeId = modalNodeId || selectedId;
-    return inputColumnsForNode(editorNodeId, nodes, edges, datasets, datasetId, catalog.aliases);
-  }, [nodes, edges, selectedId, modalNodeId, datasets, datasetId, catalog.aliases]);
+  const componentEditorDirty = useMemo(() => Boolean(componentEditor && componentDraftSignature(nodes, edges, componentEditor.version) !== componentEditor.baselineSignature), [componentEditor, edges, nodes]);
 
   const allRunOutputs = useMemo(() => normalizeOutputs(currentRun, null), [currentRun]);
+  const editorNodeId = modalNodeId || selectedId;
+  const editorIncomingEdges = useMemo(() => editorNodeId ? edges.filter((edge) => edge.target === editorNodeId) : [], [edges, editorNodeId]);
+  const editorInputOutputs = useMemo(() => editorIncomingEdges.flatMap((edge) => outputsForIncomingEdge(allRunOutputs, edge, nodes)), [allRunOutputs, editorIncomingEdges, nodes]);
+  const runtimeInputResolved = useMemo(() => editorIncomingEdges.some((edge) => allRunOutputs.some((output) => String(output.node_id || '') === edge.source)), [allRunOutputs, editorIncomingEdges]);
+  const availableColumns = useMemo(() => {
+    const runtimeColumns = columnsFromOutputs(editorInputOutputs);
+    if (runtimeInputResolved) return runtimeColumns;
+    return inputColumnsForNode(editorNodeId, nodes, edges, datasets, datasetId, catalog.aliases);
+  }, [catalog.aliases, datasetId, datasets, edges, editorInputOutputs, editorNodeId, nodes, runtimeInputResolved]);
+  const availableRows = useMemo(() => rowsFromOutputs(editorInputOutputs), [editorInputOutputs]);
   const currentOutputSignature = useMemo(() => workflowOutputSignature(nodes, edges, datasetId, targetColumn, taskType), [nodes, edges, datasetId, targetColumn, taskType]);
   const workflowDirtyForBoard = Boolean(currentRun && lastRunSignature && currentOutputSignature !== lastRunSignature);
   const activeBoard = useMemo(() => analysisBoards.find((tab) => tab.id === activeBoardId) || analysisBoards[0], [analysisBoards, activeBoardId]);
   const analysisBoardItems = activeBoard?.items || [];
+
+  const componentVersionFromSnapshot = useCallback((snapshot: Record<string, unknown>): ComponentVersion => ({
+    id: Number(snapshot.version_id || 0),
+    component_id: Number(snapshot.component_id || 0),
+    version_number: Number(snapshot.version_number || 0),
+    semantic_version: String(snapshot.semantic_version || '1.0.0'),
+    name: String(snapshot.component_name || 'Component'),
+    description: '',
+    graph: (snapshot.graph || {}) as Record<string, unknown>,
+    graph_hash: String(snapshot.graph_hash || ''),
+    interface_json: (snapshot.interface || { inputs: [], outputs: [] }) as ComponentVersion['interface_json'],
+    exposed_parameters: (snapshot.exposed_parameters || []) as ComponentVersion['exposed_parameters'],
+    dependencies_json: (snapshot.dependencies || []) as ComponentVersion['dependencies_json'],
+    changelog: '',
+    owner_username: user.username,
+    created_at: new Date().toISOString(),
+  }), [user.username]);
+
+  const enterComponentEditor = useCallback(async (component: WorkflowComponent, version: ComponentVersion, sourceNodeId: string | null = null) => {
+    if (versionPreview || componentEditor) return;
+    const graph = version.graph as unknown as FlowGraph;
+    const editorNodes = normalizeFlowNodes(graph.nodes || [], registry, catalog.aliases);
+    const editorEdges = (graph.edges || []).map((edge) => ({ ...edge, animated: true }));
+    setComponentEditor({ component, version, parentNodes: nodes, parentEdges: edges, sourceNodeId, baselineSignature: componentDraftSignature(editorNodes, editorEdges, version) });
+    setNodes(editorNodes);
+    setEdges(editorEdges);
+    setSelectedId(null);
+    setSelectedIds([]);
+    setSelectedEdgeId(null);
+    setSelectedEdgeIds([]);
+    setModalNodeId(null);
+    setAnalysisBoardOpen(false);
+    window.setTimeout(() => fitView({ padding: 0.12, duration: 300 }), 40);
+  }, [catalog.aliases, componentEditor, edges, fitView, nodes, registry, versionPreview]);
+
+  const enterComponentNode = useCallback(async (node: Node) => {
+    const snapshot = node.data?.componentSnapshot as Record<string, unknown> | undefined;
+    if (!snapshot) return false;
+    const componentId = Number(snapshot.component_id || node.data?.componentId || 0);
+    const versionId = Number(snapshot.version_id || node.data?.componentVersionId || 0);
+    try {
+      const component = components.find((item) => item.id === componentId) || await api.getComponent(componentId, projectId);
+      const version = versionId ? await api.getComponentVersion(componentId, versionId, projectId).catch(() => componentVersionFromSnapshot(snapshot)) : componentVersionFromSnapshot(snapshot);
+      await enterComponentEditor(component, version, node.id);
+      return true;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'باز کردن کامپوننت ناموفق بود');
+      return false;
+    }
+  }, [componentVersionFromSnapshot, components, enterComponentEditor, projectId]);
+
+  const leaveComponentEditor = useCallback(() => {
+    if (!componentEditor) return;
+    setNodes(componentEditor.parentNodes);
+    setEdges(componentEditor.parentEdges);
+    setComponentEditor(null);
+    setComponentVersionDialogOpen(false);
+    setComponentDefinitionDialogOpen(false);
+    setConfirmLeaveComponentEditor(false);
+    setSelectedId(null);
+    setSelectedIds([]);
+    setSelectedEdgeId(null);
+    setSelectedEdgeIds([]);
+    window.setTimeout(() => fitView({ padding: 0.1, duration: 260 }), 40);
+  }, [componentEditor, fitView]);
+
+  const requestLeaveComponentEditor = useCallback(() => {
+    if (componentEditorDirty) {
+      setConfirmLeaveComponentEditor(true);
+      return;
+    }
+    leaveComponentEditor();
+  }, [componentEditorDirty, leaveComponentEditor]);
+
+  const selectedComponentBoundary = useCallback(() => {
+    const selected = new Set(selectedIds);
+    const selectedNodes = nodes.filter((node) => selected.has(node.id));
+    if (selectedNodes.length < 2) return null;
+    const internalEdges = edges.filter((edge) => selected.has(edge.source) && selected.has(edge.target));
+    const adjacency = new Map<string, Set<string>>(selectedNodes.map((node) => [node.id, new Set<string>()]));
+    internalEdges.forEach((edge) => {
+      adjacency.get(edge.source)?.add(edge.target);
+      adjacency.get(edge.target)?.add(edge.source);
+    });
+    const visited = new Set<string>();
+    const queue = selectedNodes.length ? [selectedNodes[0].id] : [];
+    while (queue.length) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      adjacency.get(current)?.forEach((next) => { if (!visited.has(next)) queue.push(next); });
+    }
+    const disconnected = visited.size !== selectedNodes.length;
+    const incoming = edges.filter((edge) => selected.has(edge.target) && !selected.has(edge.source));
+    const outgoing = edges.filter((edge) => selected.has(edge.source) && !selected.has(edge.target));
+    const portType = (nodeId: string, handle: string | null | undefined, side: 'inputs' | 'outputs') => {
+      const node = nodes.find((item) => item.id === nodeId);
+      const ports = (node?.data?.[side] || []) as Array<{ id: string; type?: string; name?: string }>;
+      return ports.find((port) => port.id === String(handle || (side === 'inputs' ? 'input' : 'output')))?.type || ports[0]?.type || 'any';
+    };
+    const inputs: ComponentBoundaryPort[] = incoming.map((edge, index) => ({
+      id: `input_${index + 1}`,
+      name: String(edge.targetHandle || `Input ${index + 1}`),
+      type: portType(edge.target, edge.targetHandle, 'inputs'),
+      required: true,
+      multiple: false,
+      internal_node_id: edge.target,
+      internal_handle: String(edge.targetHandle || 'input'),
+    }));
+    const outputs: ComponentBoundaryPort[] = outgoing.map((edge, index) => ({
+      id: `output_${index + 1}`,
+      name: String(edge.sourceHandle || `Output ${index + 1}`),
+      type: portType(edge.source, edge.sourceHandle, 'outputs'),
+      required: true,
+      multiple: false,
+      internal_node_id: edge.source,
+      internal_handle: String(edge.sourceHandle || 'output'),
+    }));
+    return { selected, selectedNodes, internalEdges, incoming, outgoing, inputs, outputs, disconnected };
+  }, [edges, nodes, selectedIds]);
+
+  const openCreateComponent = useCallback(() => {
+    if (versionPreview || componentEditor) return;
+    const boundary = selectedComponentBoundary();
+    if (!boundary) {
+      setMessage('برای ساخت کامپوننت حداقل دو نود را انتخاب کنید.');
+      return;
+    }
+    if (boundary.disconnected) {
+      setMessage('نودهای انتخاب‌شده باید در یک گروه متصل باشند. گروه‌های جدا را به‌صورت کامپوننت‌های مستقل بسازید.');
+      return;
+    }
+    setComponentBoundary({ inputs: boundary.inputs, outputs: boundary.outputs });
+    setCreateComponentOpen(true);
+  }, [componentEditor, selectedComponentBoundary, versionPreview]);
+
+  const createComponentFromSelection = useCallback(async (draft: ComponentDefinitionDraft) => {
+    const boundary = selectedComponentBoundary();
+    if (!boundary || boundary.disconnected) return;
+    setComponentBusy(true);
+    try {
+      const minX = Math.min(...boundary.selectedNodes.map((node) => node.position.x));
+      const minY = Math.min(...boundary.selectedNodes.map((node) => node.position.y));
+      const internalNodes = boundary.selectedNodes.map((node) => ({ ...node, selected: false, position: { x: node.position.x - minX + 80, y: node.position.y - minY + 80 } }));
+      const internalEdges = boundary.internalEdges.map((edge) => ({ ...edge, selected: false }));
+      const component = await api.createComponent({
+        name: draft.name,
+        description: draft.description,
+        category: 'Components',
+        icon: 'workflow',
+        visibility: draft.visibility,
+        project_id: draft.visibility === 'project' ? projectId : null,
+        semantic_version: draft.semanticVersion,
+        graph: { nodes: internalNodes, edges: internalEdges, meta: {} },
+        interface: { inputs: draft.inputs, outputs: draft.outputs },
+        exposed_parameters: draft.exposedParameters,
+        changelog: 'Initial component',
+      });
+      const registryNode = await api.componentRegistry(component.id, projectId);
+      const centerX = boundary.selectedNodes.reduce((sum, node) => sum + node.position.x, 0) / boundary.selectedNodes.length;
+      const centerY = boundary.selectedNodes.reduce((sum, node) => sum + node.position.y, 0) / boundary.selectedNodes.length;
+      const componentNode = makeNode(registryNode, nodes.length, { x: centerX, y: centerY });
+      componentNode.data = { ...componentNode.data, label: component.name, typeLabel: component.name };
+      const rewiredIncoming = boundary.incoming.map((edge, index) => ({ ...edge, id: `component-in-${componentNode.id}-${index}`, target: componentNode.id, targetHandle: draft.inputs[index]?.id || `input_${index + 1}`, animated: true }));
+      const rewiredOutgoing = boundary.outgoing.map((edge, index) => ({ ...edge, id: `component-out-${componentNode.id}-${index}`, source: componentNode.id, sourceHandle: draft.outputs[index]?.id || `output_${index + 1}`, animated: true }));
+      setNodes((items) => [...items.filter((node) => !boundary.selected.has(node.id)), componentNode]);
+      setEdges((items) => [
+        ...items.filter((edge) => !boundary.selected.has(edge.source) && !boundary.selected.has(edge.target)),
+        ...rewiredIncoming,
+        ...rewiredOutgoing,
+      ]);
+      setSelectedId(componentNode.id);
+      setSelectedIds([componentNode.id]);
+      setCreateComponentOpen(false);
+      await Promise.all([refreshComponents(), refreshRegistry()]);
+      setMessage(`کامپوننت «${component.name}» ساخته شد و در کتابخانه قرار گرفت.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'ساخت کامپوننت ناموفق بود');
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [edges, nodes.length, projectId, refreshComponents, refreshRegistry, selectedComponentBoundary]);
+
+  const ungroupComponentInstance = useCallback((componentNode: Node) => {
+    if (versionPreview || componentEditor) return;
+    const snapshot = componentNode.data?.componentSnapshot as Record<string, unknown> | undefined;
+    if (!snapshot) {
+      setMessage('این نود یک کامپوننت قابل بازگردانی نیست.');
+      return;
+    }
+    const graph = (snapshot.graph || {}) as FlowGraph;
+    const sourceNodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+    const sourceEdges = Array.isArray(graph.edges) ? graph.edges : [];
+    if (sourceNodes.length === 0) {
+      setMessage('گراف داخلی کامپوننت خالی است.');
+      return;
+    }
+
+    const nonce = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    const idMap = new Map(sourceNodes.map((node) => [String(node.id), `${componentNode.id}__expanded__${nonce}__${node.id}`]));
+    const minX = Math.min(...sourceNodes.map((node) => Number(node.position?.x || 0)));
+    const minY = Math.min(...sourceNodes.map((node) => Number(node.position?.y || 0)));
+    const instanceParams = (componentNode.data?.params || {}) as Record<string, unknown>;
+    const exposed = (snapshot.exposed_parameters || []) as ComponentVersion['exposed_parameters'];
+
+    const expandedNodes = sourceNodes.map((sourceNode) => {
+      const originalId = String(sourceNode.id);
+      const data = { ...(sourceNode.data || {}) } as Record<string, unknown>;
+      const params = { ...((data.params || {}) as Record<string, unknown>) };
+      exposed.filter((item) => item.internal_node_id === originalId).forEach((item) => {
+        params[item.internal_param] = Object.prototype.hasOwnProperty.call(instanceParams, item.id) ? instanceParams[item.id] : item.default;
+      });
+      data.params = params;
+      return {
+        ...sourceNode,
+        id: idMap.get(originalId)!,
+        selected: true,
+        dragging: false,
+        position: {
+          x: componentNode.position.x + Number(sourceNode.position?.x || 0) - minX,
+          y: componentNode.position.y + Number(sourceNode.position?.y || 0) - minY,
+        },
+        data,
+      } as Node;
+    });
+
+    const expandedEdges = sourceEdges.map((sourceEdge, index) => ({
+      ...sourceEdge,
+      id: `${componentNode.id}__expanded-edge__${nonce}__${sourceEdge.id || index}`,
+      source: idMap.get(String(sourceEdge.source))!,
+      target: idMap.get(String(sourceEdge.target))!,
+      selected: false,
+      animated: true,
+    })) as Edge[];
+
+    const interfaceJson = (snapshot.interface || { inputs: [], outputs: [] }) as ComponentVersion['interface_json'];
+    const inputById = new Map(interfaceJson.inputs.map((port) => [port.id, port]));
+    const outputById = new Map(interfaceJson.outputs.map((port) => [port.id, port]));
+    const outsideEdges = edges.filter((edge) => edge.source !== componentNode.id && edge.target !== componentNode.id);
+    const incomingEdges = edges.filter((edge) => edge.target === componentNode.id).flatMap((edge, index) => {
+      const port = inputById.get(String(edge.targetHandle || ''));
+      const target = port ? idMap.get(port.internal_node_id) : undefined;
+      if (!port || !target) return [];
+      return [{ ...edge, id: `${edge.id}__expanded-in__${nonce}-${index}`, target, targetHandle: port.internal_handle, animated: true }];
+    });
+    const outgoingEdges = edges.filter((edge) => edge.source === componentNode.id).flatMap((edge, index) => {
+      const port = outputById.get(String(edge.sourceHandle || ''));
+      const source = port ? idMap.get(port.internal_node_id) : undefined;
+      if (!port || !source) return [];
+      return [{ ...edge, id: `${edge.id}__expanded-out__${nonce}-${index}`, source, sourceHandle: port.internal_handle, animated: true }];
+    });
+
+    const expandedIds = expandedNodes.map((node) => node.id);
+    setNodes((items) => [...items.filter((node) => node.id !== componentNode.id).map((node) => ({ ...node, selected: false })), ...expandedNodes]);
+    setEdges([...outsideEdges, ...expandedEdges, ...incomingEdges, ...outgoingEdges]);
+    setSelectedId(expandedIds[0] || null);
+    setSelectedIds(expandedIds);
+    setSelectedEdgeId(null);
+    setSelectedEdgeIds([]);
+    setModalNodeId(null);
+    setConfirmUngroupComponent(null);
+    setMessage(`کامپوننت «${String(componentNode.data?.label || componentNode.data?.typeLabel || '')}» فقط در این جریان به نودهای اصلی بازگردانده شد. نسخه کتابخانه بدون تغییر باقی ماند.`);
+    window.setTimeout(() => fitView({ nodes: expandedNodes, padding: 0.2, duration: 300 }), 40);
+  }, [componentEditor, edges, fitView, versionPreview]);
+
+  const saveComponentVersion = useCallback(async (semanticVersion: string, changelog: string) => {
+    if (!componentEditor) return;
+    setComponentBusy(true);
+    try {
+      const version = await api.createComponentVersion(componentEditor.component.id, {
+        semantic_version: semanticVersion,
+        graph: { nodes, edges, meta: {} },
+        interface: componentEditor.version.interface_json,
+        exposed_parameters: componentEditor.version.exposed_parameters,
+        changelog,
+      });
+      const [updatedComponent, registryNode] = await Promise.all([
+        api.getComponent(componentEditor.component.id, projectId),
+        api.componentRegistry(componentEditor.component.id, projectId),
+      ]);
+      setComponentEditor((current) => current ? { ...current, component: updatedComponent, version, baselineSignature: componentDraftSignature(nodes, edges, version) } : current);
+      setComponentVersionDialogOpen(false);
+      await Promise.all([refreshComponents(), refreshRegistry()]);
+      if (componentEditor.sourceNodeId) {
+        setPendingComponentUpgrade({ component: updatedComponent, version, registryNode });
+        setMessage(`نسخه ${version.semantic_version} ذخیره شد. برای ارتقای این نمونه تأیید کنید.`);
+      } else {
+        setMessage(`نسخه ${version.semantic_version} ذخیره شد. جریان‌های موجود همچنان به نسخه قبلی متصل‌اند.`);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'ذخیره نسخه کامپوننت ناموفق بود');
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [componentEditor, edges, nodes, projectId, refreshComponents, refreshRegistry]);
+
+  const applyComponentDefinition = useCallback((value: { inputs: ComponentBoundaryPort[]; outputs: ComponentBoundaryPort[]; exposedParameters: ComponentVersion['exposed_parameters'] }) => {
+    setComponentEditor((current) => current ? {
+      ...current,
+      version: {
+        ...current.version,
+        interface_json: { inputs: value.inputs, outputs: value.outputs },
+        exposed_parameters: value.exposedParameters,
+      },
+    } : current);
+    setComponentDefinitionDialogOpen(false);
+    setMessage('رابط عمومی و پارامترها برای نسخه جدید آماده شد. برای ثبت، نسخه جدید ذخیره کنید.');
+  }, []);
+
+  const confirmUpgradeComponentInstance = useCallback(() => {
+    if (!componentEditor?.sourceNodeId || !pendingComponentUpgrade) return;
+    const sourceNodeId = componentEditor.sourceNodeId;
+    const inputIds = new Set((pendingComponentUpgrade.registryNode.inputs || []).map((port) => port.id));
+    const outputIds = new Set((pendingComponentUpgrade.registryNode.outputs || []).map((port) => port.id));
+    const missingInputs = componentEditor.parentEdges.filter((edge) => edge.target === sourceNodeId && edge.targetHandle && !inputIds.has(String(edge.targetHandle)));
+    const missingOutputs = componentEditor.parentEdges.filter((edge) => edge.source === sourceNodeId && edge.sourceHandle && !outputIds.has(String(edge.sourceHandle)));
+    if (missingInputs.length || missingOutputs.length) {
+      setMessage('ارتقا انجام نشد: نسخه جدید بعضی پورت‌های متصل این نمونه را ندارد. ابتدا رابط عمومی را سازگار کنید.');
+      setPendingComponentUpgrade(null);
+      return;
+    }
+    const existing = componentEditor.parentNodes.find((node) => node.id === sourceNodeId);
+    const defaults = Object.fromEntries((pendingComponentUpgrade.registryNode.settingsSchema || []).map((item) => [item.name, item.default]));
+    const oldParams = (existing?.data?.params || {}) as Record<string, unknown>;
+    const allowed = new Set((pendingComponentUpgrade.registryNode.settingsSchema || []).map((item) => item.name));
+    const preserved = Object.fromEntries(Object.entries(oldParams).filter(([key]) => allowed.has(key)));
+    const replacementData = {
+      ...(existing?.data || {}),
+      registryId: pendingComponentUpgrade.registryNode.id,
+      catalogId: pendingComponentUpgrade.registryNode.id,
+      typeLabel: pendingComponentUpgrade.component.name,
+      category: pendingComponentUpgrade.registryNode.category,
+      description: pendingComponentUpgrade.registryNode.description,
+      inputs: pendingComponentUpgrade.registryNode.inputs,
+      outputs: pendingComponentUpgrade.registryNode.outputs,
+      params: { ...defaults, ...preserved },
+      componentSnapshot: pendingComponentUpgrade.registryNode.template?.componentSnapshot,
+      componentId: pendingComponentUpgrade.component.id,
+      componentVersionId: pendingComponentUpgrade.version.id,
+      componentVersion: pendingComponentUpgrade.version.semantic_version,
+    };
+    setNodes(componentEditor.parentNodes.map((node) => node.id === sourceNodeId ? { ...node, data: replacementData } : node));
+    setEdges(componentEditor.parentEdges);
+    setComponentEditor(null);
+    setPendingComponentUpgrade(null);
+    setSelectedId(sourceNodeId);
+    setSelectedIds([sourceNodeId]);
+    setMessage(`نمونه کامپوننت به نسخه ${pendingComponentUpgrade.version.semantic_version} ارتقا یافت.`);
+    window.setTimeout(() => fitView({ padding: 0.1, duration: 260 }), 40);
+  }, [componentEditor, fitView, pendingComponentUpgrade]);
+
+  const exportComponentPackage = useCallback(async (component: WorkflowComponent) => {
+    try {
+      const payload = await api.exportComponent(component.id);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${component.name.replace(/[^a-z0-9_-]+/gi, '-') || 'component'}.iotacomp.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'خروجی کامپوننت ناموفق بود');
+    }
+  }, []);
+
+  const importComponentPackage = useCallback(async (payload: Record<string, unknown>) => {
+    setComponentBusy(true);
+    try {
+      const component = await api.importComponent(payload);
+      await Promise.all([refreshComponents(), refreshRegistry()]);
+      setMessage(`کامپوننت «${component.name}» وارد شد.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Import کامپوننت ناموفق بود');
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [refreshComponents, refreshRegistry]);
+
+
+  const refreshManagedComponentVersions = useCallback(async (component = managedComponent) => {
+    if (!component) return [];
+    const versions = await api.componentVersions(component.id, projectId);
+    setManagedComponentVersions(versions);
+    return versions;
+  }, [managedComponent, projectId]);
+
+  const openComponentVersionManager = useCallback(async (component: WorkflowComponent) => {
+    setManagedComponent(component);
+    setManagedComponentVersions([]);
+    setComponentBusy(true);
+    try {
+      const versions = await api.componentVersions(component.id, projectId);
+      setManagedComponentVersions(versions);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'دریافت نسخه‌های کامپوننت ناموفق بود');
+      setManagedComponent(null);
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [projectId]);
+
+  const openManagedComponentVersion = useCallback(async ({ component, version }: ComponentVersionAction) => {
+    setComponentBusy(true);
+    try {
+      const fullVersion = await api.getComponentVersion(component.id, version.id, projectId);
+      setManagedComponent(null);
+      await enterComponentEditor(component, fullVersion);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'باز کردن نسخه کامپوننت ناموفق بود');
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [enterComponentEditor, projectId]);
+
+  const makeManagedComponentVersionCurrent = useCallback(async ({ component, version }: ComponentVersionAction) => {
+    setComponentBusy(true);
+    try {
+      const updated = await api.makeComponentVersionCurrent(component.id, version.id);
+      setManagedComponent(updated);
+      await Promise.all([refreshManagedComponentVersions(updated), refreshComponents(), refreshRegistry()]);
+      setMessage(`نسخه ${version.semantic_version} به‌عنوان نسخه جاری کامپوننت انتخاب شد. نمونه‌های موجود بدون تغییر باقی ماندند.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'انتخاب نسخه جاری ناموفق بود');
+    } finally {
+      setComponentBusy(false);
+    }
+  }, [refreshComponents, refreshManagedComponentVersions, refreshRegistry]);
+
+  const exportManagedComponentVersion = useCallback(async ({ component, version }: ComponentVersionAction) => {
+    try {
+      const payload = await api.exportComponent(component.id, version.id);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${component.name.replace(/[^a-z0-9_-]+/gi, '-') || 'component'}-v${version.semantic_version}.iotacomp.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'خروجی نسخه کامپوننت ناموفق بود');
+    }
+  }, []);
 
   useEffect(() => {
     if (!analysisBoards.some((tab) => tab.id === activeBoardId)) setActiveBoardId(MAIN_ANALYSIS_BOARD_ID);
@@ -260,17 +864,26 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
 
   const onNodesChange = useCallback((changes: NodeChange[]) => setNodes((items) => applyNodeChanges(changes, items)), []);
   const onEdgesChange = useCallback((changes: EdgeChange[]) => setEdges((items) => applyEdgeChanges(changes, items)), []);
+  const onInputSourceHandleChange = useCallback((edgeId: string, sourceHandle: string) => {
+    if (versionPreview) return;
+    setEdges((items) => items.map((edge) => edge.id === edgeId ? { ...edge, sourceHandle } : edge));
+  }, [versionPreview]);
   const onConnect = useCallback((connection: Connection) => {
+    if (versionPreview) return;
     const sourceNode = nodes.find((node) => node.id === connection.source);
     const targetNode = nodes.find((node) => node.id === connection.target);
-    const sourceType = portTypeFor(sourceNode, registry, catalog.aliases, connection.sourceHandle, 'source');
-    const targetType = portTypeFor(targetNode, registry, catalog.aliases, connection.targetHandle, 'target');
+    const sourcePorts = (sourceNode?.data?.outputs || []) as Array<{ id?: string }>;
+    const targetPorts = (targetNode?.data?.inputs || []) as Array<{ id?: string }>;
+    const sourceHandle = connection.sourceHandle || String(sourcePorts[0]?.id || 'output');
+    const targetHandle = connection.targetHandle || String(targetPorts[0]?.id || 'input');
+    const sourceType = portTypeFor(sourceNode, registry, catalog.aliases, sourceHandle, 'source');
+    const targetType = portTypeFor(targetNode, registry, catalog.aliases, targetHandle, 'target');
     if (!compatiblePorts(sourceType, targetType, catalog.compatiblePorts)) {
       setMessage(`اتصال نامعتبر است: ${sourceType} → ${targetType}`);
       return;
     }
-    setEdges((items) => addEdge({ ...connection, animated: true }, items));
-  }, [nodes, registry, catalog.aliases, catalog.compatiblePorts]);
+    setEdges((items) => addEdge({ ...connection, sourceHandle, targetHandle, animated: true }, items));
+  }, [nodes, registry, catalog.aliases, catalog.compatiblePorts, versionPreview]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const nextNodeIds = selectedNodes.map((node) => node.id);
@@ -305,10 +918,15 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   }, []);
 
   const onNodeDoubleClick = useCallback((_: ReactMouseEvent, node: Node) => {
+    if (versionPreview) return;
+    if (node.data?.componentSnapshot) {
+      void enterComponentNode(node);
+      return;
+    }
     setSelectedId((previous) => (previous === node.id ? previous : node.id));
     setSelectedIds((previous) => (sameStringArray(previous, [node.id]) ? previous : [node.id]));
     setModalNodeId(node.id);
-  }, []);
+  }, [enterComponentNode, versionPreview]);
 
   const onEdgeClick = useCallback((_: ReactMouseEvent, edge: Edge) => {
     setSelectedEdgeId((previous) => (previous === edge.id ? previous : edge.id));
@@ -325,6 +943,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   }, []);
 
   const deleteSelected = useCallback(() => {
+    if (versionPreview) return;
     const nodeIds = selectedIds.length ? selectedIds : (selectedId ? [selectedId] : []);
     const edgeIds = selectedEdgeIds.length ? selectedEdgeIds : (selectedEdgeId ? [selectedEdgeId] : []);
     if (nodeIds.length) {
@@ -338,7 +957,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
       setEdges((items) => items.filter((edge) => !removeEdges.has(edge.id)));
       setSelectedEdgeId(null); setSelectedEdgeIds([]);
     }
-  }, [selectedId, selectedIds, selectedEdgeId, selectedEdgeIds]);
+  }, [selectedId, selectedIds, selectedEdgeId, selectedEdgeIds, versionPreview]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => { if ((event.key === 'Delete' || event.key === 'Backspace') && !isTextInput(event.target)) deleteSelected(); };
@@ -347,16 +966,23 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   }, [deleteSelected]);
 
   const updateNodeParams = useCallback((nodeId: string, params: Record<string, unknown>) => {
+    if (versionPreview) return;
     setNodes((items) => items.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, params } } : node)));
-  }, []);
+  }, [versionPreview]);
 
   const renameNode = useCallback((nodeId: string, label: string) => {
+    if (versionPreview) return;
     setNodes((items) => items.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, label } } : node)));
-  }, []);
+    setAnalysisBoards((tabs) => tabs.map((tab) => ({
+      ...tab,
+      items: tab.items.map((item) => item.nodeId === nodeId ? { ...item, sourceLabel: label } : item),
+    })));
+  }, [versionPreview]);
 
   const updateNodePinned = useCallback((nodeId: string, pinned: PinnedNodeData) => {
+    if (versionPreview) return;
     setNodes((items) => items.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, pinned } } : node)));
-  }, []);
+  }, [versionPreview]);
 
   const selectWorkflowNode = useCallback((nodeId: string) => {
     setSelectedId(nodeId);
@@ -364,13 +990,14 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     setSelectedEdgeId(null);
     setSelectedEdgeIds([]);
     setResultsCollapsed(false);
-  }, []);
+  }, [versionPreview]);
 
   const updateBoardItems = useCallback((boardId: string, updater: (items: AnalysisBoardItem[]) => AnalysisBoardItem[]) => {
     setAnalysisBoards((tabs) => tabs.map((tab) => tab.id === boardId ? { ...tab, items: updater(tab.items) } : tab));
   }, []);
 
   const addOutputToBoard = useCallback((output: Output, visibleIndex: number, destinationBoardId: string) => {
+    if (versionPreview) return;
     const nodeId = output.node_id ? String(output.node_id) : selectedId;
     const nodeOutputs = allRunOutputs.filter((item) => String(item.node_id || '') === String(nodeId || ''));
     const nodeOutputIndex = nodeOutputs.findIndex((item) => item === output);
@@ -401,7 +1028,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     setAnalysisBoardOpen(true);
     const destination = analysisBoards.find((tab) => tab.id === destinationBoardId)?.name || 'برد اصلی';
     setMessage(`خروجی به ${destination} اضافه شد`);
-  }, [allRunOutputs, analysisBoards, currentRun?.id, nodes, selectedId, updateBoardItems]);
+  }, [allRunOutputs, analysisBoards, currentRun?.id, nodes, selectedId, updateBoardItems, versionPreview]);
 
   const addOutputToMainBoard = useCallback((output: Output, visibleIndex: number) => {
     addOutputToBoard(output, visibleIndex, MAIN_ANALYSIS_BOARD_ID);
@@ -412,34 +1039,70 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   }, [addOutputToBoard, analysisBoardOpen, boardTargetId]);
 
   const createAnalysisBoard = useCallback(() => {
+    if (versionPreview) return;
     const id = `analysis-board-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setAnalysisBoards((tabs) => [...tabs, { id, name: `برد ${tabs.length + 1}`, items: [], createdAt: new Date().toISOString() }]);
+    setAnalysisBoards((tabs) => [...tabs, { id, name: `برد ${tabs.length + 1}`, items: [], viewport: { x: 0, y: 0, scale: 1 }, createdAt: new Date().toISOString() }]);
     setActiveBoardId(id);
     setBoardTargetId(id);
-  }, []);
+  }, [versionPreview]);
+
+  const updateBoardViewport = useCallback((boardId: string, viewport: BoardViewport) => {
+    if (versionPreview) return;
+    setAnalysisBoards((tabs) => tabs.map((tab) => {
+      if (tab.id !== boardId) return tab;
+      const current = tab.viewport || { x: 0, y: 0, scale: 1 };
+      if (Math.abs(current.x - viewport.x) < 0.01 && Math.abs(current.y - viewport.y) < 0.01 && Math.abs(current.scale - viewport.scale) < 0.0001) return tab;
+      return { ...tab, viewport };
+    }));
+  }, [versionPreview]);
 
   const renameAnalysisBoard = useCallback((id: string, name: string) => {
+    if (versionPreview) return;
     const normalized = name.trim();
     if (!normalized) return;
     setAnalysisBoards((tabs) => tabs.map((tab) => tab.id === id ? { ...tab, name: normalized } : tab));
-  }, []);
+  }, [versionPreview]);
 
   const removeAnalysisBoard = useCallback((id: string) => {
+    if (versionPreview) return;
     if (id === MAIN_ANALYSIS_BOARD_ID) return;
     setAnalysisBoards((tabs) => tabs.filter((tab) => tab.id !== id));
     setActiveBoardId(MAIN_ANALYSIS_BOARD_ID);
     setBoardTargetId(MAIN_ANALYSIS_BOARD_ID);
-  }, []);
+  }, [versionPreview]);
+
+  const openRenameActiveBoard = useCallback(() => {
+    if (!activeBoard || versionPreview) return;
+    setRenameBoardDraft(activeBoard.name);
+    setRenameBoardDialogOpen(true);
+  }, [activeBoard, versionPreview]);
+
+  const confirmRenameActiveBoard = useCallback(() => {
+    if (!activeBoard) return;
+    const name = renameBoardDraft.trim();
+    if (!name) return;
+    renameAnalysisBoard(activeBoard.id, name);
+    setRenameBoardDialogOpen(false);
+  }, [activeBoard, renameAnalysisBoard, renameBoardDraft]);
+
+  const confirmDeleteActiveBoard = useCallback(() => {
+    if (!activeBoard || activeBoard.id === MAIN_ANALYSIS_BOARD_ID) return;
+    removeAnalysisBoard(activeBoard.id);
+    setDeleteBoardDialogOpen(false);
+  }, [activeBoard, removeAnalysisBoard]);
 
   const updateBoardItem = useCallback((id: string, patch: Partial<AnalysisBoardItem>) => {
+    if (versionPreview) return;
     updateBoardItems(activeBoardId, (items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
-  }, [activeBoardId, updateBoardItems]);
+  }, [activeBoardId, updateBoardItems, versionPreview]);
 
   const removeBoardItem = useCallback((id: string) => {
+    if (versionPreview) return;
     updateBoardItems(activeBoardId, (items) => items.filter((item) => item.id !== id));
-  }, [activeBoardId, updateBoardItems]);
+  }, [activeBoardId, updateBoardItems, versionPreview]);
 
   const duplicateBoardItem = useCallback((item: AnalysisBoardItem) => {
+    if (versionPreview) return;
     updateBoardItems(activeBoardId, (items) => [...items, {
       ...item,
       id: `board-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -447,11 +1110,12 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
       y: item.y + 26,
       createdAt: new Date().toISOString(),
     }]);
-  }, [activeBoardId, updateBoardItems]);
+  }, [activeBoardId, updateBoardItems, versionPreview]);
 
   const clearActiveBoard = useCallback(() => {
+    if (versionPreview) return;
     updateBoardItems(activeBoardId, () => []);
-  }, [activeBoardId, updateBoardItems]);
+  }, [activeBoardId, updateBoardItems, versionPreview]);
 
   const openCustomNodeBuilder = useCallback(() => {
     setCustomBuilderDefinition(null);
@@ -528,14 +1192,16 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
   const onDragOver = useCallback((event: DragEvent) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }, []);
   const onDrop = useCallback((event: DragEvent) => {
     event.preventDefault();
+    if (versionPreview) return;
     const nodeId = event.dataTransfer.getData('application/nocodeml-node');
     const registryNode = registry.find((node) => node.id === nodeId);
     if (!registryNode) return;
     const newNode = makeNode(registryNode, nodes.length, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
     setNodes((items) => [...items, newNode]); setSelectedId(newNode.id); setSelectedEdgeId(null);
-  }, [nodes.length, registry, screenToFlowPosition]);
+  }, [nodes.length, registry, screenToFlowPosition, versionPreview]);
 
   const prettyLayout = () => {
+    if (versionPreview) return;
     const incoming = new Map<string, string[]>();
     const outgoing = new Map<string, string[]>();
     nodes.forEach((node) => { incoming.set(node.id, []); outgoing.set(node.id, []); });
@@ -594,68 +1260,364 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
     window.setTimeout(() => fitView({ padding: 0.08, duration: 450, minZoom: 0.42, maxZoom: 1.2 }), 60);
   };
 
-  const graphPayload = (): FlowGraph => ({ nodes, edges, meta: { datasetId, targetColumn, taskType, analysisBoard: serializeAnalysisBoardTabs(analysisBoards).find((tab) => tab.id === MAIN_ANALYSIS_BOARD_ID)?.items || [], analysisBoards: serializeAnalysisBoardTabs(analysisBoards), activeAnalysisBoardId: activeBoardId } });
+  const serializedAnalysisBoards = useMemo(
+    () => serializeAnalysisBoardTabs(analysisBoards),
+    [analysisBoards],
+  );
+
+  const analysisBoardSignature = useMemo(() => analysisBoards.map((tab) => ({
+    id: tab.id,
+    name: tab.name,
+    viewport: tab.viewport,
+    createdAt: tab.createdAt,
+    items: tab.items.map((item) => ({
+      id: item.id,
+      nodeId: item.nodeId,
+      outputIndex: item.outputIndex,
+      outputTitle: item.outputTitle,
+      outputKind: item.outputKind,
+      sourceLabel: item.sourceLabel,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      runId: item.runId,
+      createdAt: item.createdAt,
+      snapshotKind: item.snapshot?.kind,
+      snapshotTitle: item.snapshot?.title,
+    })),
+  })), [analysisBoards]);
+
+  const currentGraph = useMemo<FlowGraph>(() => {
+    return {
+      nodes,
+      edges: normalizeEdgeHandles(nodes, edges),
+      meta: {
+        datasetId,
+        targetColumn,
+        taskType,
+        analysisBoard: serializedAnalysisBoards.find((tab) => tab.id === MAIN_ANALYSIS_BOARD_ID)?.items || [],
+        analysisBoards: serializedAnalysisBoards,
+        activeAnalysisBoardId: activeBoardId,
+      },
+    };
+  }, [activeBoardId, datasetId, edges, nodes, serializedAnalysisBoards, targetColumn, taskType]);
+
+  const graphPayload = () => currentGraph;
+
+  const autosaveSnapshot = useMemo(() => ({
+    name: workflowName.trim(),
+    graph: currentGraph as unknown as Record<string, unknown>,
+    project_id: projectId,
+    last_run_id: workflowLastRunId,
+  }), [currentGraph, projectId, workflowLastRunId, workflowName]);
+  const autosaveSignature = useMemo(() => JSON.stringify({
+    name: workflowName.trim(),
+    projectId,
+    workflowLastRunId,
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: node.data,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle,
+      targetHandle: edge.targetHandle,
+      data: edge.data,
+    })),
+    datasetId,
+    targetColumn,
+    taskType,
+    activeBoardId,
+    analysisBoards: analysisBoardSignature,
+  }), [activeBoardId, analysisBoardSignature, datasetId, edges, nodes, projectId, targetColumn, taskType, workflowLastRunId, workflowName]);
+
+  const persistWorkflowSnapshot = useCallback((
+    snapshot: { name: string; graph: Record<string, unknown>; project_id: number; last_run_id: number | null },
+    signature: string,
+    sessionId = editorSessionRef.current,
+  ): Promise<Workflow> => {
+    const execute = async (): Promise<Workflow> => {
+      if (sessionId !== editorSessionRef.current) throw new Error('AUTOSAVE_SUPERSEDED');
+      if (!snapshot.name) throw new Error('نام جریان را وارد کنید');
+      setAutosaveState('saving');
+      try {
+        const workflowId = workflowIdRef.current;
+        const saved = workflowId
+          ? await api.autosaveWorkflow(workflowId, {
+            ...snapshot,
+            base_revision: workflowRevisionRef.current,
+          })
+          : await api.createWorkflow(snapshot);
+        if (sessionId !== editorSessionRef.current) return saved;
+        workflowIdRef.current = saved.id;
+        workflowRevisionRef.current = saved.revision;
+        setCurrentWorkflowId(saved.id);
+        setWorkflowRevision(saved.revision);
+        setAutosaveUpdatedAt(saved.last_autosaved_at || saved.updated_at);
+        setAutosaveState('saved');
+        lastSavedSignatureRef.current = signature;
+        void refreshWorkflows().catch(() => undefined);
+        return saved;
+      } catch (error) {
+        if (sessionId !== editorSessionRef.current || (error instanceof Error && error.message === 'AUTOSAVE_SUPERSEDED')) throw error;
+        if (error instanceof ApiError && error.code === 'WORKFLOW_REVISION_CONFLICT') {
+          setAutosaveState('conflict');
+          setMessage('این جریان در نشست دیگری تغییر کرده است. برای جلوگیری از بازنویسی، جریان را دوباره بارگذاری کنید.');
+        } else {
+          setAutosaveState('error');
+          setMessage(error instanceof Error ? error.message : 'ذخیره خودکار ناموفق بود');
+        }
+        throw error;
+      }
+    };
+
+    const queued = autosaveQueueRef.current.catch(() => undefined).then(execute);
+    autosaveQueueRef.current = queued.catch(() => undefined);
+    return queued;
+  }, [refreshWorkflows]);
+
+  useEffect(() => {
+    if (versionPreview || componentEditor || !autosaveSnapshot.name) return undefined;
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      lastSavedSignatureRef.current = autosaveSignature;
+      return undefined;
+    }
+    if (autosaveSignature === lastSavedSignatureRef.current) return undefined;
+    setAutosaveState((state) => state === 'saving' ? state : 'idle');
+    const sessionId = editorSessionRef.current;
+    const timer = window.setTimeout(() => {
+      void persistWorkflowSnapshot(autosaveSnapshot, autosaveSignature, sessionId).catch((error) => {
+        if (error instanceof Error && error.message === 'AUTOSAVE_SUPERSEDED') return;
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [autosaveSignature, autosaveSnapshot, componentEditor, persistWorkflowSnapshot, versionPreview]);
 
   const exportCurrentWorkflow = () => {
     exportWorkflowJson(workflowName, graphPayload());
     setMessage('فایل JSON جریان دانلود شد');
   };
 
-  const saveWorkflow = async () => {
-    if (!workflowName.trim()) { setMessage('نام جریان را وارد کنید'); return; }
-    setBusy(true);
+  const saveWorkflowVersion = async (versionName: string, description: string) => {
+    if (versionPreview) {
+      setMessage('ابتدا نسخه انتخاب‌شده را بازیابی کنید یا به آخرین نسخه خودکار برگردید.');
+      return;
+    }
+    if (!workflowName.trim()) {
+      setMessage('نام جریان را وارد کنید');
+      return;
+    }
+    setVersionBusy(true);
     try {
-      const payload = { name: workflowName.trim(), graph: graphPayload() as unknown as Record<string, unknown>, project_id: projectId };
-      const saved = currentWorkflowId ? await api.updateWorkflow(currentWorkflowId, payload) : await api.createWorkflow(payload);
-      setCurrentWorkflowId(saved.id); await refreshWorkflows(); setMessage('جریان ذخیره شد');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'ذخیره ناموفق بود'); }
-    finally { setBusy(false); }
+      const saved = await persistWorkflowSnapshot(autosaveSnapshot, autosaveSignature);
+      const version = await api.createWorkflowVersion(saved.id, {
+        name: versionName,
+        description,
+        run_id: workflowLastRunId,
+      });
+      setSelectedVersionId(version.id);
+      await refreshWorkflowVersions(saved.id);
+      setWorkflowVersionDialogOpen(false);
+      setMessage(`نسخه «${version.name}» ذخیره شد`);
+    } catch (error) {
+      if (!(error instanceof Error && error.message === 'AUTOSAVE_SUPERSEDED')) {
+        setMessage(error instanceof Error ? error.message : 'ذخیره نسخه ناموفق بود');
+      }
+    } finally {
+      setVersionBusy(false);
+    }
   };
 
   const loadWorkflow = async (idValue: string) => {
     const id = Number(idValue) || null;
-    setCurrentWorkflowId(id);
     if (!id) return;
     try {
+      if (!versionPreview && autosaveSnapshot.name) {
+        await persistWorkflowSnapshot(autosaveSnapshot, autosaveSignature).catch((error) => {
+          if (error instanceof ApiError && error.code === 'WORKFLOW_REVISION_CONFLICT') throw error;
+        });
+      }
+      editorSessionRef.current += 1;
       const workflow = await api.getWorkflow(id);
-      const graph = workflow.graph as unknown as FlowGraph;
+      const [versions, lastRun] = await Promise.all([
+        api.workflowVersions(id),
+        workflow.last_run_id ? api.getRun(workflow.last_run_id).catch(() => null) : Promise.resolve(null),
+      ]);
+      workflowIdRef.current = workflow.id;
+      workflowRevisionRef.current = workflow.revision;
+      setCurrentWorkflowId(workflow.id);
+      setWorkflowRevision(workflow.revision);
       setWorkflowName(workflow.name);
-      setNodes(normalizeFlowNodes(graph.nodes || [], registry, catalog.aliases)); setEdges((graph.edges || []).map((edge) => ({ ...edge, animated: true })));
-      setDatasetId(graph.meta?.datasetId ?? null); setTargetColumn(graph.meta?.targetColumn || 'target'); setTaskType(graph.meta?.taskType || 'auto');
-      const restoredBoards = restoreAnalysisBoardTabs(graph.meta?.analysisBoards, graph.meta?.analysisBoard);
-      const restoredActiveId = restoredBoards.some((tab) => tab.id === graph.meta?.activeAnalysisBoardId) ? String(graph.meta?.activeAnalysisBoardId) : MAIN_ANALYSIS_BOARD_ID;
-      setAnalysisBoards(restoredBoards);
-      setActiveBoardId(restoredActiveId);
-      setBoardTargetId(restoredActiveId);
-      setAnalysisBoardOpen(false);
+      setWorkflowVersions(versions);
+      setVersionPreview(null);
+      setSelectedVersionId(null);
+      applyGraphToEditor(workflow.graph as unknown as FlowGraph, registry, catalog.aliases);
+      setCurrentRun(lastRun);
+      setWorkflowLastRunId(workflow.last_run_id ?? null);
+      setAutosaveUpdatedAt(workflow.last_autosaved_at || workflow.updated_at);
+      setAutosaveState('saved');
       setLastRunSignature('');
-      setSelectedId(null); setSelectedEdgeId(null); setMessage('جریان بارگذاری شد');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'بارگذاری ناموفق بود'); }
+      lastSavedSignatureRef.current = '';
+      skipNextAutosaveRef.current = true;
+      setMessage('جریان بارگذاری شد');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'بارگذاری ناموفق بود');
+    }
   };
 
-  const newWorkflow = () => {
-    const graph = defaultGraph(registry, catalog.aliases);
-    setCurrentWorkflowId(null); setWorkflowName('جریان IOTA ML'); setNodes(graph.nodes); setEdges(graph.edges); setTargetColumn('target'); setTaskType('auto'); setAnalysisBoards([createMainAnalysisBoard()]); setActiveBoardId(MAIN_ANALYSIS_BOARD_ID); setBoardTargetId(MAIN_ANALYSIS_BOARD_ID); setAnalysisBoardOpen(false); setLastRunSignature(''); setCurrentRun(null); setSelectedId(null); setSelectedEdgeId(null);
-  };
+  const viewWorkflowVersion = useCallback(async (versionSummary: WorkflowVersionSummary) => {
+    const workflowId = workflowIdRef.current;
+    if (!workflowId) return;
+    setVersionBusy(true);
+    try {
+      if (!versionPreview && autosaveSnapshot.name) {
+        await persistWorkflowSnapshot(autosaveSnapshot, autosaveSignature);
+      }
+      const version = await api.getWorkflowVersion(workflowId, versionSummary.id);
+      const attachedRun = version.run_id ? await api.getRun(version.run_id).catch(() => null) : null;
+      setVersionPreview(version);
+      setSelectedVersionId(version.id);
+      applyGraphToEditor(version.graph as unknown as FlowGraph, registry, catalog.aliases);
+      setCurrentRun(attachedRun);
+      setLastRunSignature('');
+      setMessage(`نسخه «${version.name}» فقط برای مشاهده باز شد`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'دریافت نسخه ناموفق بود');
+    } finally {
+      setVersionBusy(false);
+    }
+  }, [applyGraphToEditor, autosaveSignature, autosaveSnapshot, catalog.aliases, persistWorkflowSnapshot, registry, versionPreview]);
+
+  const returnToCurrentVersion = useCallback(async () => {
+    const workflowId = workflowIdRef.current;
+    if (!workflowId) return;
+    setVersionBusy(true);
+    try {
+      const workflow = await api.getWorkflow(workflowId);
+      const attachedRun = workflow.last_run_id ? await api.getRun(workflow.last_run_id).catch(() => null) : null;
+      workflowRevisionRef.current = workflow.revision;
+      setWorkflowRevision(workflow.revision);
+      setWorkflowName(workflow.name);
+      setVersionPreview(null);
+      setSelectedVersionId(null);
+      applyGraphToEditor(workflow.graph as unknown as FlowGraph, registry, catalog.aliases);
+      setCurrentRun(attachedRun);
+      setWorkflowLastRunId(workflow.last_run_id ?? null);
+      setAutosaveUpdatedAt(workflow.last_autosaved_at || workflow.updated_at);
+      setAutosaveState('saved');
+      lastSavedSignatureRef.current = '';
+      skipNextAutosaveRef.current = true;
+      setMessage('آخرین نسخه خودکار نمایش داده شد');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'بازگشت به نسخه جاری ناموفق بود');
+    } finally {
+      setVersionBusy(false);
+    }
+  }, [applyGraphToEditor, catalog.aliases, registry]);
+
+  const restoreWorkflowVersion = useCallback(async (version: WorkflowVersionSummary) => {
+    const workflowId = workflowIdRef.current;
+    if (!workflowId || !window.confirm(`نسخه «${version.name}» جایگزین پیش‌نویس جاری شود؟`)) return;
+    setVersionBusy(true);
+    try {
+      const workflow = await api.restoreWorkflowVersion(workflowId, version.id);
+      const attachedRun = workflow.last_run_id ? await api.getRun(workflow.last_run_id).catch(() => null) : null;
+      workflowRevisionRef.current = workflow.revision;
+      setWorkflowRevision(workflow.revision);
+      setWorkflowName(workflow.name);
+      setVersionPreview(null);
+      setSelectedVersionId(null);
+      applyGraphToEditor(workflow.graph as unknown as FlowGraph, registry, catalog.aliases);
+      setCurrentRun(attachedRun);
+      setWorkflowLastRunId(workflow.last_run_id ?? null);
+      setAutosaveUpdatedAt(workflow.last_autosaved_at || workflow.updated_at);
+      setAutosaveState('saved');
+      lastSavedSignatureRef.current = '';
+      skipNextAutosaveRef.current = true;
+      await Promise.all([refreshWorkflowVersions(workflowId), refreshWorkflows()]);
+      setMessage(`نسخه «${version.name}» بازیابی شد`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'بازیابی نسخه ناموفق بود');
+    } finally {
+      setVersionBusy(false);
+    }
+  }, [applyGraphToEditor, catalog.aliases, refreshWorkflowVersions, refreshWorkflows, registry]);
+
+  const deleteWorkflowVersion = useCallback(async (version: WorkflowVersionSummary) => {
+    const workflowId = workflowIdRef.current;
+    if (!workflowId || !window.confirm(`نسخه «${version.name}» حذف شود؟`)) return;
+    setVersionBusy(true);
+    try {
+      await api.deleteWorkflowVersion(workflowId, version.id);
+      if (versionPreview?.id === version.id) {
+        const workflow = await api.getWorkflow(workflowId);
+        const attachedRun = workflow.last_run_id ? await api.getRun(workflow.last_run_id).catch(() => null) : null;
+        workflowRevisionRef.current = workflow.revision;
+        setWorkflowRevision(workflow.revision);
+        setVersionPreview(null);
+        setSelectedVersionId(null);
+        applyGraphToEditor(workflow.graph as unknown as FlowGraph, registry, catalog.aliases);
+        setCurrentRun(attachedRun);
+        setWorkflowLastRunId(workflow.last_run_id ?? null);
+        lastSavedSignatureRef.current = '';
+        skipNextAutosaveRef.current = true;
+      }
+      await refreshWorkflowVersions(workflowId);
+      setMessage('نسخه حذف شد');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'حذف نسخه ناموفق بود');
+    } finally {
+      setVersionBusy(false);
+    }
+  }, [applyGraphToEditor, catalog.aliases, refreshWorkflowVersions, registry, versionPreview?.id]);
 
   const runGraphFromNode = async (nodeId: string | null) => {
-    const graphToRun = connectedGraph(nodes, edges, nodeId);
+    if (versionPreview) {
+      setMessage('برای اجرا، نسخه ذخیره‌شده را بازیابی کنید یا به آخرین نسخه خودکار برگردید.');
+      return;
+    }
+    const normalizedEdges = normalizeEdgeHandles(nodes, edges);
+    const graphToRun = connectedGraph(nodes, normalizedEdges, nodeId);
     if (nodeId) {
       setSelectedId(nodeId);
       setSelectedIds([nodeId]);
       setSelectedEdgeId(null);
       setSelectedEdgeIds([]);
     }
-    setBusy(true);
-    setMessage(graphToRun.mode === 'selected' ? 'جریان متصل به نود انتخاب‌شده اجرا می‌شود' : 'کل برد اجرا می‌شود');
+    setMessage('در حال تثبیت آخرین تغییرات جریان…');
     try {
+      const savedWorkflow = await persistWorkflowSnapshot(autosaveSnapshot, autosaveSignature);
+      setBusy(true);
+      setMessage(graphToRun.mode === 'selected' ? 'جریان متصل به نود انتخاب‌شده اجرا می‌شود' : 'کل برد اجرا می‌شود');
       const graph = { nodes: graphToRun.nodes, edges: graphToRun.edges, meta: { datasetId, targetColumn, taskType } };
-      const run = await api.createRun({ workflow_name: workflowName, workflow_graph: graph, dataset_id: datasetId, project_id: projectId, target_column: targetColumn, task_type: taskType || 'auto', idempotency_key: crypto.randomUUID() });
+      const run = await api.createRun({
+        workflow_name: workflowName,
+        workflow_graph: graph,
+        workflow_id: savedWorkflow.id,
+        workflow_revision: savedWorkflow.revision,
+        bypass_cache: false,
+        dataset_id: datasetId,
+        project_id: projectId,
+        target_column: targetColumn,
+        task_type: taskType || 'auto',
+        idempotency_key: crypto.randomUUID(),
+      });
       setCurrentRun(run);
       setRunHistory((items) => upsertRunSummary(items, run));
       setLastRunSignature(currentOutputSignature);
       setMessage('جریان در صف اجرا قرار گرفت');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'اجرا ناموفق بود'); setBusy(false); }
+    } catch (error) {
+      if (!(error instanceof Error && error.message === 'AUTOSAVE_SUPERSEDED')) {
+        setMessage(error instanceof Error ? error.message : 'اجرا ناموفق بود');
+      }
+      setBusy(false);
+    }
   };
 
   const runWorkflow = () => runGraphFromNode(selectedId);
@@ -700,6 +1662,7 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
           const completed = await api.getRun(runId);
           if (cancelled) return;
           setCurrentRun(completed);
+          if (completed.status === 'succeeded') setWorkflowLastRunId(completed.id);
           setRunHistory((items) => upsertRunSummary(items, completed));
           setBusy(false);
           void refreshRunHistory();
@@ -707,15 +1670,15 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
         }
 
         setCurrentRun((run) => run && run.id === runId ? mergeRunProgress(run, snapshot) : run);
-        timer = window.setTimeout(poll, snapshot.status === 'queued' ? 140 : 250);
+        timer = window.setTimeout(poll, snapshot.status === 'queued' ? 900 : 650);
       } catch (error) {
         if (cancelled) return;
         setMessage(error instanceof Error ? error.message : 'دریافت وضعیت اجرا ناموفق بود');
-        timer = window.setTimeout(poll, 700);
+        timer = window.setTimeout(poll, 1500);
       }
     };
 
-    timer = window.setTimeout(poll, 40);
+    timer = window.setTimeout(poll, 120);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -746,9 +1709,33 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
 
   const appStyle = {
     ['--theme-results-panel-width' as string]: resultsCollapsed ? '46px' : `${resultsWidth}px`,
-    ['--workflow-results-width' as string]: `${resultsWidth}px`
+    ['--workflow-results-width' as string]: `${resultsWidth}px`,
+    ['--workflow-left-panel-offset' as string]: paletteCollapsed ? '76px' : '304px'
   };
-  const flowNodes = useMemo(() => nodes.map((node) => ({ ...node, data: { ...node.data, onRename: renameNode } })), [nodes, renameNode]);
+  const flowNodes = useMemo(() => nodes.map((node) => {
+    const runtimeInfo = currentRun?.node_statuses?.[node.id];
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        onRename: renameNode,
+        runtimeStatus: runtimeInfo?.status || null,
+        runtimeInfo: runtimeInfo || null,
+      },
+    };
+  }), [currentRun?.node_statuses, nodes, renameNode]);
+  const autosaveLabel = versionPreview
+    ? `نسخه v${versionPreview.version_number}`
+    : autosaveState === 'saving'
+      ? 'در حال ذخیره…'
+      : autosaveState === 'conflict'
+        ? 'تداخل ذخیره'
+        : autosaveState === 'error'
+          ? 'خطای ذخیره'
+          : autosaveState === 'idle'
+            ? 'تغییرات ذخیره‌نشده'
+            : `ذخیره خودکار · r${workflowRevision}`;
+
 
   const topbarHeight = 54;
   const panelGap = 16;
@@ -872,40 +1859,51 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
       `}</style>
       <header className="topbar workflow-topbar workflow-topbar-pro" dir="ltr" style={floatingTopbarStyle}>
         <div className="workflow-topbar-left" style={topbarLeftStyle}>
-          <button className="icon-button icon-only topbar-danger-action" type="button" onClick={onLogout} title="خروج" aria-label="خروج"><LogOut size={14} /></button>
-          <button className="icon-button icon-only" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل"><UserCircle size={14} /></button>
+          <button className="icon-button icon-only topbar-danger-action" type="button" onClick={onLogout} title="خروج" aria-label="خروج"><LogOut size={17}/></button>
+          <button className="icon-button icon-only" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل"><UserCircle size={17}/></button>
           <ThemeToggle />
-          <button className="icon-button icon-only" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها"><LayoutDashboard size={14} /></button>
-          <button className="icon-button icon-only" type="button" onClick={onBack} title="بازگشت به پروژه" aria-label="بازگشت به پروژه"><ArrowRight size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها"><LayoutDashboard size={17}/></button>
           {currentRun && !terminalRunStatuses.has(currentRun.status) && <button className="icon-button icon-only topbar-danger-action" type="button" onClick={() => cancelRun(currentRun)} title="توقف اجرا" aria-label="توقف اجرا"><Square size={13} /></button>}
-          <button className="icon-button icon-only" type="button" onClick={exportCurrentWorkflow} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={14} /></button>
-          <button className="icon-button icon-only" type="button" onClick={prettyLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={14} /></button>
-          <button className="icon-button icon-only topbar-danger-action" title="حذف" aria-label="حذف" type="button" disabled={!selectedId && !selectedEdgeId && selectedIds.length === 0 && selectedEdgeIds.length === 0} onClick={deleteSelected}><Trash2 size={14} /></button>
-          <button className="icon-button icon-only" type="button" onClick={newWorkflow} title="جریان جدید" aria-label="جریان جدید"><PlusCircle size={14} /></button>
-          <button className="icon-button icon-only" type="button" title="بیشتر" aria-label="بیشتر"><MoreHorizontal size={14} /></button>
+          <button className="icon-button icon-only" type="button" onClick={exportCurrentWorkflow} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={17}/></button>
+          <button className="icon-button icon-only" type="button" disabled={Boolean(versionPreview)} onClick={prettyLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={17}/></button>
+          <button className="icon-button icon-only" type="button" disabled={Boolean(versionPreview) || Boolean(componentEditor) || selectedIds.length < 2} onClick={openCreateComponent} title="تبدیل نودهای انتخاب‌شده به کامپوننت" aria-label="ساخت کامپوننت"><Layers3 size={17}/></button>
         </div>
 
         <div className="workflow-topbar-center" style={topbarCenterStyle}>
-          <button className="icon-button icon-only topbar-primary-action" title={selectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={busy || nodes.length === 0} onClick={runWorkflow}>{busy ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}</button>
-          <button className={`icon-button icon-only ${analysisBoardOpen ? 'active' : ''}`} type="button" onClick={() => setAnalysisBoardOpen((value) => !value)} title={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><BoardIcon size={14} /></button>
-          <button className="icon-button icon-only topbar-primary-action" type="button" disabled={busy} onClick={saveWorkflow} title="ذخیره" aria-label="ذخیره"><Save size={14} /></button>
+          <button className="icon-button icon-only topbar-primary-action" title={selectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={busy || versionBusy || Boolean(versionPreview) || Boolean(componentEditor) || nodes.length === 0} onClick={runWorkflow}>{busy ? <RefreshCw size={17}className="spin" /> : <Play size={17}/>}</button>
+          <button className={`icon-button icon-only ${analysisBoardOpen ? 'active' : ''}`} type="button" onClick={() => setAnalysisBoardOpen((value) => !value)} title={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={analysisBoardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><KanbanSquare size={17}/></button>
+          <button className="icon-button icon-only topbar-primary-action" type="button" disabled={versionBusy || Boolean(versionPreview) || Boolean(componentEditor)} onClick={() => setWorkflowVersionDialogOpen(true)} title="ذخیره نسخه نام‌گذاری‌شده" aria-label="ذخیره نسخه نام‌گذاری‌شده">{versionBusy ? <RefreshCw size={17} className="spin" /> : <Save size={17}/>}</button>
+          {analysisBoardOpen && <button className="icon-button icon-only" type="button" disabled={Boolean(versionPreview)} onClick={openRenameActiveBoard} title="تغییر نام برد فعال" aria-label="تغییر نام برد فعال"><Pencil size={17}/></button>}
+          {analysisBoardOpen && <button className="icon-button icon-only topbar-danger-action" type="button" disabled={Boolean(versionPreview) || activeBoard?.id === MAIN_ANALYSIS_BOARD_ID} onClick={() => setDeleteBoardDialogOpen(true)} title={activeBoard?.id === MAIN_ANALYSIS_BOARD_ID ? 'برد اصلی قابل حذف نیست' : 'حذف برد فعال'} aria-label="حذف برد فعال"><Trash2 size={17}/></button>}
         </div>
 
         <div className="workflow-topbar-right" style={topbarRightStyle}>
-          <input className="workflow-name-input" style={{ width: '168px', minWidth: '120px', height: '32px' }} value={workflowName} onChange={(event) => setWorkflowName(event.target.value)} aria-label="نام جریان" placeholder="نام جریان" />
-          {/* <div style={{ width: '164px', minWidth: '132px' }}><CustomSelect className="workflow-select" value={currentWorkflowId ? String(currentWorkflowId) : ''} options={workflowOptions} onChange={loadWorkflow} ariaLabel="لیست جریان‌ها" /></div> */}
+          <span className={`workflow-autosave-status ${autosaveState} ${versionPreview ? 'preview' : ''}`} title={autosaveUpdatedAt ? `آخرین ذخیره: ${new Date(autosaveUpdatedAt).toLocaleString('fa-IR')}` : autosaveLabel}>{autosaveLabel}</span>
           <div className="workflow-breadcrumb workflow-logo-breadcrumb" dir="rtl">
             <div className="workflow-logo-title">
               <img src="/iota.png" alt="IOTA" />
               <h2>IOTA ML</h2>
             </div>
             <h1>›</h1>
-            <h3>{project.name}</h3>
+            <button type="button" className="workflow-project-link" onClick={onBack} title="بازگشت به صفحه پروژه">{project.name}</button>
+            <h1>›</h1>
+            <span className="workflow-current-name" title={workflowName}>{workflowName}</span>
           </div>
         </div>
       </header>
 
-      <main className={`workspace ${paletteCollapsed ? 'palette-collapsed' : ''} ${resultsCollapsed ? 'results-collapsed' : ''}`} style={floatingWorkspaceStyle}>
+      {componentEditor && (
+        <div className="component-editor-banner workflow-shell-card" dir="rtl">
+          <div className="component-editor-breadcrumb"><Layers3 size={17}/><span>{workflowName}</span><b>›</b><strong>{componentEditor.component.name}</strong><small>v{componentEditor.version.semantic_version}{componentEditorDirty ? " · تغییر ذخیره‌نشده" : ""}</small></div>
+          <div className="component-editor-actions">
+            <button type="button" className="secondary-button compact" disabled={componentBusy} onClick={() => setComponentDefinitionDialogOpen(true)}><SlidersHorizontal size={15}/> پورت‌ها و پارامترها</button>
+            <button type="button" className="secondary-button compact" onClick={requestLeaveComponentEditor}><ArrowLeft size={15}/> بازگشت به جریان</button>
+            <button type="button" className="primary-button compact" disabled={componentBusy} onClick={() => setComponentVersionDialogOpen(true)}><Save size={15}/> ذخیره نسخه جدید</button>
+          </div>
+        </div>
+      )}
+
+      <main className={`workspace ${paletteCollapsed ? 'palette-collapsed' : ''} ${resultsCollapsed ? 'results-collapsed' : ''} ${componentEditor ? 'component-editor-active' : ''}`} style={floatingWorkspaceStyle}>
         {analysisBoardOpen ? (
           <WorkflowNodesList
             nodes={nodes}
@@ -928,11 +1926,11 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
         <section className="board" onDrop={onDrop} onDragOver={onDragOver} style={floatingBoardStyle}>
           {message && <div className="toast">{message}</div>}
           <div className={`workflow-flow-layer ${analysisBoardOpen ? 'is-hidden' : ''}`}>
-            <ReactFlow nodes={flowNodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onSelectionChange={onSelectionChange} onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick} selectionOnDrag multiSelectionKeyCode={multiSelectionKeys} onlyRenderVisibleElements fitView>
+            <ReactFlow nodes={flowNodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onSelectionChange={onSelectionChange} onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick} nodesDraggable={!versionPreview && !ctrlSelectionActive} nodesConnectable={!versionPreview} edgesReconnectable={!versionPreview} selectionOnDrag={ctrlSelectionActive} selectionKeyCode={null} multiSelectionKeyCode={multiSelectionKeys} panOnDrag={!ctrlSelectionActive} className={ctrlSelectionActive ? 'workflow-ctrl-selection-active' : ''} onlyRenderVisibleElements fitView>
               <Controls /><MiniMap className="workflow-minimap-visible" pannable zoomable style={{ left: paletteCollapsed ? 76 : 304, right: 'auto', bottom: 24 }} />
             </ReactFlow>
           </div>
-          {analysisBoardOpen && (
+          <div className={`analysis-board-mount-layer ${analysisBoardOpen ? '' : 'is-hidden'}`}>
             <AnalysisBoard
               tabs={analysisBoards}
               activeBoardId={activeBoardId}
@@ -944,15 +1942,15 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
               onRun={runWorkflow}
               onSelectBoard={(id) => { setActiveBoardId(id); setBoardTargetId(id); }}
               onCreateBoard={createAnalysisBoard}
-              onRenameBoard={renameAnalysisBoard}
-              onRemoveBoard={removeAnalysisBoard}
               onAddOutput={(output, index) => addOutputToBoard(output, index, activeBoardId)}
               onUpdateItem={updateBoardItem}
               onRemoveItem={removeBoardItem}
               onDuplicateItem={duplicateBoardItem}
               onClear={clearActiveBoard}
+              onViewportChange={updateBoardViewport}
+              readOnly={Boolean(versionPreview)}
             />
-          )}
+          </div>
         </section>
         <RightPanel
           floatingRightStyle={floatingRightStyle}
@@ -960,8 +1958,6 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
           setResultsCollapsed={setResultsCollapsed}
           startResize={startResize}
           selectedFlow={selectedFlow}
-          historyCollapsed={historyCollapsed}
-          setHistoryCollapsed={setHistoryCollapsed}
           runHistory={runHistory}
           currentRun={currentRun}
           busy={busy}
@@ -975,23 +1971,56 @@ function WorkflowEditor({ project, user, initialWorkflowId, onBack, onProfile, o
           aliases={catalog.aliases}
           datasets={datasets}
           availableColumns={availableColumns}
+          availableRows={availableRows}
           updateNodeParams={updateNodeParams}
           renameNode={renameNode}
           deleteSelected={deleteSelected}
-          nodeResultsCollapsed={nodeResultsCollapsed}
-          setNodeResultsCollapsed={setNodeResultsCollapsed}
-          quickSettingsCollapsed={quickSettingsCollapsed}
-          setQuickSettingsCollapsed={setQuickSettingsCollapsed}
+          onUngroupComponent={(node) => setConfirmUngroupComponent(node)}
           selectedId={selectedId}
           onAddOutputToBoard={addOutputFromRightPanel}
           analysisBoardOpen={analysisBoardOpen}
           boardTabs={analysisBoards}
           boardTargetId={analysisBoardOpen ? boardTargetId : MAIN_ANALYSIS_BOARD_ID}
           onBoardTargetChange={(id) => { setBoardTargetId(id); setActiveBoardId(id); }}
+          workflowId={currentWorkflowId}
+          workflowVersions={workflowVersions}
+          selectedVersionId={selectedVersionId}
+          versionPreviewActive={Boolean(versionPreview)}
+          onSelectVersion={(version) => { void viewWorkflowVersion(version); }}
+          onRestoreVersion={(version) => { void restoreWorkflowVersion(version); }}
+          onDeleteVersion={(version) => { void deleteWorkflowVersion(version); }}
+          onRefreshVersions={() => { void refreshWorkflowVersions().catch((error) => setMessage(error instanceof Error ? error.message : 'دریافت نسخه‌ها ناموفق بود')); }}
+          onReturnToCurrentVersion={() => { void returnToCurrentVersion(); }}
+          components={components}
+          onRefreshComponents={() => { void refreshComponents().catch((error) => setMessage(error instanceof Error ? error.message : 'دریافت کامپوننت‌ها ناموفق بود')); }}
+          onEditComponent={(component) => { if (component.current_version) void enterComponentEditor(component, component.current_version); }}
+          onManageComponentVersions={(component) => { void openComponentVersionManager(component); }}
+          onExportComponent={(component) => { void exportComponentPackage(component); }}
+          onArchiveComponent={(component) => { void api.updateComponent(component.id, { archived: !component.archived }).then(() => refreshComponents()).catch((error) => setMessage(error instanceof Error ? error.message : 'آرشیو کامپوننت ناموفق بود')); }}
+          onDeleteComponent={(component) => setConfirmDeleteComponent(component)}
+          onImportComponent={(payload) => { void importComponentPackage(payload); }}
+          readOnly={Boolean(versionPreview)}
         />
       </main>
-      {modalNode && <NodeModal node={modalNode} edges={edges} registry={registry} aliases={catalog.aliases} datasets={datasets} availableColumns={availableColumns} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onAddOutputToBoard={addOutputToMainBoard} onClose={() => setModalNodeId(null)} />}
+      {modalNode && !versionPreview && <NodeModal node={modalNode} workflowNodes={nodes} edges={edges} registry={registry} aliases={catalog.aliases} portCompatibility={catalog.compatiblePorts} datasets={datasets} availableColumns={availableColumns} availableRows={availableRows} run={currentRun} busy={busy} onRunNode={() => runGraphFromNode(modalNode.id)} onParamsChange={updateNodeParams} onRename={renameNode} onPinnedChange={updateNodePinned} onAddOutputToBoard={addOutputToMainBoard} onInputSourceHandleChange={onInputSourceHandleChange} onClose={() => setModalNodeId(null)} />}
       {customBuilderOpen && <CustomNodeBuilder definition={customBuilderDefinition} workflowNodes={nodes} registry={registry} busy={customBuilderBusy} onSave={saveCustomNode} onDelete={customBuilderDefinition ? deleteCustomNode : undefined} onClose={() => { if (!customBuilderBusy) { setCustomBuilderOpen(false); setCustomBuilderDefinition(null); } }} />}
+      <AppDialog open={renameBoardDialogOpen} title="تغییر نام برد" description="نام برد فعال را تغییر دهید. محتوا و چیدمان برد بدون تغییر می‌ماند." onClose={() => setRenameBoardDialogOpen(false)} width={440} footer={<>
+        <button type="button" className="secondary-button" onClick={() => setRenameBoardDialogOpen(false)}>انصراف</button>
+        <button type="button" className="primary-button" disabled={!renameBoardDraft.trim()} onClick={confirmRenameActiveBoard}>ذخیره نام</button>
+      </>}>
+        <label className="app-dialog-field"><span>نام برد</span><input autoFocus value={renameBoardDraft} maxLength={120} onChange={(event) => setRenameBoardDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && renameBoardDraft.trim()) confirmRenameActiveBoard(); }} /></label>
+      </AppDialog>
+      <ConfirmDialog open={deleteBoardDialogOpen} title="حذف برد" message={activeBoard ? `برد «${activeBoard.name}» و چیدمان کارت‌های آن حذف شود؟ خروجی‌های اصلی Run حذف نمی‌شوند.` : ''} confirmLabel="حذف برد" danger onClose={() => setDeleteBoardDialogOpen(false)} onConfirm={confirmDeleteActiveBoard} />
+      <WorkflowVersionDialog open={workflowVersionDialogOpen} defaultName={`نسخه ${workflowVersions.length + 1}`} busy={versionBusy} onClose={() => setWorkflowVersionDialogOpen(false)} onSave={(name, description) => { void saveWorkflowVersion(name, description); }} />
+      <CreateComponentDialog open={createComponentOpen} busy={componentBusy} selectedCount={selectedIds.length} initialInputs={componentBoundary.inputs} initialOutputs={componentBoundary.outputs} onClose={() => setCreateComponentOpen(false)} onCreate={(draft) => { void createComponentFromSelection(draft); }} />
+      <ComponentVersionDialog open={componentVersionDialogOpen} busy={componentBusy} currentVersion={componentEditor?.version.semantic_version || '1.0.0'} onClose={() => setComponentVersionDialogOpen(false)} onSave={(semanticVersion, changelog) => { void saveComponentVersion(semanticVersion, changelog); }} />
+      <ComponentDefinitionEditorDialog open={componentDefinitionDialogOpen} nodes={nodes} registry={registry} inputs={componentEditor?.version.interface_json.inputs || []} outputs={componentEditor?.version.interface_json.outputs || []} exposedParameters={componentEditor?.version.exposed_parameters || []} onClose={() => setComponentDefinitionDialogOpen(false)} onSave={applyComponentDefinition} />
+      <ComponentVersionsDialog open={Boolean(managedComponent)} component={managedComponent} versions={managedComponentVersions} busy={componentBusy} onClose={() => setManagedComponent(null)} onRefresh={() => { void refreshManagedComponentVersions().catch((error) => setMessage(error instanceof Error ? error.message : 'دریافت نسخه‌ها ناموفق بود')); }} onOpenVersion={(action) => { void openManagedComponentVersion(action); }} onMakeCurrent={(action) => { void makeManagedComponentVersionCurrent(action); }} onExportVersion={(action) => { void exportManagedComponentVersion(action); }} onDeleteVersion={(action) => setConfirmDeleteComponentVersion(action)} />
+      <ConfirmDialog open={confirmLeaveComponentEditor} title="خروج از ویرایش کامپوننت" message="تغییرات این نسخه هنوز ذخیره نشده‌اند. خروج، تغییرات ویرایشگر کامپوننت را دور می‌ریزد." confirmLabel="خروج بدون ذخیره" danger onClose={() => setConfirmLeaveComponentEditor(false)} onConfirm={leaveComponentEditor} />
+      <ConfirmDialog open={Boolean(pendingComponentUpgrade)} title="ارتقای نمونه کامپوننت" message={pendingComponentUpgrade ? `نسخه ${pendingComponentUpgrade.version.semantic_version} ساخته شد. آیا نمونه این کامپوننت در جریان جاری به نسخه جدید ارتقا یابد؟ جریان‌های دیگر بدون تغییر می‌مانند.` : ''} confirmLabel="ارتقای این نمونه" busy={componentBusy} onClose={() => setPendingComponentUpgrade(null)} onConfirm={confirmUpgradeComponentInstance} />
+      <ConfirmDialog open={Boolean(confirmDeleteComponentVersion)} title="حذف نسخه کامپوننت" message={confirmDeleteComponentVersion ? `نسخه ${confirmDeleteComponentVersion.version.semantic_version} از «${confirmDeleteComponentVersion.component.name}» حذف شود؟ نسخه جاری یا نسخه‌ای که در جریان‌ها استفاده شده باشد قابل حذف نیست.` : ''} confirmLabel="حذف نسخه" danger busy={componentBusy} onClose={() => setConfirmDeleteComponentVersion(null)} onConfirm={() => { if (!confirmDeleteComponentVersion) return; const action = confirmDeleteComponentVersion; setComponentBusy(true); void api.deleteComponentVersion(action.component.id, action.version.id).then(async () => { setConfirmDeleteComponentVersion(null); await refreshManagedComponentVersions(action.component); setMessage('نسخه کامپوننت حذف شد.'); }).catch((error) => setMessage(error instanceof Error ? error.message : 'حذف نسخه کامپوننت ناموفق بود')).finally(() => setComponentBusy(false)); }} />
+      <ConfirmDialog open={Boolean(confirmUngroupComponent)} title="بازگرداندن کامپوننت به نودها" message={confirmUngroupComponent ? `کامپوننت «${String(confirmUngroupComponent.data?.label || confirmUngroupComponent.data?.typeLabel || '')}» در همین جریان به نودهای داخلی تبدیل شود؟ کامپوننت ذخیره‌شده در کتابخانه و استفاده‌های آن در جریان‌های دیگر بدون تغییر می‌ماند.` : ''} confirmLabel="بازگرداندن به نودها" busy={componentBusy} onClose={() => setConfirmUngroupComponent(null)} onConfirm={() => { if (confirmUngroupComponent) ungroupComponentInstance(confirmUngroupComponent); }} />
+      <ConfirmDialog open={Boolean(confirmDeleteComponent)} title="حذف کامپوننت" message={confirmDeleteComponent ? `کامپوننت «${confirmDeleteComponent.name}» برای همیشه حذف شود؟ این کار فقط زمانی مجاز است که هیچ جریان یا نسخه‌ای از آن استفاده نکند.` : ''} confirmLabel="حذف کامپوننت" danger busy={componentBusy} onClose={() => setConfirmDeleteComponent(null)} onConfirm={() => { if (!confirmDeleteComponent) return; setComponentBusy(true); void api.deleteComponent(confirmDeleteComponent.id).then(async () => { setConfirmDeleteComponent(null); await Promise.all([refreshComponents(), refreshRegistry()]); setMessage('کامپوننت حذف شد'); }).catch((error) => setMessage(error instanceof Error ? error.message : 'حذف کامپوننت ناموفق بود')).finally(() => setComponentBusy(false)); }} />
     </div>
   );
 }

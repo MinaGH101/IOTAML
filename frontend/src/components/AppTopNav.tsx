@@ -32,7 +32,7 @@ export function AppTopNav({
         <button className="iota-brand-mark" type="button" onClick={onProjects} title="IOTA">
                       <div className="workflow-logo-title">
               <img src="/iota.png" alt="IOTA" />
-              <h2>IOTA ML</h2>
+              <h3>IOTA ML</h3>
             </div>
         </button>
         <span className="iota-nav-divider" />

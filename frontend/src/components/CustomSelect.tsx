@@ -38,7 +38,7 @@ export function CustomSelect({ value, options, onChange, ariaLabel, placeholder 
         onClick={() => setOpen((current) => !current)}
       >
         <span>{selected?.label || placeholder}</span>
-        <ChevronDown size={14} />
+        <ChevronDown size={17}/>
       </button>
       {open && (
         <div className="iota-select-menu" id={menuId} role="listbox">

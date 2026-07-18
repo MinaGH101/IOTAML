@@ -22,10 +22,13 @@ class ArtifactRepository:
         node_id: str | None = None,
         artifact_type: str | None = None,
         include_deleted: bool = False,
+        include_internal: bool = False,
     ) -> list[Artifact]:
         query = db.query(Artifact).filter(Artifact.owner_username == owner_username)
         if not include_deleted:
             query = query.filter(Artifact.deleted_at.is_(None), Artifact.status == "available")
+        if not include_internal and artifact_type is None:
+            query = query.filter(Artifact.artifact_type != "node_cache")
         if project_id is not None:
             query = query.filter(Artifact.project_id == project_id)
         if run_id is not None:

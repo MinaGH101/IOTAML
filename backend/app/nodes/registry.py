@@ -10,6 +10,7 @@ from app.nodes.inspection.data_overview_node import DataOverviewNode
 from app.nodes.inspection.missing_values_node import MissingValuesReportNode
 from app.nodes.inspection.correlation_node import CorrelationMatrixNode
 from app.nodes.inspection.statistical_report_node import StatisticalReportNode
+from app.nodes.inspection.duplicate_error_node import DuplicateSampleErrorNode
 from app.nodes.cleaning.convert_type_node import ConvertTypeNode
 from app.nodes.cleaning.select_columns_node import SelectColumnsNode
 from app.nodes.cleaning.filter_dataframe_node import FilterDataFrameNode
@@ -19,12 +20,16 @@ from app.nodes.cleaning.detection_limit_node import DetectionLimitHandlingNode
 from app.nodes.anomaly_detection.z_score_node import ZScoreOutlierNode
 from app.nodes.anomaly_detection.iqr_node import IQROutlierNode
 from app.nodes.anomaly_detection.threshold_node import ThresholdAnomalyNode
+from app.nodes.anomaly_detection.sorted_gap_node import SortedGapOutlierNode
 from app.nodes.transformation.scaler_nodes import ScalerNode
 from app.nodes.transformation.normalization_node import NormalizationNode
 from app.nodes.transformation.ratio_node import RatioCalculatorNode
+from app.nodes.transformation.transpose_node import TransposeDataFrameNode
 from app.nodes.visualization.histogram_node import HistogramNode
 from app.nodes.visualization.scatter_node import ScatterPlotNode
 from app.nodes.visualization.boxplot_node import BoxPlotNode
+from app.nodes.visualization.barplot_node import BarPlotNode
+from app.nodes.visualization.pp_plot_node import PPPlotNode
 from app.nodes.ml_data_processing.split_node import TrainTestSplitNode
 from app.nodes.ml_data_processing.kfold_node import KFoldSplitNode
 from app.nodes.ml_data_processing.select_features_node import SelectFeaturesNode
@@ -72,21 +77,22 @@ EXACT_CATEGORIES = [
     'Export or Report',
     'Utilities / Advanced',
     'User Nodes',
+    'Components',
 ]
 
 NODE_CLASSES: list[type[BaseNode]] = [
     # Data Input
     ManualJsonInputNode, CsvInputNode, ManualTriggerNode,
     # Data Inspection
-    DataOverviewNode, MissingValuesReportNode, CorrelationMatrixNode, StatisticalReportNode,
+    DataOverviewNode, MissingValuesReportNode, CorrelationMatrixNode, StatisticalReportNode, DuplicateSampleErrorNode,
     # Data Cleaning
     ConvertTypeNode, SelectColumnsNode, FilterDataFrameNode, ReplaceValuesNode, ImputationNode, DetectionLimitHandlingNode,
     # Anomaly Detection
-    ZScoreOutlierNode, IQROutlierNode, ThresholdAnomalyNode,
+    ZScoreOutlierNode, IQROutlierNode, ThresholdAnomalyNode, SortedGapOutlierNode,
     # Transformation
-    ScalerNode, NormalizationNode, RatioCalculatorNode,
+    ScalerNode, NormalizationNode, RatioCalculatorNode, TransposeDataFrameNode,
     # Visualizations
-    HistogramNode, ScatterPlotNode, BoxPlotNode,
+    HistogramNode, ScatterPlotNode, BoxPlotNode, BarPlotNode, PPPlotNode,
     # ML Data Processing
     SelectFeaturesNode, TrainTestSplitNode, KFoldSplitNode, SetTargetNode, MutualInfoFeatureScoreNode, FRegressionFeatureScoreNode,
     # Regression Models

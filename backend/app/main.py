@@ -13,16 +13,20 @@ from app.core.openapi import install_openapi
 from app.database import Base, SessionLocal, engine
 from app.domains.artifacts import models as artifact_models  # noqa: F401
 from app.domains.artifacts.routes import router as artifacts_router
+from app.domains.components.routes import router as components_router
 from app.domains.auth.routes import router as auth_router
 from app.domains.datasets.routes import router as datasets_router
 from app.domains.nodes.routes import router as nodes_router
 from app.domains.projects.routes import router as projects_router
 from app.domains.runs.routes import router as runs_router
 from app.domains.workflows.routes import router as workflows_router
+from app.domains.assistant.router import router as assistant_router
+
 from app.infrastructure.storage import get_storage_backend
 from app.services.run_queue import queue_metrics
 from app.services.storage import ensure_dirs
 from app.services.users import ensure_user_file
+
 
 settings = get_settings()
 
@@ -110,5 +114,7 @@ for router in (
     workflows_router,
     runs_router,
     artifacts_router,
+    components_router,
+    assistant_router,
 ):
     app.include_router(router, prefix="/api")

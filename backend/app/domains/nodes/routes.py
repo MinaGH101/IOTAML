@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.domains.nodes.models import CustomNode
 from app.schemas import CustomNodeCreate
+from app.domains.components.service import component_to_registry_node, current_version, list_components
 from app.domains.nodes.service import (
     create_custom_node, custom_node_to_api, get_catalog_metadata, get_current_user,
     get_node_categories, get_node_definition, get_node_registry, list_custom_nodes, update_custom_node,
@@ -16,7 +17,8 @@ router = APIRouter(prefix='/nodes', tags=['nodes'])
 def list_nodes(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)) -> list[dict]:
     built_in = get_node_registry()
     custom = [custom_node_to_api(node) for node in list_custom_nodes(db, str(current_user['username']))]
-    return [*built_in, *custom]
+    components = [component_to_registry_node(item, current_version(db, item)) for item in list_components(db, str(current_user['username'])) if current_version(db, item)]
+    return [*built_in, *custom, *components]
 
 
 @router.get('/categories')
@@ -28,7 +30,9 @@ def list_categories() -> list[str]:
 def get_catalog(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
     metadata = get_catalog_metadata()
     custom = [custom_node_to_api(node) for node in list_custom_nodes(db, str(current_user['username']))]
-    return {**metadata, 'nodes': [*get_node_registry(), *custom]}
+    components = [component_to_registry_node(item, current_version(db, item)) for item in list_components(db, str(current_user['username'])) if current_version(db, item)]
+    categories = list(dict.fromkeys([*(metadata.get('categories') or []), 'Components']))
+    return {**metadata, 'categories': categories, 'nodes': [*get_node_registry(), *custom, *components]}
 
 
 @router.post('/custom')

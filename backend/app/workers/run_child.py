@@ -12,6 +12,7 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.node_cache_runtime import RuntimeNodeCache
 from app.services.run_state import RunCancelledError, initial_node_statuses, progress_payload
 
 
@@ -69,26 +70,32 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
     graph = snapshot.get('workflow_graph') or {}
     statuses = initial_node_statuses(graph)
     started_monotonic: dict[str, float] = {}
+    runtime_cache: RuntimeNodeCache | None = None
 
     def save_progress() -> None:
         _atomic_write(progress_path, {
             'node_statuses': statuses,
             'progress': progress_payload(graph, statuses),
             'updated_at': time.time(),
+            'cache_records': list(runtime_cache.records) if runtime_cache else [],
         })
 
-    def progress_callback(node_id: str, status: str, error: str | None) -> None:
+    def progress_callback(node_id: str, status: str, error: str | None, metadata: dict[str, Any] | None = None) -> None:
         now_iso = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         item = statuses.setdefault(node_id, {'status': 'queued', 'name': node_id})
         if status == 'running' and not item.get('started_at'):
             item['started_at'] = now_iso
             started_monotonic[node_id] = time.monotonic()
         item['status'] = status
-        if status in {'succeeded', 'failed', 'cancelled', 'skipped'}:
+        if status in {'succeeded', 'cached', 'failed', 'cancelled', 'skipped'}:
             item['finished_at'] = now_iso
             if node_id in started_monotonic:
                 item['duration_ms'] = round((time.monotonic() - started_monotonic[node_id]) * 1000)
         item['error'] = error
+        if metadata:
+            for key in ('cache_hit', 'cache_key', 'cache_entry_id', 'artifact_id', 'source_run_id', 'output_digest', 'size_bytes'):
+                if metadata.get(key) is not None:
+                    item[key if key != 'size_bytes' else 'output_size_bytes'] = metadata.get(key)
         save_progress()
 
     def cancel_check() -> bool:
@@ -99,6 +106,13 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
     if bool(snapshot.get('network_disabled', True)):
         _disable_network()
     os.chdir(work_dir)
+    runtime_cache = RuntimeNodeCache(
+        snapshot.get('cache_manifest'),
+        Path(snapshot.get('cache_output_dir') or work_dir / 'cache-output'),
+        external_inputs=dict(snapshot.get('external_inputs') or {}),
+        target_column=snapshot.get('target_column'),
+        task_type=snapshot.get('task_type') or 'auto',
+    )
     save_progress()
 
     try:
@@ -134,14 +148,15 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
                 dataset_path=snapshot.get('dataset_path'),
                 progress_callback=progress_callback,
                 cancel_check=cancel_check,
+                runtime_cache=runtime_cache,
             )
         if cancel_check():
             raise RunCancelledError('Cancellation requested.')
         status = 'failed' if normalized.get('error') else 'succeeded'
-        _atomic_write(result_path, {'status': status, **normalized})
+        _atomic_write(result_path, {'status': status, **normalized, 'cache_records': list(runtime_cache.records) if runtime_cache else []})
         return 1 if status == 'failed' else 0
     except RunCancelledError as exc:
-        _atomic_write(result_path, {'status': 'cancelled', 'error': str(exc), 'metrics': None, 'artifacts': None})
+        _atomic_write(result_path, {'status': 'cancelled', 'error': str(exc), 'metrics': None, 'artifacts': None, 'cache_records': list(runtime_cache.records) if runtime_cache else []})
         return 2
     except BaseException as exc:
         _atomic_write(result_path, {
@@ -149,6 +164,7 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
             'error': str(exc),
             'metrics': None,
             'artifacts': {'traceback': traceback.format_exc()[-12000:]},
+            'cache_records': list(runtime_cache.records) if runtime_cache else [],
         })
         return 1
 
