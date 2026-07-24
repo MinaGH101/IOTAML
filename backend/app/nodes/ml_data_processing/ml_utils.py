@@ -4,7 +4,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.nodes.io import dataframe_payload, ensure_df, selected_columns
+from app.nodes.io import calculation_columns, dataframe_payload, ensure_df, selected_columns
 
 
 def feature_target_from_inputs(inputs: dict[str, Any], settings: dict[str, Any], context: Any, node_id: str):
@@ -26,14 +26,14 @@ def feature_target_from_inputs(inputs: dict[str, Any], settings: dict[str, Any],
         return x, y, target, features, payload
 
     target = str(settings.get('target_column') or meta.get('target_column') or context.target_column or '').strip()
-    if not target or target not in df.columns:
-        raise ValueError('Select target/features first or set a valid target column.')
+    if not target or target not in calculation_columns(df):
+        raise ValueError('Select target/features first or set a valid active target column. The workflow ID cannot be the target.')
 
     features = [c for c in selected_columns(settings, df) if c != target]
     if not features:
         features = [str(c) for c in meta.get('feature_columns') or [] if str(c) in df.columns and str(c) != target]
     if not features:
-        features = [str(c) for c in df.columns if str(c) != target and str(c) != (payload.id_column if payload else None)]
+        features = [str(c) for c in calculation_columns(df) if str(c) != target]
 
     x = df[features].copy()
     y = df[target].copy()

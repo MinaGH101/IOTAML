@@ -1,8 +1,10 @@
 from functools import lru_cache
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    app_environment: str = "development"
     database_url: str = "postgresql+psycopg2://nocodeml:nocodeml@postgres:5432/nocodeml"
     redis_url: str = "redis://redis:6379/0"
     storage_dir: str = "/app/storage"
@@ -51,6 +53,20 @@ class Settings(BaseSettings):
     node_cache_compression: int = 3
     node_cache_cleanup_batch_size: int = 200
     workflow_version_limit: int = 100
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.app_environment.lower() != "production":
+            return self
+        invalid = {
+            "AUTH_SECRET": self.auth_secret in {"", "change-this-secret-in-production", "dev-only-auth-secret-change-me"} or len(self.auth_secret) < 32,
+            "MINIO_ACCESS_KEY": self.minio_access_key in {"", "nocodeml", "nocodeml-dev"},
+            "MINIO_SECRET_KEY": self.minio_secret_key in {"", "nocodeml-secret", "dev-only-minio-password"} or len(self.minio_secret_key) < 16,
+        }
+        missing = [name for name, failed in invalid.items() if failed]
+        if missing:
+            raise ValueError("Unsafe production configuration: " + ", ".join(missing))
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

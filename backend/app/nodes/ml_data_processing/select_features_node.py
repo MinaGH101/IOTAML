@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
+from app.nodes.io import calculation_columns, dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
 
 
 class SelectFeaturesNode(BaseNode):
@@ -28,12 +28,12 @@ class SelectFeaturesNode(BaseNode):
         id_column = payload.id_column if payload else None
 
         target = str(settings.get('target_column') or '').strip()
-        if not target or target not in df.columns:
-            raise ValueError('Select a valid target column.')
+        if not target or target not in calculation_columns(df):
+            raise ValueError('Select a valid active target column. The workflow ID cannot be the target.')
 
         features = [c for c in selected_columns(settings, df) if c != target]
         if not features:
-            features = [c for c in df.columns if c != target and c != id_column]
+            features = [c for c in calculation_columns(df) if c != target]
 
         feature_df = df[features].copy()
         target_series = df[target].copy()

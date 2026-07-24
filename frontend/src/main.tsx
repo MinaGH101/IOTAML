@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
-import App from './App';
+import App from './app/App';
 
 // Apply the saved theme before React mounts. This prevents MUI X components
 // from measuring/rendering once with the wrong theme during a page refresh.

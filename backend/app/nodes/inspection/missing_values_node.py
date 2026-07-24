@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port
-from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, output
+from app.nodes.io import calculation_columns, dataframe_payload, dataframe_result, ensure_df, node_label, output
 
 
 class MissingValuesReportNode(BaseNode):
@@ -16,7 +16,7 @@ class MissingValuesReportNode(BaseNode):
         payload = dataframe_payload(inputs, 'data')
         df = ensure_df(payload.df if payload else None, str(node['id']))
         rows = []
-        for c in df.columns:
+        for c in calculation_columns(df):
             pct = float(df[c].isna().mean() * 100)
             rows.append({
                 'column': str(c),
@@ -29,7 +29,7 @@ class MissingValuesReportNode(BaseNode):
         report = {
             'columns': rows,
             'rows_total': len(df),
-            'columns_total': len(df.columns),
+            'columns_total': len(rows),
             'id_column': payload.id_column if payload else None,
         }
         return dataframe_result(

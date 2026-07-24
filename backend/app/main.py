@@ -5,12 +5,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 
 from app.config import get_settings
 from app.core.http import ApiEnvelopeMiddleware, install_exception_handlers
 from app.core.openapi import install_openapi
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, engine
 from app.domains.artifacts import models as artifact_models  # noqa: F401
 from app.domains.artifacts.routes import router as artifacts_router
 from app.domains.components.routes import router as components_router
@@ -24,7 +24,7 @@ from app.domains.assistant.router import router as assistant_router
 
 from app.infrastructure.storage import get_storage_backend
 from app.services.run_queue import queue_metrics
-from app.services.storage import ensure_dirs
+from app.services.storage import ensure_dirs, ensure_storage_writable
 from app.services.users import ensure_user_file
 
 
@@ -43,46 +43,11 @@ install_exception_handlers(app)
 install_openapi(app)
 
 
-def ensure_runtime_schema() -> None:
-    """Compatibility guard for older local databases.
-
-    Alembic remains the source of truth. This only adds small nullable/default
-    columns needed to keep a developer database bootable before a manual reset.
-    """
-    inspector = inspect(engine)
-    tables = set(inspector.get_table_names())
-    with engine.begin() as conn:
-        for table in ("datasets", "workflows", "runs"):
-            if table not in tables:
-                continue
-            columns = {column["name"] for column in inspector.get_columns(table)}
-            if "project_id" not in columns:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN project_id INTEGER NULL"))
-        if "datasets" in tables:
-            columns = {column["name"] for column in inspector.get_columns("datasets")}
-            additions = {
-                "artifact_id": "INTEGER NULL",
-                "content_type": "VARCHAR(255) NOT NULL DEFAULT 'text/csv'",
-                "size_bytes": "INTEGER NOT NULL DEFAULT 0",
-                "checksum_sha256": "VARCHAR(64) NULL",
-            }
-            for name, ddl in additions.items():
-                if name not in columns:
-                    conn.execute(text(f"ALTER TABLE datasets ADD COLUMN {name} {ddl}"))
-        if "projects" in tables:
-            columns = {column["name"] for column in inspector.get_columns("projects")}
-            if "color" not in columns:
-                conn.execute(text("ALTER TABLE projects ADD COLUMN color VARCHAR(32) NOT NULL DEFAULT '#31cde3'"))
-            if "priority" not in columns:
-                conn.execute(text("ALTER TABLE projects ADD COLUMN priority VARCHAR(32) NOT NULL DEFAULT 'medium'"))
-
-
 @app.on_event("startup")
 def startup() -> None:
+    ensure_storage_writable()
     ensure_dirs()
     ensure_user_file()
-    Base.metadata.create_all(bind=engine)
-    ensure_runtime_schema()
     get_storage_backend().ensure_ready()
 
 
@@ -93,6 +58,7 @@ def health() -> dict:
 
 @app.get("/health/ready")
 def readiness() -> dict:
+    ensure_storage_writable()
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     with SessionLocal() as db:

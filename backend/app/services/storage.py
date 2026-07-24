@@ -14,6 +14,22 @@ def ensure_dirs() -> None:
     Path(settings.storage_dir, "profile-images").mkdir(parents=True, exist_ok=True)
 
 
+def ensure_storage_writable() -> None:
+    """Fail startup early when the mounted runtime volume is not writable."""
+    root = Path(settings.storage_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    probe = root / f".iota-write-probe-{uuid4().hex}"
+    try:
+        probe.write_bytes(b"ok")
+    except OSError as exc:
+        raise RuntimeError(
+            f"Runtime storage is not writable: {root}. "
+            "Ensure the storage-init service completed successfully."
+        ) from exc
+    finally:
+        probe.unlink(missing_ok=True)
+
+
 def dataset_path(filename: str) -> str:
     safe_name = filename.replace("/", "_").replace("\\", "_")
     return str(Path(settings.storage_dir, "datasets", f"{uuid4().hex}_{safe_name}"))

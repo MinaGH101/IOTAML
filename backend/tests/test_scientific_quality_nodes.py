@@ -135,3 +135,121 @@ def test_transpose_dataframe_uses_selected_row_labels_as_columns() -> None:
 def test_new_nodes_are_available_in_registry() -> None:
     for node_id in ('IN-008', 'AD-005', 'TR-014', 'VZ-005', 'VZ-006'):
         assert get_node_runner(node_id) is not None
+
+
+def test_workflow_id_is_preserved_outside_calculation_columns_and_can_change_from_source_columns() -> None:
+    from app.nodes.cleaning.select_columns_node import SelectColumnsNode
+    from app.nodes.io import apply_dataframe_contract, dataframe_payload, selected_columns
+
+    frame = pd.DataFrame({
+        'sample_id': ['A', 'B', 'C'],
+        'batch_id': ['X1', 'X2', 'X3'],
+        'Au': [1.0, 2.0, 3.0],
+        'Cu': [10.0, 20.0, 30.0],
+    })
+    source = dataframe_result(frame, id_column='sample_id')
+
+    first = SelectColumnsNode().run(
+        {'id': 'select-1', 'data': {'label': 'Select'}},
+        {'input': source},
+        {'mode': 'select', 'columns': ['sample_id', 'Au'], 'id_column': None},
+        None,
+    )
+    first_payload = dataframe_payload({'input': first})
+    assert first_payload is not None
+    assert first_payload.id_column == 'sample_id'
+    assert first_payload.df.columns.tolist() == ['sample_id', 'Au']
+    assert first_payload.active_columns == ['Au']
+    assert first_payload.source_columns == ['sample_id', 'batch_id', 'Au', 'Cu']
+    assert selected_columns({'columns': ['sample_id', 'Au']}, first_payload.df) == ['Au']
+
+    second = SelectColumnsNode().run(
+        {'id': 'select-2', 'data': {'label': 'Select'}},
+        {'input': first},
+        {'mode': 'select', 'columns': ['Au'], 'id_column': 'batch_id'},
+        None,
+    )
+    second_payload = dataframe_payload({'input': second})
+    assert second_payload is not None
+    assert second_payload.id_column == 'batch_id'
+    assert second_payload.df.columns.tolist() == ['batch_id', 'Au']
+    assert second_payload.df['batch_id'].tolist() == ['X1', 'X2', 'X3']
+    assert second_payload.active_columns == ['Au']
+
+    legacy_node_result = {'_df': second_payload.df.assign(Au=second_payload.df['Au'] * 2)}
+    normalized = apply_dataframe_contract(legacy_node_result, {'input': second})
+    normalized_payload = dataframe_payload({'input': normalized})
+    assert normalized_payload is not None
+    assert normalized_payload.id_column == 'batch_id'
+    assert normalized_payload.df.columns.tolist() == ['batch_id', 'Au']
+    assert normalized_payload.source_columns == ['sample_id', 'batch_id', 'Au', 'Cu']
+
+
+def test_duplicate_error_defaults_to_inherited_workflow_id() -> None:
+    mapping = pd.DataFrame({'Raw Sample': ['A', 'B'], 'Duplicate Sample': ['AD', 'BD']})
+    frame = pd.DataFrame({
+        'lab_id': ['A', 'AD', 'B', 'BD'],
+        'Au': [10.0, 11.0, 20.0, 18.0],
+    })
+    result = DuplicateSampleErrorNode().run(
+        {'id': 'dup-default-id', 'data': {'label': 'Duplicate Error'}},
+        {'input': dataframe_result(frame, id_column='lab_id')},
+        {
+            'mapping_file': _xlsx_file_value(mapping),
+            'mapping_raw_column': '',
+            'mapping_duplicate_column': '',
+            'columns': ['lab_id', 'Au'],
+            'metrics': ['pair_count', 'mae'],
+            'duplicate_id_policy': 'error',
+        },
+        None,
+    )
+    assert result['dataframe_meta']['duplicate_sample_error']['dataframe_id_column'] == 'lab_id'
+    assert result['_df']['column'].tolist() == ['Au']
+
+
+def test_legacy_calculation_settings_cannot_modify_workflow_id() -> None:
+    from app.nodes.cleaning.imputation_node import ImputationNode
+    from app.nodes.io import dataframe_payload
+
+    frame = pd.DataFrame({
+        'sample_id': [None, 'B', 'C'],
+        'Au': [1.0, None, 3.0],
+    })
+    source = dataframe_result(frame, id_column='sample_id')
+    result = ImputationNode().run(
+        {'id': 'impute-id-safety', 'data': {'label': 'Imputation'}},
+        {'input': source},
+        {'imputation_blocks': [{'method': 'constant', 'columns': ['sample_id', 'Au'], 'constant_value': 0}]},
+        None,
+    )
+    payload = dataframe_payload({'input': result})
+    assert payload is not None
+    assert pd.isna(payload.df.loc[0, 'sample_id'])
+    assert payload.df.loc[1, 'Au'] == 0
+    assert payload.active_columns == ['Au']
+
+
+def test_inspection_reports_exclude_id_from_calculations() -> None:
+    from app.nodes.inspection.data_overview_node import DataOverviewNode
+    from app.nodes.inspection.missing_values_node import MissingValuesReportNode
+    from app.nodes.inspection.statistical_report_node import StatisticalReportNode
+
+    frame = pd.DataFrame({'sample_id': ['A', None, 'C'], 'Au': [1.0, None, 3.0], 'Cu': [2.0, 4.0, 6.0]})
+    source = {'input': dataframe_result(frame, id_column='sample_id')}
+
+    overview = DataOverviewNode().run(
+        {'id': 'overview-id-safety', 'data': {'label': 'Overview'}}, source, {'include': 'all'}, None,
+    )
+    assert overview['profile_report']['column_names'] == ['Au', 'Cu']
+    assert overview['profile_report']['id_column'] == 'sample_id'
+
+    missing = MissingValuesReportNode().run(
+        {'id': 'missing-id-safety', 'data': {'label': 'Missing'}}, source, {}, None,
+    )
+    assert [row['column'] for row in missing['missing_report']['columns']] == ['Au', 'Cu']
+
+    stats = StatisticalReportNode().run(
+        {'id': 'stats-id-safety', 'data': {'label': 'Stats'}}, source, {'columns': [], 'metrics': ['count']}, None,
+    )
+    assert stats['report']['_df']['column'].tolist() == ['Au', 'Cu']

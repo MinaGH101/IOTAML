@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import all_upstream_dfs, node_label, table_output
+from app.nodes.io import all_upstream_dfs, dataframe_result, node_label, table_output
 
 
 class MergeDataFramesNode(BaseNode):
@@ -26,4 +26,10 @@ class MergeDataFramesNode(BaseNode):
             out = pd.concat([df.reset_index(drop=True) for df in dfs], axis=1)
         else:
             out = pd.concat(dfs, axis=0, ignore_index=True)
-        return {'_df': out, 'output': table_output(str(node['id']), node_label(node), out, 100)}
+        id_column = str(key) if key and str(key) in out.columns else None
+        return dataframe_result(
+            out,
+            id_column=id_column,
+            reset_lineage=True,
+            output=table_output(str(node['id']), node_label(node), out, 100),
+        )

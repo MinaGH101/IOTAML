@@ -23,6 +23,19 @@ datasets, and artifacts use route/service/repository layers. Legacy
 `backend/app/api/routes_*.py` modules only re-export domain routers so existing
 imports do not break.
 
+### Frontend feature boundaries
+
+The React source is organized by capability under `src/auth`, `src/projects`,
+and `src/workspace`. Each feature owns its pages, page-local UI, service
+boundary, and domain logic. Feature-neutral UI, transport, types, and helpers
+live in `src/shared`; `src/app` only composes the application.
+
+The complete ownership rules and directory map are in
+[`frontend/ARCHITECTURE.md`](frontend/ARCHITECTURE.md). Run
+`npm run check:architecture` after adding or moving frontend source files.
+Project and workflow navigation uses canonical browser URLs, so project detail
+and workspace links can be refreshed or opened directly.
+
 ### Central API contract
 
 Successful `/api` responses use:
@@ -74,17 +87,36 @@ Implemented controls:
 
 MinIO console: `http://localhost:9001`
 
-## Run locally
+## Development
 
-Copy the environment template, set secure secrets, then build:
+Copy the development template and start the hot-reload overrides:
 
 ```bash
-cp .env.example .env
-docker compose down
-docker compose up --build
+cp .env.development.example .env
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-The migration container runs `alembic upgrade head` before the API starts.
+Development exposes PostgreSQL, Redis, MinIO, API, and Vite on localhost. Source
+mounts and filesystem polling exist only in `docker-compose.dev.yml`.
+
+## Production
+
+Copy `.env.example` to `.env`, replace every `CHANGE_ME` value, and configure
+TLS/reverse-proxy routing for the selected hostname. Then run:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Production serves the compiled frontend through Nginx, runs FastAPI without
+reload, has no source mounts or polling, and exposes only the frontend port.
+PostgreSQL, Redis, MinIO, API, and worker remain on the Compose network.
+
+In both modes the one-shot migration service must complete `alembic upgrade
+head` before API and worker startup. A separate one-shot `storage-init` service
+repairs ownership of the persistent runtime volume for the non-root API and
+worker, including volumes created by older releases.
 
 For an existing installation with legacy local dataset files:
 
@@ -100,6 +132,7 @@ Backend:
 cd backend
 pytest -q
 alembic upgrade head
+python -m compileall -q app tests
 ```
 
 Frontend:
@@ -107,8 +140,21 @@ Frontend:
 ```bash
 cd frontend
 npm ci
+npm test
 npm run check
 ```
+
+Compose and release validation:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+./scripts/scan-secrets.sh
+./scripts/package-release.sh ../iota_ml-clean.zip
+```
+
+Database migration design and recovery procedures are documented in
+[`docs/DATABASE_MIGRATIONS.md`](docs/DATABASE_MIGRATIONS.md).
 
 ## Backups
 

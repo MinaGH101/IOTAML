@@ -6,7 +6,7 @@ import pandas as pd
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.errors import NotFoundError, StorageUnavailableError, ValidationAppError
 from app.domains.artifacts.service import create_artifact_from_upload, delete_artifact, materialize_artifact
 from app.domains.datasets.repository import dataset_repository
 from app.models import Dataset
@@ -62,11 +62,28 @@ def upload_dataset(db: Session, *, upload: UploadFile, project_id: int | None, o
     )
     try:
         path = materialize_artifact(db, artifact.id, cache_group="datasets")
-        frame = pd.read_csv(path)
-    except Exception as exc:
+    except StorageUnavailableError:
         delete_artifact(db, artifact.id, owner_username, force=True)
         db.commit()
-        raise ValidationAppError("DATASET_READ_FAILED", "Could not read the uploaded CSV dataset.") from exc
+        raise
+
+    try:
+        frame = pd.read_csv(path)
+    except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError) as exc:
+        delete_artifact(db, artifact.id, owner_username, force=True)
+        db.commit()
+        raise ValidationAppError(
+            "DATASET_READ_FAILED",
+            "Could not read the uploaded CSV dataset.",
+            {"reason": type(exc).__name__},
+        ) from exc
+    except OSError as exc:
+        delete_artifact(db, artifact.id, owner_username, force=True)
+        db.commit()
+        raise StorageUnavailableError(
+            "The uploaded dataset could not be materialized in runtime storage.",
+            {"artifact_id": artifact.id},
+        ) from exc
 
     dataset = Dataset(
         name=artifact.original_filename,

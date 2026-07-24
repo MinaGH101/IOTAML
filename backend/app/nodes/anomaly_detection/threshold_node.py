@@ -4,6 +4,7 @@ import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import (
+    calculation_columns,
     coerce_numeric_series,
     dataframe_payload,
     dataframe_result,
@@ -42,9 +43,13 @@ class ThresholdAnomalyNode(BaseNode):
         df = ensure_df(payload.df if payload else None, str(node['id']))
         id_column = payload.id_column if payload else None
 
-        col = settings.get('column') or next(iter(numeric_df(df).columns), None)
-        if not col or str(col) not in df.columns:
-            raise ValueError('Select a numeric column for threshold anomaly detection.')
+        requested_column = str(settings.get('column') or '').strip()
+        allowed_columns = set(calculation_columns(df))
+        if requested_column and requested_column not in allowed_columns:
+            raise ValueError('The workflow ID cannot be used as a calculation column.')
+        col = requested_column or next(iter(numeric_df(df).columns), None)
+        if not col or str(col) not in allowed_columns:
+            raise ValueError('Select a numeric calculation column for threshold anomaly detection.')
         col = str(col)
 
         op = str(settings.get('operator') or '>')

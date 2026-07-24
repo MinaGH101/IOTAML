@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from app.nodes.io import dataframe_payload, metrics_output, node_label, output, safe_json, table_output
+from app.nodes.io import apply_dataframe_contract, dataframe_payload, metrics_output, node_label, output, safe_json, table_output
 from app.nodes.registry import get_node_runner
 from app.services.node_cache_runtime import RuntimeNodeCache
 from app.services.run_state import RunCancelledError
@@ -39,10 +39,11 @@ def apply_node(
 ) -> dict[str, Any]:
     resolved = params if params is not None else get_params(node, ctx)
     if is_component_node(node):
-        return execute_component(
+        raw_result = execute_component(
             node, inputs, ctx, resolved, apply_node=apply_node, runtime_cache=runtime_cache,
             progress_callback=progress_callback, cancel_check=cancel_check,
         )
+        return apply_dataframe_contract(raw_result, inputs)
     rid = registry_id(node)
     nid = str(node['id'])
     label = node_label(node)
@@ -52,7 +53,7 @@ def apply_node(
     if not node_runner.implemented:
         return {'output': output(nid, label, 'json', value={'status': 'not_implemented_yet', 'message': f'{node_runner.name} is registered but execution is not implemented yet.'})}
     node_runner.validate_settings(resolved)
-    return node_runner.run(node, inputs, resolved, ctx)
+    return apply_dataframe_contract(node_runner.run(node, inputs, resolved, ctx), inputs)
 
 
 def _visible_output_items(value: dict[str, Any]) -> list[dict[str, Any]]:
@@ -113,6 +114,15 @@ def _annotate_port_output(item: dict[str, Any], port: dict[str, Any]) -> dict[st
     return current
 
 
+def _annotate_dataframe_contract(item: dict[str, Any], payload: Any) -> dict[str, Any]:
+    current = dict(item)
+    if payload:
+        current['id_column'] = payload.id_column
+        current['active_columns'] = list(payload.active_columns or [])
+        current['source_columns'] = list(payload.source_columns or [])
+    return current
+
+
 def _visible_outputs_from_declared_ports(node: dict[str, Any], value: dict[str, Any], ports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Build visible outputs from the actual declared port values.
 
@@ -133,14 +143,19 @@ def _visible_outputs_from_declared_ports(node: dict[str, Any], value: dict[str, 
             continue
 
         candidates = _port_candidates(value, port_id)
-        if candidates:
-            result.extend(_annotate_port_output(candidate, port) for candidate in candidates)
-            continue
-
         port_type = str(port.get('type') or 'any')
         payload = dataframe_payload({'port': port_value})
+        if candidates:
+            for candidate in candidates:
+                annotated = _annotate_port_output(candidate, port)
+                if port_type == 'dataframe':
+                    annotated = _annotate_dataframe_contract(annotated, payload)
+                result.append(annotated)
+            continue
+
         if port_type == 'dataframe' and payload:
             preview = table_output(node_id, f"{label} · {str(port.get('name') or port_id)}", payload.df, 100)
+            preview = _annotate_dataframe_contract(preview, payload)
             result.append(_annotate_port_output(preview, port))
             continue
 
@@ -224,6 +239,8 @@ def visible_node_output(node: dict[str, Any], value: Any) -> Any:
             port = next((port for port in ports if str(port.get('id')) == handle), None)
             if port:
                 current['source_port_name'] = str(port.get('name') or handle)
+                if str(port.get('type') or '') == 'dataframe':
+                    current = _annotate_dataframe_contract(current, dataframe_payload({'value': value}))
         annotated.append(current)
 
     used_handles = {str(item.get('source_handle') or '') for item in annotated}
@@ -240,6 +257,7 @@ def visible_node_output(node: dict[str, Any], value: Any) -> Any:
             payload.df,
             100,
         )
+        preview = _annotate_dataframe_contract(preview, payload)
         preview['source_handle'] = port_id
         preview['source_port_name'] = str(port.get('name') or port_id)
         annotated.append(preview)

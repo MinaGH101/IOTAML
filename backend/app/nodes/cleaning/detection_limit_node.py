@@ -8,7 +8,7 @@ import pandas as pd
 from io import StringIO
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, table_output
+from app.nodes.io import calculation_columns, dataframe_payload, dataframe_result, ensure_df, node_label, table_output
 
 
 def _clean_numeric(series: pd.Series) -> pd.Series:
@@ -70,7 +70,7 @@ class DetectionLimitHandlingNode(BaseNode):
 
     def run(self, node: dict[str, Any], inputs: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
         payload = dataframe_payload(inputs, "data")
-        df = ensure_df(payload.df if payload else None, str(node["id"])).copy()
+        df = ensure_df(payload.df if payload else None, str(node["id"]))
 
         dl_file = str(settings.get("dl_file") or "").strip()
         if not dl_file:
@@ -86,7 +86,7 @@ class DetectionLimitHandlingNode(BaseNode):
         replacement_mode = str(settings.get("replacement") or "2/3DL")
         max_rows = int(settings.get("max_output_rows") or 100)
 
-        common_columns = [col for col in df.columns if col in dl_df.columns]
+        common_columns = [col for col in calculation_columns(df) if col in dl_df.columns]
         if not common_columns:
             raise ValueError("No matching columns found between input DataFrame and detection limit table.")
 

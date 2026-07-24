@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import coerce_numeric_series, dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
+from app.nodes.io import calculation_columns, coerce_numeric_series, dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
 
 
 METRICS = ['count', 'missing', 'missing_percent', 'unique', 'mean', 'std', 'variance', 'min', 'q1', 'median', 'q3', 'max', 'skew', 'kurtosis', 'mode']
@@ -36,7 +36,7 @@ class StatisticalReportNode(BaseNode):
     def run(self, node, inputs, settings, context):
         payload = dataframe_payload(inputs, 'data')
         df = ensure_df(payload.df if payload else None, str(node['id']))
-        columns = selected_columns(settings, df) or [str(c) for c in df.columns]
+        columns = selected_columns(settings, df) or calculation_columns(df)
         metrics = _parse_list(settings.get('metrics'), ['count', 'missing', 'mean', 'std', 'min', 'median', 'max'])
 
         rows: list[dict[str, Any]] = []

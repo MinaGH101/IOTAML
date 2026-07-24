@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output
+from app.nodes.io import calculation_columns, coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output
 
 
 def _list_setting(value: Any) -> list[dict[str, Any]]:
@@ -37,6 +37,7 @@ class ScatterPlotNode(BaseNode):
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
+        allowed_columns = set(calculation_columns(df))
         nums = list(numeric_df(df).columns)
         blocks = _list_setting(settings.get('scatter_blocks'))
 
@@ -55,7 +56,7 @@ class ScatterPlotNode(BaseNode):
         for index, block in enumerate(blocks):
             x = block.get('x_column') or block.get('x')
             y = block.get('y_column') or block.get('y')
-            if not x or not y or x not in df.columns or y not in df.columns:
+            if not x or not y or str(x) not in allowed_columns or str(y) not in allowed_columns:
                 continue
 
             try:

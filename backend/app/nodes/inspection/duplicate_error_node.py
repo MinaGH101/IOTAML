@@ -97,7 +97,7 @@ class DuplicateSampleErrorNode(BaseNode):
         setting('mapping_file', 'Raw / Duplicate Mapping', 'data_file', None, True, supports_dynamic=False, help='CSV, TSV, or XLSX with one raw ID column and one duplicate ID column.'),
         setting('mapping_raw_column', 'Raw Sample Mapping Column', 'text', '', help='Leave blank to use the first mapping column.'),
         setting('mapping_duplicate_column', 'Duplicate Sample Mapping Column', 'text', '', help='Leave blank to use the second mapping column.'),
-        setting('dataframe_id_column', 'DataFrame Sample ID Column', 'column', None, True, help='The ID column in the connected dataframe. It may differ from the ID selected in the CSV input node.'),
+        setting('dataframe_id_column', 'DataFrame Sample ID Column', 'column', None, False, help='Defaults to the inherited workflow ID. You may choose another original source column.'),
         setting('columns', 'Analyte / Measurement Columns', 'columns', [], help='Numeric columns for duplicate error calculation.'),
         setting('metrics', 'Error Metrics', 'multiselect', ['pair_count', 'mae', 'rmse', 'mean_rpd_pct', 'pearson_r'], options=_METRIC_OPTIONS),
         setting('case_sensitive_ids', 'Case-sensitive IDs', 'boolean', False, supports_dynamic=False),
@@ -108,8 +108,15 @@ class DuplicateSampleErrorNode(BaseNode):
     def run(self, node: dict[str, Any], inputs: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
         payload = dataframe_payload(inputs, 'data')
         df = ensure_df(payload.df if payload else None, str(node['id']))
-        id_column = str(settings.get('dataframe_id_column') or '').strip()
-        if not id_column or id_column not in df.columns:
+        id_column = str(settings.get('dataframe_id_column') or (payload.id_column if payload else '') or '').strip()
+        if not id_column:
+            raise ValueError('Select a valid DataFrame sample ID column.')
+        if payload:
+            try:
+                df = payload.frame_for_id(id_column)
+            except ValueError as exc:
+                raise ValueError('Select a valid DataFrame sample ID column.') from exc
+        elif id_column not in df.columns:
             raise ValueError('Select a valid DataFrame sample ID column.')
 
         mapping, mapping_meta = read_uploaded_table(settings.get('mapping_file'))
@@ -134,7 +141,7 @@ class DuplicateSampleErrorNode(BaseNode):
             if policy == 'first':
                 working = working.drop_duplicates('__iota_pair_key', keep='first')
             elif policy == 'mean_numeric':
-                numeric_columns = list(working.select_dtypes(include=[np.number]).columns)
+                numeric_columns = [column for column in working.select_dtypes(include=[np.number]).columns if column != id_column]
                 non_numeric = [column for column in working.columns if column not in numeric_columns and column != '__iota_pair_key']
                 aggregations = {column: 'mean' for column in numeric_columns}
                 aggregations.update({column: 'first' for column in non_numeric})
@@ -196,6 +203,14 @@ class DuplicateSampleErrorNode(BaseNode):
             summary_df,
             id_column='column',
             meta={'duplicate_sample_error': report},
-            outputs_by_port={'errors': dataframe_result(summary_df, id_column='column', meta={'duplicate_sample_error': report})},
+            reset_lineage=True,
+            outputs_by_port={
+                'errors': dataframe_result(
+                    summary_df,
+                    id_column='column',
+                    meta={'duplicate_sample_error': report},
+                    reset_lineage=True,
+                )
+            },
             output=table_output(str(node['id']), f'{node_label(node)} · Error Metrics', summary_df, 500),
         )

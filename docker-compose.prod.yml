@@ -1,0 +1,85 @@
+x-production-backend: &production-backend
+  APP_ENVIRONMENT: production
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}
+  REDIS_URL: redis://redis:6379/0
+  STORAGE_DIR: /app/storage
+  STORAGE_BACKEND: minio
+  MINIO_ENDPOINT: minio:9000
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:?Set the externally reachable MinIO endpoint}
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY}
+  MINIO_SECURE: ${MINIO_SECURE:-true}
+  ARTIFACT_BUCKET: ${ARTIFACT_BUCKET:-iota-artifacts}
+  AUTH_SECRET: ${AUTH_SECRET:?Set a random AUTH_SECRET of at least 32 characters}
+  CORS_ORIGINS: ${CORS_ORIGINS:?Set the production frontend origin}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+  USER_FILE: /app/app/data/user.json
+  JOB_DEFAULT_TIMEOUT_SECONDS: ${JOB_DEFAULT_TIMEOUT_SECONDS:-7200}
+  JOB_WORKER_CONCURRENCY: ${JOB_WORKER_CONCURRENCY:-2}
+  JOB_NETWORK_DISABLED: ${JOB_NETWORK_DISABLED:-true}
+  JOB_USE_FORK_FAST_PATH: ${JOB_USE_FORK_FAST_PATH:-true}
+  JOB_MEMORY_LIMIT_MB: ${JOB_MEMORY_LIMIT_MB:-4096}
+  JOB_CPU_LIMIT_SECONDS: ${JOB_CPU_LIMIT_SECONDS:-7200}
+  NODE_CACHE_ENABLED: ${NODE_CACHE_ENABLED:-true}
+  NODE_CACHE_RETENTION_DAYS: ${NODE_CACHE_RETENTION_DAYS:-30}
+  NODE_CACHE_COMPRESSION: ${NODE_CACHE_COMPRESSION:-3}
+  WORKFLOW_VERSION_LIMIT: ${WORKFLOW_VERSION_LIMIT:-100}
+
+x-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    logging: *production-logging
+
+  redis:
+    logging: *production-logging
+
+  minio:
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY}
+    logging: *production-logging
+
+  migrate:
+    environment: *production-backend
+    logging: *production-logging
+
+  storage-init:
+    logging: *production-logging
+
+  api:
+    environment: *production-backend
+    mem_limit: ${API_MEMORY_LIMIT:-2g}
+    cpus: ${API_CPU_LIMIT:-2.0}
+    pids_limit: 256
+    logging: *production-logging
+
+  worker:
+    environment:
+      <<: *production-backend
+      WORKER_ID: ${WORKER_ID:-worker-1}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    mem_limit: ${WORKER_MEMORY_LIMIT:-6g}
+    cpus: ${WORKER_CPU_LIMIT:-4.0}
+    pids_limit: 512
+    logging: *production-logging
+
+  frontend:
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
+    cpus: ${FRONTEND_CPU_LIMIT:-1.0}
+    pids_limit: 128
+    logging: *production-logging

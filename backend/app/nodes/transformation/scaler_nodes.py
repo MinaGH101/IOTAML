@@ -40,7 +40,7 @@ class ScalerNode(BaseNode):
 
     def run(self, node, inputs, settings, context):
         payload = dataframe_payload(inputs, 'data')
-        df = ensure_df(payload.df if payload else None, str(node['id'])).copy()
+        df = ensure_df(payload.df if payload else None, str(node['id']))
         id_column = payload.id_column if payload else None
 
         columns = selected_columns(settings, df)

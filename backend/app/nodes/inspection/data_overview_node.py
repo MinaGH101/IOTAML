@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, table_output
+from app.nodes.io import calculation_df, dataframe_payload, dataframe_result, ensure_df, node_label, table_output
 
 
 class DataOverviewNode(BaseNode):
@@ -30,17 +30,21 @@ class DataOverviewNode(BaseNode):
 
         include = str(settings.get('include') or 'all')
         max_rows = int(settings.get('max_output_rows') or 200)
+        analysis_df = calculation_df(df)
+        if analysis_df.empty:
+            raise ValueError('No active calculation columns are available.')
 
         if include == 'numeric':
-            desc = df.describe().reset_index().rename(columns={'index': 'statistic'})
+            desc = analysis_df.describe().reset_index().rename(columns={'index': 'statistic'})
         else:
-            desc = df.describe(include='all').reset_index().rename(columns={'index': 'statistic'})
+            desc = analysis_df.describe(include='all').reset_index().rename(columns={'index': 'statistic'})
 
         profile = {
             'rows': int(len(df)),
-            'columns': int(len(df.columns)),
-            'column_names': [str(c) for c in df.columns],
-            'dtypes': {str(c): str(df[c].dtype) for c in df.columns},
+            'columns': int(len(analysis_df.columns)),
+            'column_names': [str(c) for c in analysis_df.columns],
+            'dtypes': {str(c): str(analysis_df[c].dtype) for c in analysis_df.columns},
+            'id_column': payload.id_column if payload else None,
             'describe': desc.to_dict(orient='records'),
         }
 

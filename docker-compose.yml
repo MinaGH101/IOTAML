@@ -1,28 +1,51 @@
+x-backend-environment: &backend-environment
+  APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-nocodeml}:${POSTGRES_PASSWORD:-dev-only-password}@postgres:5432/${POSTGRES_DB:-nocodeml}
+  REDIS_URL: redis://redis:6379/0
+  STORAGE_DIR: /app/storage
+  STORAGE_BACKEND: ${STORAGE_BACKEND:-minio}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-nocodeml-dev}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-dev-only-minio-password}
+  MINIO_SECURE: ${MINIO_SECURE:-false}
+  ARTIFACT_BUCKET: ${ARTIFACT_BUCKET:-iota-artifacts}
+  AUTH_SECRET: ${AUTH_SECRET:-dev-only-auth-secret-change-me}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+  USER_FILE: ${USER_FILE:-/app/app/data/user.json}
+  JOB_DEFAULT_TIMEOUT_SECONDS: ${JOB_DEFAULT_TIMEOUT_SECONDS:-7200}
+  JOB_WORKER_CONCURRENCY: ${JOB_WORKER_CONCURRENCY:-2}
+  JOB_NETWORK_DISABLED: ${JOB_NETWORK_DISABLED:-true}
+  JOB_USE_FORK_FAST_PATH: ${JOB_USE_FORK_FAST_PATH:-true}
+  JOB_MEMORY_LIMIT_MB: ${JOB_MEMORY_LIMIT_MB:-4096}
+  JOB_CPU_LIMIT_SECONDS: ${JOB_CPU_LIMIT_SECONDS:-7200}
+  NODE_CACHE_ENABLED: ${NODE_CACHE_ENABLED:-true}
+  NODE_CACHE_RETENTION_DAYS: ${NODE_CACHE_RETENTION_DAYS:-30}
+  NODE_CACHE_COMPRESSION: ${NODE_CACHE_COMPRESSION:-3}
+  WORKFLOW_VERSION_LIMIT: ${WORKFLOW_VERSION_LIMIT:-100}
+
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: nocodeml-postgres
+    image: postgres:16.4-alpine3.20
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nocodeml}
       POSTGRES_USER: ${POSTGRES_USER:-nocodeml}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nocodeml}
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-only-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nocodeml} -d ${POSTGRES_DB:-nocodeml}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
     restart: unless-stopped
+    networks: [backend]
 
   redis:
-    image: redis:7-alpine
-    container_name: nocodeml-redis
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    image: redis:7.4.1-alpine3.20
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,17 +54,14 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    networks: [backend]
 
   minio:
-    image: minio/minio:latest
-    container_name: nocodeml-minio
-    command: server /data --console-address ":9001"
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-nocodeml}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-nocodeml-secret}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-nocodeml-dev}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-dev-only-minio-password}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -50,73 +70,40 @@ services:
       timeout: 5s
       retries: 20
     restart: unless-stopped
+    networks: [backend]
 
   migrate:
     build:
       context: ./backend
-    command: alembic upgrade head
-    environment: &backend-environment
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-nocodeml}:${POSTGRES_PASSWORD:-nocodeml}@postgres:5432/${POSTGRES_DB:-nocodeml}
-      REDIS_URL: redis://redis:6379/0
-      STORAGE_DIR: /app/storage
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-minio}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-nocodeml}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-nocodeml-secret}
-      MINIO_SECURE: ${MINIO_SECURE:-false}
-      ARTIFACT_BUCKET: ${ARTIFACT_BUCKET:-iota-artifacts}
-      ARTIFACT_MAX_UPLOAD_BYTES: ${ARTIFACT_MAX_UPLOAD_BYTES:-536870912}
-      ARTIFACT_USER_QUOTA_BYTES: ${ARTIFACT_USER_QUOTA_BYTES:-10737418240}
-      ARTIFACT_PROJECT_QUOTA_BYTES: ${ARTIFACT_PROJECT_QUOTA_BYTES:-5368709120}
-      AUTH_SECRET: ${AUTH_SECRET:-change-this-secret-in-production}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
-      USER_FILE: ${USER_FILE:-/app/app/data/user.json}
-      JOB_DEFAULT_TIMEOUT_SECONDS: ${JOB_DEFAULT_TIMEOUT_SECONDS:-7200}
-      JOB_POLL_INTERVAL_SECONDS: ${JOB_POLL_INTERVAL_SECONDS:-1.0}
-      JOB_ACTIVE_POLL_INTERVAL_SECONDS: ${JOB_ACTIVE_POLL_INTERVAL_SECONDS:-0.05}
-      JOB_STATE_POLL_INTERVAL_SECONDS: ${JOB_STATE_POLL_INTERVAL_SECONDS:-0.75}
-      JOB_USE_FORK_FAST_PATH: ${JOB_USE_FORK_FAST_PATH:-true}
-      JOB_WORKER_HEALTH_INTERVAL_SECONDS: ${JOB_WORKER_HEALTH_INTERVAL_SECONDS:-5}
-      JOB_DEFAULT_MAX_ATTEMPTS: ${JOB_DEFAULT_MAX_ATTEMPTS:-3}
-      JOB_WORKER_CONCURRENCY: ${JOB_WORKER_CONCURRENCY:-2}
-      JOB_HEARTBEAT_INTERVAL_SECONDS: ${JOB_HEARTBEAT_INTERVAL_SECONDS:-10}
-      JOB_STALE_AFTER_SECONDS: ${JOB_STALE_AFTER_SECONDS:-45}
-      JOB_MEMORY_LIMIT_MB: ${JOB_MEMORY_LIMIT_MB:-4096}
-      JOB_CPU_LIMIT_SECONDS: ${JOB_CPU_LIMIT_SECONDS:-7200}
-      JOB_NETWORK_DISABLED: ${JOB_NETWORK_DISABLED:-true}
-      MAX_ACTIVE_RUNS_PER_USER: ${MAX_ACTIVE_RUNS_PER_USER:-4}
-      MAX_ACTIVE_RUNS_PER_PROJECT: ${MAX_ACTIVE_RUNS_PER_PROJECT:-8}
-      NODE_CACHE_ENABLED: ${NODE_CACHE_ENABLED:-true}
-      NODE_CACHE_RETENTION_DAYS: ${NODE_CACHE_RETENTION_DAYS:-30}
-      NODE_CACHE_CANDIDATES_PER_FINGERPRINT: ${NODE_CACHE_CANDIDATES_PER_FINGERPRINT:-8}
-      NODE_CACHE_MAX_BYTES_PER_PROJECT: ${NODE_CACHE_MAX_BYTES_PER_PROJECT:-3221225472}
-      NODE_CACHE_COMPRESSION: ${NODE_CACHE_COMPRESSION:-3}
-      NODE_CACHE_CLEANUP_BATCH_SIZE: ${NODE_CACHE_CLEANUP_BATCH_SIZE:-200}
-      WORKFLOW_VERSION_LIMIT: ${WORKFLOW_VERSION_LIMIT:-100}
-    volumes:
-      - ./backend:/app
+    command: ["alembic", "upgrade", "head"]
+    environment: *backend-environment
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
+    networks: [backend]
+
+  storage-init:
+    build:
+      context: ./backend
+    user: "0:0"
+    command: ["sh", "-c", "mkdir -p /app/storage && chown -R 10001:10001 /app/storage"]
+    volumes:
+      - backend_storage:/app/storage
+    restart: "no"
+    network_mode: "none"
 
   api:
     build:
       context: ./backend
-    container_name: nocodeml-api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    environment:
-      <<: *backend-environment
-      CORS_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
-    ports:
-      - "8001:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers"]
+    environment: *backend-environment
     volumes:
-      - ./backend:/app
       - backend_storage:/app/storage
     depends_on:
       migrate:
+        condition: service_completed_successfully
+      storage-init:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
@@ -126,29 +113,28 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
     restart: unless-stopped
     init: true
-    mem_limit: 2g
-    cpus: 2.0
-    pids_limit: 256
+    networks: [backend]
 
   worker:
     build:
       context: ./backend
-    command: python worker.py
+    command: ["python", "worker.py"]
     environment:
       <<: *backend-environment
       WORKER_ID: ${WORKER_ID:-worker-1}
-      OPENBLAS_NUM_THREADS: ${OPENBLAS_NUM_THREADS:-1}
-      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-1}
-      MKL_NUM_THREADS: ${MKL_NUM_THREADS:-1}
-      NUMEXPR_NUM_THREADS: ${NUMEXPR_NUM_THREADS:-1}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
     volumes:
-      - ./backend:/app
       - backend_storage:/app/storage
     depends_on:
       migrate:
+        condition: service_completed_successfully
+      storage-init:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
@@ -157,32 +143,23 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
-    mem_limit: 6g
-    cpus: 4.0
-    pids_limit: 512
+    networks: [backend]
 
   frontend:
     build:
       context: ./frontend
-    container_name: nocodeml-frontend
-    command: npm run dev -- --host 0.0.0.0
-    environment:
-      VITE_API_URL: http://localhost:8001
-      VITE_AMCHARTS_LICENSE_KEY: ${VITE_AMCHARTS_LICENSE_KEY:-}
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
-    ports:
-      - "5174:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      api:
-        condition: service_healthy
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_AMCHARTS_LICENSE_KEY: ${VITE_AMCHARTS_LICENSE_KEY:-}
     restart: unless-stopped
+    networks: [backend]
 
 volumes:
   postgres_data:
   redis_data:
   backend_storage:
   minio_data:
+
+networks:
+  backend:

@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --experimental-strip-types --test src/app/*.test.ts src/workspace/_model/*.test.ts src/workspace/pages/workflow/_model/*.test.ts src/workspace/pages/workflow/_features/*/_model/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint:css": "stylelint \"src/**/*.css\"",
     "build": "tsc && vite build",
-    "check": "npm run typecheck && npm run lint:css && npm run check:theme && npm run check:css-debt && npm run build",
+    "check": "npm run check:architecture && npm run typecheck && npm run lint:css && npm run check:theme && npm run check:css-debt && npm run build",
     "preview": "vite preview --host 0.0.0.0",
     "css:dedupe": "node scripts/dedupe-css.mjs",
+    "check:architecture": "node scripts/check-feature-boundaries.mjs",
     "check:css-debt": "node scripts/check-css-debt.mjs",
     "check:theme": "node scripts/check-theme-contract.mjs"
   },
@@ -30,6 +32,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.3",
+    "postcss": "8.5.17",
     "stylelint": "17.14.0",
     "typescript": "7.0.2",
     "vite": "8.1.4"

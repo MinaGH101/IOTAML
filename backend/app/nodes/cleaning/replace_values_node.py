@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, safe_json, table_output
+from app.nodes.io import calculation_columns, dataframe_payload, dataframe_result, ensure_df, node_label, safe_json, table_output
 
 
 def _blocks(value: Any) -> list[dict[str, Any]]:
@@ -22,10 +22,11 @@ def _blocks(value: Any) -> list[dict[str, Any]]:
 
 
 def _as_columns(value: Any, df: pd.DataFrame) -> list[str]:
+    allowed = set(calculation_columns(df))
     if isinstance(value, list):
-        return [str(c) for c in value if str(c) in df.columns]
+        return [str(c) for c in value if str(c) in allowed]
     if isinstance(value, str):
-        return [c.strip() for c in value.split(',') if c.strip() in df.columns]
+        return [c.strip() for c in value.split(',') if c.strip() in allowed]
     return []
 
 
@@ -98,7 +99,7 @@ class ReplaceValuesNode(BaseNode):
 
     def run(self, node, inputs, settings, context):
         payload = dataframe_payload(inputs, 'data')
-        df = ensure_df(payload.df if payload else None, str(node['id'])).copy()
+        df = ensure_df(payload.df if payload else None, str(node['id']))
         id_column = payload.id_column if payload else None
         blocks = _blocks(settings.get('replacement_blocks'))
         if not blocks:
