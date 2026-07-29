@@ -16,7 +16,7 @@ const base = {
   analysisBoards: [],
 };
 
-test('autosave signature ignores object identity but detects graph changes', () => {
+test('autosave signature ignores object identity but detects document changes', () => {
   const first = createAutosaveSignature(base);
   const equivalent = createAutosaveSignature(structuredClone(base));
   const changed = createAutosaveSignature({
@@ -25,4 +25,9 @@ test('autosave signature ignores object identity but detects graph changes', () 
   });
   assert.equal(first, equivalent);
   assert.notEqual(first, changed);
+});
+
+test('autosave signature contains no transient viewport state', () => {
+  const signature = JSON.parse(createAutosaveSignature(base));
+  assert.equal('workflowViewport' in signature, false);
 });

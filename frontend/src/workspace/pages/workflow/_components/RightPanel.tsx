@@ -170,7 +170,8 @@ function RightPanelComponent({
           </div>
         </div>
 
-        <div className="workflow-right-tabs-content" aria-hidden={resultsCollapsed}>
+        {!resultsCollapsed && (
+          <div className="workflow-right-tabs-content">
             <div className="workflow-right-context-line">
               <b>{tabMeta[activeTab].label}</b>
               <span>{selectedFlow.mode === 'selected' ? 'جریان انتخاب‌شده' : 'کل برد'} · {selectedFlow.nodes.length} نود، {selectedFlow.edges.length} اتصال</span>
@@ -255,6 +256,7 @@ function RightPanelComponent({
               </div>
             )}
           </div>
+        )}
       </div>
     </div>
   );

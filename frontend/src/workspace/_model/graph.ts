@@ -12,11 +12,32 @@ export type FlowGraph = {
     datasetId?: number | null;
     targetColumn?: string;
     taskType?: string;
+    workflowViewport?: WorkflowViewport;
     analysisBoard?: AnalysisBoardItem[];
     analysisBoards?: AnalysisBoardTab[];
     activeAnalysisBoardId?: string;
   };
 };
+
+export type WorkflowViewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
+
+export function restoreWorkflowViewport(value: unknown): WorkflowViewport {
+  const viewport = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Partial<WorkflowViewport>
+    : {};
+  const x = Number(viewport.x);
+  const y = Number(viewport.y);
+  const zoom = Number(viewport.zoom);
+  return {
+    x: Number.isFinite(x) ? x : 0,
+    y: Number.isFinite(y) ? y : 0,
+    zoom: Number.isFinite(zoom) ? Math.min(2, Math.max(0.1, zoom)) : 1,
+  };
+}
 
 const SECTION_TITLES = new Set([
   'Data Input', 'Data Inspection', 'Data Cleaning', 'Anomaly Detection',

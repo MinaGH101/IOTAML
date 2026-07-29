@@ -26,7 +26,9 @@ import {
   normalizeEdgeHandles,
   normalizeFlowNodes,
   restoreAnalysisBoardTabs,
+  restoreWorkflowViewport,
   type FlowGraph,
+  type WorkflowViewport,
 } from '../../../_model/graph';
 import { workspaceApi } from '../../../_service/workspaceApi';
 import { useWorkflowPersistence } from './useWorkflowPersistence';
@@ -49,6 +51,7 @@ type UseWorkflowDocumentOptions = {
   setTargetColumn: Dispatch<SetStateAction<string>>;
   taskType: string;
   setTaskType: Dispatch<SetStateAction<string>>;
+  restoreWorkflowCanvasViewport: (viewport: WorkflowViewport) => void;
   serializedBoards: AnalysisBoardTab[];
   analysisBoardSignature: unknown;
   activeBoardId: string;
@@ -84,6 +87,7 @@ export function useWorkflowDocument(options: UseWorkflowDocumentOptions) {
     setTargetColumn,
     taskType,
     setTaskType,
+    restoreWorkflowCanvasViewport,
     serializedBoards,
     analysisBoardSignature,
     activeBoardId,
@@ -122,6 +126,7 @@ export function useWorkflowDocument(options: UseWorkflowDocumentOptions) {
     setDatasetId(graph.meta?.datasetId ?? null);
     setTargetColumn(graph.meta?.targetColumn || 'target');
     setTaskType(graph.meta?.taskType || 'auto');
+    restoreWorkflowCanvasViewport(restoreWorkflowViewport(graph.meta?.workflowViewport));
     const boards = restoreAnalysisBoardTabs(
       graph.meta?.analysisBoards,
       graph.meta?.analysisBoard,
@@ -132,7 +137,7 @@ export function useWorkflowDocument(options: UseWorkflowDocumentOptions) {
     );
     setBoardOpen(false);
     clearSelection();
-  }, [clearSelection, restoreBoards, setBoardOpen, setDatasetId, setEdges, setNodes, setTargetColumn, setTaskType]);
+  }, [clearSelection, restoreBoards, restoreWorkflowCanvasViewport, setBoardOpen, setDatasetId, setEdges, setNodes, setTargetColumn, setTaskType]);
 
   const persistence = useWorkflowPersistence({
     projectId,
@@ -199,12 +204,13 @@ export function useWorkflowDocument(options: UseWorkflowDocumentOptions) {
     setNodes(graph.nodes);
     setEdges(graph.edges);
     setDatasetId(fallbackDatasetId);
+    restoreWorkflowCanvasViewport(restoreWorkflowViewport(null));
     restoreBoards([createMainAnalysisBoard()], MAIN_ANALYSIS_BOARD_ID);
     setBoardOpen(false);
     setCurrentRun(null);
     setWorkflowLastRunId(null);
     setLastRunSignature('');
-  }, [initializeVersions, resetMetadata, restoreBoards, setBoardOpen, setCurrentRun, setDatasetId, setEdges, setLastRunSignature, setNodes, setWorkflowLastRunId]);
+  }, [initializeVersions, resetMetadata, restoreBoards, restoreWorkflowCanvasViewport, setBoardOpen, setCurrentRun, setDatasetId, setEdges, setLastRunSignature, setNodes, setWorkflowLastRunId]);
 
   useEffect(() => {
     let alive = true;

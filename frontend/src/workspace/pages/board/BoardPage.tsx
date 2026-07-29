@@ -2,7 +2,7 @@ import { Download, Move, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadOutput, normalizeOutputs, OutputBody } from '../../_components/ResultsPanel';
-import type { AnalysisBoardItem, AnalysisBoardTab, BoardViewport } from '../../_model/board';
+import type { AnalysisBoardItem, AnalysisBoardTab } from '../../_model/board';
 import { boardOutputTitle, resolveBoardItems } from '../../_model/boardOutputs';
 import type { Run } from '../../../shared/_types';
 import { BoardCard, type FocusedOutput } from './_components/BoardCard';
@@ -20,7 +20,7 @@ type BoardPageProps = {
   onUpdateItem: (id: string, patch: Partial<AnalysisBoardItem>) => void;
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (item: AnalysisBoardItem) => void;
-  onViewportChange: (boardId: string, viewport: BoardViewport) => void;
+  viewportStorageScope: string;
   readOnly?: boolean;
 };
 
@@ -32,11 +32,10 @@ export function BoardPage({
   workflowDirty,
   onSelectBoard,
   onCreateBoard,
-  onAddOutput,
   onUpdateItem,
   onRemoveItem,
   onDuplicateItem,
-  onViewportChange,
+  viewportStorageScope,
   readOnly = false,
 }: BoardPageProps) {
   const [focusedOutput, setFocusedOutput] = useState<FocusedOutput | null>(null);
@@ -50,7 +49,11 @@ export function BoardPage({
     worldRef,
     startPan,
     getViewportScale,
-  } = useBoardViewport({ tabs, activeBoardId, onViewportChange });
+  } = useBoardViewport({
+    activeBoardId,
+    initialViewport: tabs.find((tab) => tab.id === activeBoardId)?.viewport || { x: 0, y: 0, scale: 1 },
+    storageScope: viewportStorageScope,
+  });
 
   useEffect(() => {
     if (workflowDirty || run?.status !== 'succeeded' || !run.id) return;

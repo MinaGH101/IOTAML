@@ -98,38 +98,33 @@ export function ProfilePage({
                   <span className="access-badge-reference"><ShieldCheck size={13} /> {draft.access_level || 'کاربر'}</span>
                 </div>
                 <p>{draft.title || 'کاربر IOTA'} — {draft.department || 'واحد نامشخص'}</p>
-
-                <label className="profile-image-url-reference">
-                  آدرس تصویر پروفایل
-                  <input value={draft.profile_image || ''} onChange={(event) => setField('profile_image', event.target.value)} placeholder="https://... یا تصویر آپلودشده" />
-                </label>
               </div>
             </div>
 
             <div className="profile-form-grid-reference">
-              <label>
-                نام
-                <div className="input-with-icon-reference"><User size={17}/><input value={draft.first_name || ''} onChange={(event) => setField('first_name', event.target.value)} /></div>
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">نام</span>
+                <div className="input-with-icon-reference"><User size={17}/><input value={draft.first_name || ''} placeholder="نام" onChange={(event) => setField('first_name', event.target.value)} /></div>
               </label>
-              <label>
-                نام خانوادگی
-                <input value={draft.last_name || ''} onChange={(event) => setField('last_name', event.target.value)} />
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">نام خانوادگی</span>
+                <input value={draft.last_name || ''} placeholder="نام خانوادگی" onChange={(event) => setField('last_name', event.target.value)} />
               </label>
-              <label>
-                ایمیل
-                <div className="input-with-icon-reference"><Mail size={17}/><input value={draft.email || ''} onChange={(event) => setField('email', event.target.value)} /></div>
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">ایمیل</span>
+                <div className="input-with-icon-reference"><Mail size={17}/><input value={draft.email || ''} placeholder="ایمیل" onChange={(event) => setField('email', event.target.value)} /></div>
               </label>
-              <label>
-                شماره تماس
-                <div className="input-with-icon-reference"><Phone size={17}/><input value={draft.phone_number || ''} onChange={(event) => setField('phone_number', event.target.value)} /></div>
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">شماره تماس</span>
+                <div className="input-with-icon-reference"><Phone size={17}/><input value={draft.phone_number || ''} placeholder="شماره تماس" onChange={(event) => setField('phone_number', event.target.value)} /></div>
               </label>
-              <label>
-                عنوان
-                <input value={draft.title || ''} onChange={(event) => setField('title', event.target.value)} />
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">عنوان</span>
+                <input value={draft.title || ''} placeholder="عنوان" onChange={(event) => setField('title', event.target.value)} />
               </label>
-              <label>
-                واحد
-                <div className="input-with-icon-reference"><Building2 size={17}/><input value={draft.department || ''} onChange={(event) => setField('department', event.target.value)} /></div>
+              <label className="profile-field-reference">
+                <span className="profile-field-label-reference">واحد</span>
+                <div className="input-with-icon-reference"><Building2 size={17}/><input value={draft.department || ''} placeholder="واحد" onChange={(event) => setField('department', event.target.value)} /></div>
               </label>
             </div>
 

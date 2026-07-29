@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Database, Filter, FolderOpen, GitBranch, PlusCircle, RefreshCw, Search, UserCircle } from 'lucide-react';
+import { CalendarDays, Database, Filter, FolderOpen, GitBranch, PanelRightClose, PlusCircle, RefreshCw, Search, UserCircle } from 'lucide-react';
 import { projectsApi } from '../../_service/projectsApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
 import { ProjectPriorityBadge, ProjectStatus } from '../../_components/ProjectForm';
@@ -58,6 +58,7 @@ export function ProjectManagementPage({
   const [projects, setProjects] = useState<Project[]>([]);
   const [message, setMessage] = useState<UiMessage>(null);
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const refresh = useCallback(async () => setProjects(await projectsApi.list()), []);
 
@@ -77,10 +78,11 @@ export function ProjectManagementPage({
       <main className="manager-page projects-reference-page iota-minimal-page">
         {message && <div className={`manager-toast ${message.tone}`}>{message.text}</div>}
 
-        <section className="projects-reference-layout">
-          <aside className="manager-panel project-filter-panel project-filter-panel-reference">
+        <section className={`projects-reference-layout ${filtersOpen ? '' : 'filters-collapsed'}`}>
+          {filtersOpen && <aside className="manager-panel project-filter-panel project-filter-panel-reference">
             <div className="project-filter-head">
               <div><b><Filter size={15} /> فیلتر پروژه‌ها</b><span>{filtered.length.toLocaleString('fa-IR')} از {projects.length.toLocaleString('fa-IR')}</span></div>
+              <button className="filter-panel-toggle-reference" type="button" onClick={() => setFiltersOpen(false)} title="بستن فیلترها" aria-label="بستن فیلترها"><PanelRightClose size={16} /></button>
             </div>
 
             <label className="project-filter-field">
@@ -113,11 +115,14 @@ export function ProjectManagementPage({
             </div>
 
             <button className="icon-button full-width" type="button" disabled={!hasActiveFilters} onClick={() => setFilters(emptyFilters)}>پاک کردن فیلترها</button>
-          </aside>
+          </aside>}
 
           <section className="manager-panel projects-list-panel projects-list-reference">
             <div className="manager-list-head projects-list-toolbar projects-toolbar-reference">
-              <div><b>لیست پروژه‌ها</b><span>{filtered.length.toLocaleString('fa-IR')} پروژه نمایش داده می‌شود</span></div>
+              <div className="projects-list-title-reference">
+                {!filtersOpen && <button className="filter-panel-toggle-reference" type="button" onClick={() => setFiltersOpen(true)} title="باز کردن فیلترها" aria-label="باز کردن فیلترها"><Filter size={16} /></button>}
+                <div><b>لیست پروژه‌ها</b><span>{filtered.length.toLocaleString('fa-IR')} پروژه نمایش داده می‌شود</span></div>
+              </div>
               <div className="projects-list-actions">
                 <button className="primary" type="button" onClick={onCreateProject}><PlusCircle size={15} /> ایجاد پروژه</button>
                 <button className="icon-button" type="button" onClick={() => refresh().catch((error) => setMessage(messageFromError(error, 'به‌روزرسانی ناموفق بود')))}><RefreshCw size={15} /> بروزرسانی</button>

@@ -1292,15 +1292,32 @@ gap:14px
 height:180px!important
 }
 
-.projects-reference-layout {
+.projects-reference-page {
+padding-inline:clamp(22px,5vw,100px)!important
+}
+
+.projects-reference-page .projects-reference-layout {
+position:relative;
+width:100%;
+max-width:none;
+margin:0;
 display:grid;
-grid-template-columns:minmax(280px,320px) minmax(0,1fr);
-gap:16px;
+grid-template-columns:minmax(0,1fr) 320px;
+grid-template-areas:"list filters";
+gap:28px;
 min-height:calc(100dvh - 110px);
-align-items:start
+align-items:start;
+direction:ltr
+}
+
+.projects-reference-page .projects-reference-layout.filters-collapsed {
+grid-template-columns:minmax(0,1fr);
+grid-template-areas:"list"
 }
 
 .project-filter-panel-reference {
+grid-area:filters;
+direction:rtl;
 position:sticky;
 top:84px;
 align-self:start;
@@ -1313,6 +1330,9 @@ border:var(--theme-border-width) solid var(--theme-divider,var(--theme-divider))
 }
 
 .projects-list-reference {
+grid-area:list;
+direction:rtl;
+min-width:0;
 min-height:calc(100dvh - 110px);
 max-height:calc(100dvh - 110px);
 padding:16px!important;
@@ -1336,6 +1356,32 @@ min-height:0;
 flex:1;
 overflow:auto;
 padding-inline-end:4px
+}
+
+.projects-list-title-reference {
+display:flex;
+align-items:center;
+gap:10px;
+min-width:0
+}
+
+.filter-panel-toggle-reference {
+width:32px;
+min-width:32px;
+height:32px;
+min-height:32px!important;
+padding:0;
+display:inline-grid;
+place-items:center;
+border:0;
+border-radius:var(--theme-radius-control);
+background:var(--theme-transparent);
+color:var(--theme-text-muted)
+}
+
+.filter-panel-toggle-reference:hover {
+background:var(--theme-hover-bg);
+color:var(--theme-primary)
 }
 
 .project-card-grid-reference {
@@ -1490,10 +1536,19 @@ background:color-mix(in srgb,var(--theme-secondary) 88%,var(--theme-primary));
 }
 
 @media (width <= 1180px) {
-.profile-layout-reference,.projects-reference-layout,.project-detail-reference-layout,.project-create-reference-layout {
+.profile-layout-reference,.project-detail-reference-layout,.project-create-reference-layout {
 grid-template-columns:1fr
 }
 
+.projects-reference-page .projects-reference-layout {
+grid-template-columns:1fr;
+grid-template-areas:"filters" "list";
+gap:18px
+}
+
+.projects-reference-page .projects-reference-layout.filters-collapsed {
+grid-template-areas:"list"
+}
 
 .project-filter-panel-reference,.project-info-reference,.project-create-info-reference {
 position:static
@@ -1624,6 +1679,11 @@ padding:14px!important
   align-items: center;
   gap: 6px;
   direction: rtl;
+}
+
+.workflow-name-editor.is-viewing {
+  min-width:0;
+  grid-template-columns:32px 32px
 }
 
 .workflow-name-editor input {

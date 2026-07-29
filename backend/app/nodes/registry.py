@@ -30,6 +30,7 @@ from app.nodes.visualization.scatter_node import ScatterPlotNode
 from app.nodes.visualization.boxplot_node import BoxPlotNode
 from app.nodes.visualization.barplot_node import BarPlotNode
 from app.nodes.visualization.pp_plot_node import PPPlotNode
+from app.nodes.visualization.clustering_plot_node import ClusteringPlotNode
 from app.nodes.ml_data_processing.split_node import TrainTestSplitNode
 from app.nodes.ml_data_processing.kfold_node import KFoldSplitNode
 from app.nodes.ml_data_processing.select_features_node import SelectFeaturesNode
@@ -92,7 +93,7 @@ NODE_CLASSES: list[type[BaseNode]] = [
     # Transformation
     ScalerNode, NormalizationNode, RatioCalculatorNode, TransposeDataFrameNode,
     # Visualizations
-    HistogramNode, ScatterPlotNode, BoxPlotNode, BarPlotNode, PPPlotNode,
+    HistogramNode, ScatterPlotNode, BoxPlotNode, BarPlotNode, PPPlotNode, ClusteringPlotNode,
     # ML Data Processing
     SelectFeaturesNode, TrainTestSplitNode, KFoldSplitNode, SetTargetNode, MutualInfoFeatureScoreNode, FRegressionFeatureScoreNode,
     # Regression Models

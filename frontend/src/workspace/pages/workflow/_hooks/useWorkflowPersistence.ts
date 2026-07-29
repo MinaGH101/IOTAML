@@ -15,7 +15,6 @@ import {
   createAutosaveSnapshot,
 } from '../../../_model/workflowPersistence';
 import {
-  MAIN_ANALYSIS_BOARD_ID,
   normalizeEdgeHandles,
   workflowOutputSignature,
   type FlowGraph,
@@ -74,8 +73,6 @@ export function useWorkflowPersistence({
       datasetId,
       targetColumn,
       taskType,
-      analysisBoard: serializedBoards
-        .find((board) => board.id === MAIN_ANALYSIS_BOARD_ID)?.items || [],
       analysisBoards: serializedBoards,
       activeAnalysisBoardId: activeBoardId,
     },

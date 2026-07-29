@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useState,
   type Dispatch,
   type MouseEvent as ReactMouseEvent,
@@ -17,13 +18,56 @@ import {
 } from '@xyflow/react';
 import { connectedGraph, isTextInput } from '../../../_model/graph';
 import { sameStringArray } from '../../../../shared/_utils/appShared';
+import {
+  hasDocumentNodeChange,
+  mergeCommittedPositions,
+} from '../_model/interactiveGraph';
+
+type InteractiveNodeState = {
+  live: Node[];
+  committed: Node[];
+};
+
+type InteractiveNodeAction =
+  | { type: 'replace'; value: SetStateAction<Node[]> }
+  | { type: 'flow-change'; changes: NodeChange[] }
+  | { type: 'commit-position' };
+
+function interactiveNodeReducer(
+  state: InteractiveNodeState,
+  action: InteractiveNodeAction,
+): InteractiveNodeState {
+  if (action.type === 'replace') {
+    const next = typeof action.value === 'function'
+      ? action.value(state.live)
+      : action.value;
+    return next === state.live ? state : { live: next, committed: next };
+  }
+  if (action.type === 'flow-change') {
+    const live = applyNodeChanges(action.changes, state.live);
+    return {
+      live,
+      committed: hasDocumentNodeChange(action.changes) ? live : state.committed,
+    };
+  }
+  const committed = mergeCommittedPositions(state.committed, state.live);
+  return committed === state.committed ? state : { ...state, committed };
+}
 
 export function useWorkflowGraph({
   readOnly,
 }: {
   readOnly: boolean;
 }) {
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodeState, dispatchNodes] = useReducer(interactiveNodeReducer, {
+    live: [],
+    committed: [],
+  });
+  const nodes = nodeState.live;
+  const documentNodes = nodeState.committed;
+  const setNodes = useCallback<Dispatch<SetStateAction<Node[]>>>((value) => {
+    dispatchNodes({ type: 'replace', value });
+  }, []);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -33,8 +77,8 @@ export function useWorkflowGraph({
   const [modalNodeId, setModalNodeId] = useState<string | null>(null);
 
   const nodesById = useMemo(
-    () => new Map(nodes.map((node) => [node.id, node])),
-    [nodes],
+    () => new Map(documentNodes.map((node) => [node.id, node])),
+    [documentNodes],
   );
   const selectedNode = useMemo(
     () => nodesById.get(selectedId || '') || null,
@@ -45,8 +89,8 @@ export function useWorkflowGraph({
     [edges, selectedEdgeId],
   );
   const selectedFlow = useMemo(
-    () => connectedGraph(nodes, edges, selectedId),
-    [edges, nodes, selectedId],
+    () => connectedGraph(documentNodes, edges, selectedId),
+    [documentNodes, edges, selectedId],
   );
   const modalNode = useMemo(
     () => nodesById.get(modalNodeId || '') || null,
@@ -70,9 +114,12 @@ export function useWorkflowGraph({
   }, []);
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((items) => applyNodeChanges(changes, items)),
+    (changes: NodeChange[]) => dispatchNodes({ type: 'flow-change', changes }),
     [],
   );
+  const commitNodePositions = useCallback(() => {
+    dispatchNodes({ type: 'commit-position' });
+  }, []);
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => setEdges((items) => applyEdgeChanges(changes, items)),
     [],
@@ -163,6 +210,7 @@ export function useWorkflowGraph({
 
   return {
     nodes,
+    documentNodes,
     setNodes: setNodes as Dispatch<SetStateAction<Node[]>>,
     edges,
     setEdges: setEdges as Dispatch<SetStateAction<Edge[]>>,
@@ -185,6 +233,7 @@ export function useWorkflowGraph({
     clearSelection,
     selectNode,
     onNodesChange,
+    commitNodePositions,
     onEdgesChange,
     onSelectionChange,
     onNodeClick,

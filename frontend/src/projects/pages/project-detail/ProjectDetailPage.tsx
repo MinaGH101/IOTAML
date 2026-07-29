@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FileUp, FolderOpen, GitBranch, HardDrive, PlusCircle, RefreshCw, Save, Trash2, Upload } from 'lucide-react';
+import { FileUp, FolderOpen, GitBranch, HardDrive, Pencil, PlusCircle, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react';
 import { projectsApi } from '../../_service/projectsApi';
 import { workspaceApi } from '../../../workspace/_service/workspaceApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
@@ -43,6 +43,7 @@ export function ProjectDetailPage({
   const [importingWorkflow, setImportingWorkflow] = useState(false);
   const [workflowNameDrafts, setWorkflowNameDrafts] = useState<Record<number, string>>({});
   const [workflowActionId, setWorkflowActionId] = useState<number | null>(null);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<number | null>(null);
   const workflowImportRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -148,13 +149,17 @@ export function ProjectDetailPage({
       setMessage({ text: 'نام جریان نمی‌تواند خالی باشد', tone: 'error' });
       return;
     }
-    if (name === workflow.name) return;
+    if (name === workflow.name) {
+      setEditingWorkflowId(null);
+      return;
+    }
 
     setWorkflowActionId(workflow.id);
     try {
       const saved = await workspaceApi.renameWorkflow(workflow.id, name);
       setWorkflows((current) => current.map((item) => item.id === saved.id ? saved : item));
       setWorkflowNameDrafts((current) => ({ ...current, [saved.id]: saved.name }));
+      setEditingWorkflowId(null);
       setMessage({ text: 'نام جریان ذخیره شد', tone: 'success' });
     } catch (error) {
       setMessage(messageFromError(error, 'ذخیره نام جریان ناموفق بود'));
@@ -243,38 +248,73 @@ export function ProjectDetailPage({
                   <article key={workflow.id} className="workflow-card workflow-card-reference workflow-manage-card">
                     <button className="workflow-card-open" type="button" onClick={() => onOpenEditor(workflow.id)} title="باز کردن جریان">
                       <WorkflowIcon />
-                      <div><b>باز کردن جریان</b><span>آخرین تغییر: {formatDate(workflow.updated_at)}</span></div>
+                      <div><b>{workflow.name}</b><span>آخرین تغییر: {formatDate(workflow.updated_at)}</span></div>
                     </button>
-                    <div className="workflow-name-editor">
-                      <input
-                        value={workflowNameDrafts[workflow.id] ?? workflow.name}
-                        maxLength={255}
-                        aria-label={`نام جریان ${workflow.name}`}
-                        onChange={(event) => setWorkflowNameDrafts((current) => ({ ...current, [workflow.id]: event.target.value }))}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') void saveWorkflowName(workflow);
-                        }}
-                      />
-                      <button
-                        className="workflow-row-action"
-                        type="button"
-                        disabled={workflowActionId === workflow.id || (workflowNameDrafts[workflow.id] ?? workflow.name).trim() === workflow.name}
-                        onClick={() => { void saveWorkflowName(workflow); }}
-                        title="ذخیره نام جریان"
-                        aria-label="ذخیره نام جریان"
-                      >
-                        {workflowActionId === workflow.id ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
-                      </button>
-                      <button
-                        className="workflow-row-action danger-action"
-                        type="button"
-                        disabled={workflowActionId === workflow.id}
-                        onClick={() => { void deleteWorkflow(workflow); }}
-                        title="حذف جریان"
-                        aria-label="حذف جریان"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                    <div className={`workflow-name-editor ${editingWorkflowId === workflow.id ? 'is-editing' : 'is-viewing'}`}>
+                      {editingWorkflowId === workflow.id ? (
+                        <>
+                          <input
+                            autoFocus
+                            value={workflowNameDrafts[workflow.id] ?? workflow.name}
+                            maxLength={255}
+                            aria-label={`نام جریان ${workflow.name}`}
+                            onChange={(event) => setWorkflowNameDrafts((current) => ({ ...current, [workflow.id]: event.target.value }))}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') void saveWorkflowName(workflow);
+                              if (event.key === 'Escape') {
+                                setWorkflowNameDrafts((current) => ({ ...current, [workflow.id]: workflow.name }));
+                                setEditingWorkflowId(null);
+                              }
+                            }}
+                          />
+                          <button
+                            className="workflow-row-action"
+                            type="button"
+                            disabled={workflowActionId === workflow.id}
+                            onClick={() => { void saveWorkflowName(workflow); }}
+                            title="ذخیره نام جریان"
+                            aria-label="ذخیره نام جریان"
+                          >
+                            {workflowActionId === workflow.id ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
+                          </button>
+                          <button
+                            className="workflow-row-action"
+                            type="button"
+                            disabled={workflowActionId === workflow.id}
+                            onClick={() => {
+                              setWorkflowNameDrafts((current) => ({ ...current, [workflow.id]: workflow.name }));
+                              setEditingWorkflowId(null);
+                            }}
+                            title="لغو ویرایش"
+                            aria-label="لغو ویرایش"
+                          >
+                            <X size={15} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="workflow-row-action"
+                            type="button"
+                            disabled={workflowActionId === workflow.id}
+                            onClick={() => setEditingWorkflowId(workflow.id)}
+                            title="ویرایش نام جریان"
+                            aria-label="ویرایش نام جریان"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="workflow-row-action danger-action"
+                            type="button"
+                            disabled={workflowActionId === workflow.id}
+                            onClick={() => { void deleteWorkflow(workflow); }}
+                            title="حذف جریان"
+                            aria-label="حذف جریان"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </article>
                 ))}

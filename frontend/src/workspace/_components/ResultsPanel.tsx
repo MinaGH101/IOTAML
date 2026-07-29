@@ -1,13 +1,16 @@
 import { Download, Maximize2, PanelRightClose, PanelRightOpen, Pin, X } from 'lucide-react';
-import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import type { Run } from '../../shared/_types';
 import type { Output } from '../_model/output';
+import { chartHeight } from './charts/chartSizing';
+import { useChartVisibility } from './charts/useChartVisibility';
 
 export type { Output } from '../_model/output';
 
 const AmChartsOutput = lazy(() => import('./charts/AmChartsOutput'));
+const DendrogramOutput = lazy(() => import('./charts/DendrogramOutput'));
 
 function fmt(value: unknown): string {
   if (typeof value === 'number') return Number.isInteger(value) ? value.toLocaleString('fa-IR') : value.toFixed(4);
@@ -158,11 +161,26 @@ function ChartLoadingPlaceholder() {
   return <div className="amchart-loading" aria-live="polite"><span/><span/><span/></div>;
 }
 
-function AmChartBody({ output, collectionMode = false }: { output: Output; collectionMode?: boolean }) {
+function ChartBody({ output, collectionMode = false }: { output: Output; collectionMode?: boolean }) {
+  const { elementRef, visible } = useChartVisibility<HTMLDivElement>();
+  const kind = String(output.kind || 'plot');
+
   return (
-    <Suspense fallback={<ChartLoadingPlaceholder />}>
-      <AmChartsOutput output={output} collectionMode={collectionMode} />
-    </Suspense>
+    <div
+      ref={elementRef}
+      className="chart-viewport"
+      style={{ minHeight: collectionMode ? 280 : chartHeight(output) }}
+    >
+      {visible ? (
+        <Suspense fallback={<ChartLoadingPlaceholder />}>
+          {kind === 'dendrogram'
+            ? <DendrogramOutput output={output} collectionMode={collectionMode} />
+            : <AmChartsOutput output={output} collectionMode={collectionMode} />}
+        </Suspense>
+      ) : (
+        <div className="chart-suspended-placeholder" aria-hidden="true" />
+      )}
+    </div>
   );
 }
 
@@ -176,28 +194,15 @@ function plotSubtitle(plot: Output) {
 
 
 const LazyPlotItem = memo(function LazyPlotItem({ plot, index, onAddToBoard }: { plot: Output; index: number; onAddToBoard?: (output: Output, index: number) => void }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(index < 3);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      setVisible(entry.isIntersecting);
-    }, { rootMargin: '650px 0px', threshold: 0 });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div ref={ref} className="plot-group-item" style={{ minHeight: 360 }}>
+    <div className="plot-group-item" style={{ minHeight: 360 }}>
       <div className="plot-group-item-head">
         <b>{String(plot.title || `Plot ${index + 1}`)}</b>
         <span>{plotSubtitle(plot)}</span>
         <button className="tiny-action icon-action" type="button" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(plot, index)}><Download size={12} /></button>
         {onAddToBoard && <button className="tiny-action icon-action" type="button" title="افزودن همین نمودار به برد" aria-label="افزودن همین نمودار به برد" onClick={() => onAddToBoard(plot, index)}><Pin size={12} /></button>}
       </div>
-      {visible ? <OutputBody output={plot} onAddToBoard={onAddToBoard} collectionMode /> : <div className="plot-group-lazy-placeholder">نمودار نزدیک محدوده دید فعال می‌شود.</div>}
+      <OutputBody output={plot} onAddToBoard={onAddToBoard} collectionMode />
     </div>
   );
 });
@@ -220,14 +225,26 @@ function PlotGroupView({ output, onAddToBoard }: { output: Output; onAddToBoard?
   );
 }
 
-const AMCHART_KINDS = new Set(['scatter', 'histogram', 'bar', 'line', 'heatmap', 'matrix', 'boxplot', 'bar_plot', 'pp_plot', 'stair_outlier']);
+const CHART_KINDS = new Set([
+  'scatter',
+  'histogram',
+  'bar',
+  'line',
+  'heatmap',
+  'matrix',
+  'boxplot',
+  'bar_plot',
+  'pp_plot',
+  'stair_outlier',
+  'dendrogram',
+]);
 
 export const OutputBody = memo(function OutputBody({ output, onAddToBoard, collectionMode = false }: { output: Output; onAddToBoard?: (output: Output, index: number) => void; collectionMode?: boolean }) {
   const kind = String(output.kind || 'json');
   if (kind === 'table') return <TableView rows={(output.rows as Record<string, unknown>[] | undefined) || []} columns={output.columns as string[] | undefined} />;
   if (kind === 'metrics') return <MetricsView metrics={(output.metrics as Record<string, unknown> | undefined) || {}} />;
   if (kind === 'plot_group') return <PlotGroupView output={output} onAddToBoard={onAddToBoard} />;
-  if (AMCHART_KINDS.has(kind)) return <AmChartBody output={output} collectionMode={collectionMode} />;
+  if (CHART_KINDS.has(kind)) return <ChartBody output={output} collectionMode={collectionMode} />;
   return <pre>{JSON.stringify(output.value ?? output, null, 2)}</pre>;
 });
 

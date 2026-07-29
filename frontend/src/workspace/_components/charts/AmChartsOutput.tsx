@@ -2,7 +2,10 @@ import * as am5 from '@amcharts/amcharts5';
 import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
 import * as am5xy from '@amcharts/amcharts5/xy';
 import { memo, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { evenlySample } from '../../_model/chartData';
 import type { Output } from '../../_model/output';
+import { chartHeight } from './chartSizing';
+import { getThemeSnapshot, subscribeTheme } from './chartTheme';
 
 const amChartsLicenseKey = String(import.meta.env.VITE_AMCHARTS_LICENSE_KEY || '').trim();
 if (amChartsLicenseKey) am5.addLicense(amChartsLicenseKey);
@@ -24,28 +27,6 @@ type Props = {
   output: Output;
   collectionMode?: boolean;
 };
-
-const themeListeners = new Set<() => void>();
-let themeObserver: MutationObserver | null = null;
-
-function getThemeSnapshot() {
-  return document.documentElement.dataset.theme || 'dark';
-}
-
-function subscribeTheme(listener: () => void) {
-  themeListeners.add(listener);
-  if (!themeObserver) {
-    themeObserver = new MutationObserver(() => themeListeners.forEach((callback) => callback()));
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  }
-  return () => {
-    themeListeners.delete(listener);
-    if (themeListeners.size === 0 && themeObserver) {
-      themeObserver.disconnect();
-      themeObserver = null;
-    }
-  };
-}
 
 function themePalette(): ChartPalette {
   const styles = getComputedStyle(document.documentElement);
@@ -91,7 +72,14 @@ function formatNumber(value: unknown) {
 }
 
 function createRoot(element: HTMLDivElement, palette: ChartPalette, animated: boolean) {
-  const root = am5.Root.new(element);
+  const root = am5.Root.new(element, {
+    // Board zoom uses a CSS transform. Layout dimensions avoid measuring the
+    // transformed visual size twice when amCharts recalculates its canvas.
+    calculateSize: () => ({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    }),
+  });
   if (animated) root.setThemes([am5themes_Animated.new(root)]);
   root.numberFormatter.set('numberFormat', '#,###.####');
   return root;
@@ -236,7 +224,12 @@ function renderScatter(root: am5.Root, output: Output, palette: ChartPalette, co
   const points = ((output.points as Record<string, unknown>[] | undefined) || (output.rows as Record<string, unknown>[] | undefined) || []);
   const xKey = String(output.x || (pp ? 'theoretical_probability' : 'x'));
   const yKey = String(output.y || (pp ? 'observed_probability' : 'y'));
-  const data = points.map((point) => ({ x: Number(point[xKey]), y: Number(point[yKey]) })).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const data = evenlySample(
+    points
+      .map((point) => ({ x: Number(point[xKey]), y: Number(point[yKey]) }))
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y)),
+    compact ? 800 : 2500,
+  );
   if (!data.length) return false;
 
   const chart = createChart(root, compact);
@@ -672,7 +665,16 @@ function renderStairOutlier(root: am5.Root, output: Output, palette: ChartPalett
   const original = ((output.original_values as unknown[] | undefined) || []).map((value) => value == null ? null : Number(value));
   const corrected = ((output.corrected_values as unknown[] | undefined) || []).map((value) => value == null ? null : Number(value));
   const flags = ((output.outlier_flags as unknown[] | undefined) || []).map(Boolean);
-  const data = ranks.map((rank, index) => ({ rank, original: original[index], corrected: corrected[index], outlier: flags[index] ? original[index] : null })).filter((row) => Number.isFinite(row.rank));
+  const fullData = ranks
+    .map((rank, index) => ({ rank, original: original[index], corrected: corrected[index], outlier: flags[index] ? original[index] : null }))
+    .filter((row) => Number.isFinite(row.rank));
+  const sampledData = evenlySample(fullData, compact ? 1200 : 4000);
+  const data = Array.from(
+    new Map(
+      [...sampledData, ...fullData.filter((row) => row.outlier !== null)]
+        .map((row) => [row.rank, row] as const),
+    ).values(),
+  ).sort((left, right) => left.rank - right.rank);
   if (!data.length) return false;
   const showCorrected = String(output.replacement || 'keep') !== 'keep' && corrected.some((value, index) => value !== original[index]);
 
@@ -723,25 +725,6 @@ function renderStairOutlier(root: am5.Root, output: Output, palette: ChartPalett
   addCursor(root, chart, compact, palette);
   addLegend(root, chart, palette, compact);
   return chart;
-}
-
-function chartHeight(output: Output) {
-  const kind = String(output.kind || 'plot');
-  if (kind === 'bar') {
-    const rows = (output.rows as unknown[] | undefined) || [];
-    return Math.max(280, Math.min(900, rows.length * 25 + 100));
-  }
-  if (kind === 'bar_plot' && String(output.orientation || 'vertical') === 'horizontal') {
-    const categories = (output.categories as unknown[] | undefined) || [];
-    return Math.max(300, Math.min(900, categories.length * 32 + 110));
-  }
-  if (kind === 'heatmap' || kind === 'matrix') {
-    const labels = (output.labels as unknown[] | undefined) || [];
-    return Math.max(300, Math.min(820, labels.length * 34 + 100));
-  }
-  if (kind === 'stair_outlier') return 330;
-  if (kind === 'boxplot') return 285;
-  return 300;
 }
 
 const AmChartsOutput = memo(function AmChartsOutput({ output, collectionMode = false }: Props) {

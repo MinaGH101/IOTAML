@@ -141,7 +141,7 @@ export const BoardCard = memo(function BoardCard({
       </div>
       <div className="analysis-board-card-body">
         {output
-          ? <OutputBody output={output} />
+          ? <OutputBody output={output} collectionMode />
           : <div className="empty-state small">این خروجی در اجرای فعلی پیدا نشد. Workflow را Run کنید.</div>}
       </div>
       <div

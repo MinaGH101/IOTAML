@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { AnalysisBoardTab, BoardViewport } from '../../../_model/board';
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import type { BoardViewport } from '../../../_model/board';
+import { loadCanvasViewport, saveCanvasViewport } from '../../../_model/viewportStorage';
 import { clamp, setBoardInteractionActive } from '../_utils/boardInteraction';
 
 function zoomAt(
@@ -18,85 +24,103 @@ function zoomAt(
   };
 }
 
+function restoreViewport(storageKey: string, fallback: BoardViewport): BoardViewport {
+  const stored = loadCanvasViewport(storageKey, {
+    x: fallback.x,
+    y: fallback.y,
+    zoom: fallback.scale,
+  });
+  return { x: stored.x, y: stored.y, scale: stored.zoom };
+}
+
 export function useBoardViewport({
-  tabs,
   activeBoardId,
-  onViewportChange,
+  initialViewport,
+  storageScope,
 }: {
-  tabs: AnalysisBoardTab[];
   activeBoardId: string;
-  onViewportChange: (boardId: string, viewport: BoardViewport) => void;
+  initialViewport: BoardViewport;
+  storageScope: string;
 }) {
-  const [zoomPercent, setZoomPercent] = useState(100);
+  const storageKey = `${storageScope}:board:${activeBoardId}`;
+  const initial = restoreViewport(storageKey, initialViewport);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
-  const viewportRef = useRef<BoardViewport>({ x: 0, y: 0, scale: 1 });
-  const viewportByBoardRef = useRef<Record<string, BoardViewport>>({});
+  const viewportRef = useRef<BoardViewport>(initial);
   const activeBoardIdRef = useRef(activeBoardId);
+  const initialViewportRef = useRef(initialViewport);
+  const storageScopeRef = useRef(storageScope);
   const transformFrameRef = useRef(0);
-  const viewportPersistTimerRef = useRef(0);
+  const persistTimerRef = useRef(0);
+  initialViewportRef.current = initialViewport;
+  storageScopeRef.current = storageScope;
 
   const renderViewport = useCallback(() => {
     transformFrameRef.current = 0;
     const world = worldRef.current;
     if (!world) return;
-    const value = viewportRef.current;
-    world.style.transform = `translate3d(${value.x}px, ${value.y}px, 0) scale(${value.scale})`;
+    const viewport = viewportRef.current;
+    world.style.transform = `translate3d(${viewport.x}px, ${viewport.y}px, 0) scale(${viewport.scale})`;
   }, []);
 
-  const scheduleViewportRender = useCallback(() => {
+  const scheduleRender = useCallback(() => {
     if (!transformFrameRef.current) {
       transformFrameRef.current = window.requestAnimationFrame(renderViewport);
     }
   }, [renderViewport]);
 
-  useEffect(() => {
+  const commitViewport = useCallback((boardId: string, viewport: BoardViewport) => {
+    saveCanvasViewport(`${storageScopeRef.current}:board:${boardId}`, {
+      x: viewport.x,
+      y: viewport.y,
+      zoom: viewport.scale,
+    });
+  }, []);
+
+  const cancelPendingCommit = useCallback(() => {
+    if (!persistTimerRef.current) return;
+    window.clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = 0;
+  }, []);
+
+  const scheduleCommit = useCallback(() => {
+    cancelPendingCommit();
+    persistTimerRef.current = window.setTimeout(() => {
+      persistTimerRef.current = 0;
+      commitViewport(activeBoardIdRef.current, viewportRef.current);
+    }, 300);
+  }, [cancelPendingCommit, commitViewport]);
+
+  const applyViewport = useCallback((next: BoardViewport) => {
+    viewportRef.current = next;
+    scheduleRender();
+    scheduleCommit();
+  }, [scheduleCommit, scheduleRender]);
+
+  useLayoutEffect(() => {
     renderViewport();
     return () => {
+      cancelPendingCommit();
       if (transformFrameRef.current) window.cancelAnimationFrame(transformFrameRef.current);
-      if (viewportPersistTimerRef.current) window.clearTimeout(viewportPersistTimerRef.current);
-      onViewportChange(activeBoardIdRef.current, { ...viewportRef.current });
+      commitViewport(activeBoardIdRef.current, viewportRef.current);
       setBoardInteractionActive(false);
     };
-  }, [onViewportChange, renderViewport]);
+  }, [cancelPendingCommit, commitViewport, renderViewport]);
 
-  const schedulePersistence = useCallback((boardId: string, viewport: BoardViewport) => {
-    if (viewportPersistTimerRef.current) window.clearTimeout(viewportPersistTimerRef.current);
-    viewportPersistTimerRef.current = window.setTimeout(() => {
-      viewportPersistTimerRef.current = 0;
-      onViewportChange(boardId, { ...viewport });
-    }, 180);
-  }, [onViewportChange]);
-
-  const applyViewport = useCallback((next: BoardViewport, updateZoomLabel = false) => {
-    viewportRef.current = next;
-    viewportByBoardRef.current[activeBoardIdRef.current] = { ...next };
-    scheduleViewportRender();
-    schedulePersistence(activeBoardIdRef.current, next);
-    if (updateZoomLabel) {
-      const nextPercent = Math.round(next.scale * 100);
-      setZoomPercent((current) => current === nextPercent ? current : nextPercent);
-    }
-  }, [schedulePersistence, scheduleViewportRender]);
-
-  useEffect(() => {
-    const previousId = activeBoardIdRef.current;
-    viewportByBoardRef.current[previousId] = { ...viewportRef.current };
-    if (previousId !== activeBoardId) {
-      onViewportChange(previousId, { ...viewportRef.current });
-    }
+  useLayoutEffect(() => {
+    if (activeBoardIdRef.current === activeBoardId) return;
+    cancelPendingCommit();
+    commitViewport(activeBoardIdRef.current, viewportRef.current);
     activeBoardIdRef.current = activeBoardId;
-    const persisted = tabs.find((tab) => tab.id === activeBoardId)?.viewport;
-    const next = viewportByBoardRef.current[activeBoardId]
-      || persisted
-      || { x: 0, y: 0, scale: 1 };
-    viewportRef.current = { ...next };
-    viewportByBoardRef.current[activeBoardId] = { ...next };
-    setZoomPercent(Math.round(next.scale * 100));
-    scheduleViewportRender();
-  }, [activeBoardId, onViewportChange, scheduleViewportRender, tabs]);
+    const next = restoreViewport(
+      `${storageScope}:board:${activeBoardId}`,
+      initialViewportRef.current,
+    );
+    viewportRef.current = next;
+    renderViewport();
+  }, [activeBoardId, cancelPendingCommit, commitViewport, renderViewport, storageScope]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const handleWheel = (event: WheelEvent) => {
@@ -109,7 +133,7 @@ export function useBoardViewport({
       const current = viewportRef.current;
       if (event.ctrlKey || event.metaKey) {
         const zoomDelta = Math.exp(-event.deltaY * 0.0015);
-        applyViewport(zoomAt(current, current.scale * zoomDelta, originX, originY), true);
+        applyViewport(zoomAt(current, current.scale * zoomDelta, originX, originY));
         return;
       }
       const panX = event.shiftKey ? event.deltaY : event.deltaX;
@@ -148,30 +172,19 @@ export function useBoardViewport({
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
+      cancelPendingCommit();
+      commitViewport(activeBoardIdRef.current, viewportRef.current);
       setBoardInteractionActive(false);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
-  }, [applyViewport]);
+  }, [applyViewport, cancelPendingCommit, commitViewport]);
 
   const getViewportScale = useCallback(() => viewportRef.current.scale, []);
-  const setZoom = useCallback((nextScale: number) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    const originX = rect ? rect.width / 2 : window.innerWidth / 2;
-    const originY = rect ? rect.height / 2 : window.innerHeight / 2;
-    applyViewport(zoomAt(viewportRef.current, nextScale, originX, originY), true);
-  }, [applyViewport]);
-  const resetViewport = useCallback(() => {
-    applyViewport({ x: 0, y: 0, scale: 1 }, true);
-  }, [applyViewport]);
-
   return {
     canvasRef,
     worldRef,
-    zoomPercent,
-    setZoom,
-    resetViewport,
     startPan,
     getViewportScale,
   };

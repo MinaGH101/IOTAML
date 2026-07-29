@@ -1,6 +1,7 @@
 import {
   useCallback,
   useMemo,
+  useRef,
   type Dispatch,
   type DragEvent,
   type MouseEvent as ReactMouseEvent,
@@ -29,6 +30,13 @@ type FitView = (options: {
   minZoom?: number;
   maxZoom?: number;
 }) => unknown;
+
+type RenderedNodeCacheEntry = {
+  source: Node;
+  runtimeInfo: unknown;
+  rename: (nodeId: string, label: string) => void;
+  rendered: Node;
+};
 
 export function useWorkflowCanvasActions({
   nodes,
@@ -79,6 +87,11 @@ export function useWorkflowCanvasActions({
   enterComponentNode: (node: Node) => Promise<boolean>;
   renameNodeSources: (nodeId: string, label: string) => void;
 }) {
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+
   const onInputSourceHandleChange = useCallback((edgeId: string, sourceHandle: string) => {
     if (readOnly) return;
     setEdges((items) => items.map((edge) => (
@@ -164,7 +177,7 @@ export function useWorkflowCanvasActions({
 
   const prettyLayout = useCallback(() => {
     if (readOnly) return;
-    setNodes(layoutWorkflowNodes(nodes, edges, {
+    setNodes(layoutWorkflowNodes(nodesRef.current, edgesRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
       paletteCollapsed,
@@ -177,20 +190,44 @@ export function useWorkflowCanvasActions({
       minZoom: 0.42,
       maxZoom: 1.2,
     }), 60);
-  }, [edges, fitView, nodes, paletteCollapsed, readOnly, resultsCollapsed, resultsWidth, setNodes]);
+  }, [fitView, paletteCollapsed, readOnly, resultsCollapsed, resultsWidth, setNodes]);
 
-  const flowNodes = useMemo(() => nodes.map((node) => {
-    const runtimeInfo = currentRun?.node_statuses?.[node.id];
-    return {
-      ...node,
-      data: {
-        ...node.data,
-        onRename: renameNode,
-        runtimeStatus: runtimeInfo?.status || null,
-        runtimeInfo: runtimeInfo || null,
-      },
-    };
-  }), [currentRun?.node_statuses, nodes, renameNode]);
+  const renderedNodeCacheRef = useRef(new Map<string, RenderedNodeCacheEntry>());
+  const flowNodes = useMemo(() => {
+    const previous = renderedNodeCacheRef.current;
+    const next = new Map<string, RenderedNodeCacheEntry>();
+    const rendered = nodes.map((node) => {
+      const runtimeInfo = currentRun?.node_statuses?.[node.id] || null;
+      const cached = previous.get(node.id);
+      if (
+        cached
+        && cached.source === node
+        && cached.runtimeInfo === runtimeInfo
+        && cached.rename === renameNode
+      ) {
+        next.set(node.id, cached);
+        return cached.rendered;
+      }
+      const item = {
+        ...node,
+        data: {
+          ...node.data,
+          onRename: renameNode,
+          runtimeStatus: runtimeInfo?.status || null,
+          runtimeInfo,
+        },
+      };
+      next.set(node.id, {
+        source: node,
+        runtimeInfo,
+        rename: renameNode,
+        rendered: item,
+      });
+      return item;
+    });
+    renderedNodeCacheRef.current = next;
+    return rendered;
+  }, [currentRun?.node_statuses, nodes, renameNode]);
 
   return {
     onInputSourceHandleChange,

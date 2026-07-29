@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Node } from '@xyflow/react';
-import type { AnalysisBoardItem, AnalysisBoardTab, BoardViewport } from '../../../_model/board';
+import type { AnalysisBoardItem, AnalysisBoardTab } from '../../../_model/board';
 import type { Output } from '../../../_model/output';
 import {
   boardOutputTitle,
@@ -129,20 +129,6 @@ export function useAnalysisBoards({
     setTargetBoardId(id);
   }, [readOnly]);
 
-  const updateViewport = useCallback((boardId: string, viewport: BoardViewport) => {
-    if (readOnly) return;
-    setBoards((current) => current.map((board) => {
-      if (board.id !== boardId) return board;
-      const previous = board.viewport || { x: 0, y: 0, scale: 1 };
-      if (
-        Math.abs(previous.x - viewport.x) < 0.01
-        && Math.abs(previous.y - viewport.y) < 0.01
-        && Math.abs(previous.scale - viewport.scale) < 0.0001
-      ) return board;
-      return { ...board, viewport };
-    }));
-  }, [readOnly]);
-
   const renameBoard = useCallback((id: string, name: string) => {
     if (readOnly || !name.trim()) return;
     setBoards((current) => current.map((board) => (
@@ -224,7 +210,6 @@ export function useAnalysisBoards({
     addOutputToMainBoard,
     addOutputFromResults,
     createBoard,
-    updateViewport,
     renameBoard,
     removeBoard,
     renameNodeSources,

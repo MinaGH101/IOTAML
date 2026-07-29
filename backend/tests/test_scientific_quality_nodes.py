@@ -12,6 +12,7 @@ from app.nodes.inspection.duplicate_error_node import DuplicateSampleErrorNode
 from app.nodes.io import dataframe_result
 from app.nodes.registry import get_node_runner
 from app.nodes.visualization.barplot_node import BarPlotNode
+from app.nodes.visualization.clustering_plot_node import ClusteringPlotNode
 from app.nodes.visualization.pp_plot_node import PPPlotNode
 from app.nodes.transformation.transpose_node import TransposeDataFrameNode
 
@@ -100,6 +101,50 @@ def test_pp_plot_and_correlation_heatmap_produce_plot_outputs() -> None:
     assert heatmap['outputs'][0]['labels'] == ['x', 'y']
 
 
+def test_clustering_plot_supports_columns_and_rows_with_compact_plot_payloads() -> None:
+    frame = pd.DataFrame({
+        'sample_id': ['A', 'B', 'C', 'D'],
+        'Au': [1.0, 1.2, 8.0, 8.3],
+        'Cu': [2.0, 2.2, 7.0, 7.1],
+        'Zn': [9.0, 8.8, 1.0, 1.2],
+    })
+    source = {'input': dataframe_result(frame, id_column='sample_id')}
+    node = {'id': 'cluster', 'data': {'label': 'Clustering'}}
+
+    columns_result = ClusteringPlotNode().run(
+        node,
+        source,
+        {
+            'cluster_target': 'columns',
+            'columns': ['Au', 'Cu', 'Zn'],
+            'methods': ['ward'],
+            'metric': 'euclidean',
+            'scale': True,
+        },
+        None,
+    )
+    columns_output = columns_result['output']
+    assert columns_output['kind'] == 'dendrogram'
+    assert {item['label'] for item in columns_output['labels']} == {'Au', 'Cu', 'Zn'}
+    assert len(columns_output['segments']) == 2
+    assert 'linkage_matrix' not in columns_output
+    assert 'leaf_order' not in columns_output
+
+    rows_result = ClusteringPlotNode().run(
+        node,
+        source,
+        {
+            'cluster_target': 'rows',
+            'columns': ['Au', 'Cu', 'Zn'],
+            'methods': ['average'],
+            'metric': 'cosine',
+            'scale': False,
+        },
+        None,
+    )
+    assert {item['label'] for item in rows_result['output']['labels']} == {'A', 'B', 'C', 'D'}
+
+
 def test_sorted_gap_outlier_caps_abrupt_upper_tail_and_adds_flags() -> None:
     frame = pd.DataFrame({'sample_id': list('abcdefghijkl'), 'value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 70, 90]})
     result = SortedGapOutlierNode().run(
@@ -133,7 +178,7 @@ def test_transpose_dataframe_uses_selected_row_labels_as_columns() -> None:
     assert result['_df']['metric'].tolist() == ['mae', 'rmse']
 
 def test_new_nodes_are_available_in_registry() -> None:
-    for node_id in ('IN-008', 'AD-005', 'TR-014', 'VZ-005', 'VZ-006'):
+    for node_id in ('IN-008', 'AD-005', 'TR-014', 'VZ-005', 'VZ-006', 'VZ-007'):
         assert get_node_runner(node_id) is not None
 
 

@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type SetStateAction,
 } from 'react';
@@ -31,6 +32,7 @@ import { useAnalysisBoards } from './_hooks/useAnalysisBoards';
 import { useCustomNodes } from './_hooks/useCustomNodes';
 import { useNodeColumnContext } from './_hooks/useNodeColumnContext';
 import { useProjectDatasets } from './_hooks/useProjectDatasets';
+import { usePersistentWorkflowViewport } from './_hooks/usePersistentWorkflowViewport';
 import { terminalRunStatuses, useRunHistory } from './_hooks/useRunHistory';
 import { useWorkflowCanvasActions } from './_hooks/useWorkflowCanvasActions';
 import { useWorkflowDocument } from './_hooks/useWorkflowDocument';
@@ -56,7 +58,7 @@ function WorkflowEditor({
   onLogout,
   onProjects,
 }: WorkflowPageProps) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, setViewport } = useReactFlow();
   const projectId = project.id;
   const [catalog, setCatalog] = useState<NodeCatalogResponse>({
     version: 0,
@@ -66,6 +68,8 @@ function WorkflowEditor({
     compatiblePorts: {},
   });
   const registry = catalog.nodes;
+  const viewportStorageScope = `user:${user.username}:project:${projectId}:workflow:${initialWorkflowId ?? 'draft'}`;
+  const workflowCanvas = usePersistentWorkflowViewport({ storageScope: viewportStorageScope, setViewport });
   const [targetColumn, setTargetColumn] = useState('target');
   const [taskType, setTaskType] = useState('auto');
   const [message, setMessage] = useState('');
@@ -76,19 +80,54 @@ function WorkflowEditor({
     initialWorkflowViewState,
   );
   const { paletteCollapsed, resultsCollapsed, analysisBoardOpen } = viewState;
+  const viewStateRef = useRef(viewState);
+  viewStateRef.current = viewState;
+  const workflowPanelStateRef = useRef({ paletteCollapsed, resultsCollapsed });
   const setPaletteCollapsed = useCallback((value: SetStateAction<boolean>) => {
-    dispatchViewState({ type: 'palette', value });
+    const current = viewStateRef.current;
+    const next = typeof value === 'function' ? value(current.paletteCollapsed) : value;
+    viewStateRef.current = { ...current, paletteCollapsed: next };
+    if (!current.analysisBoardOpen) workflowPanelStateRef.current.paletteCollapsed = next;
+    dispatchViewState({ type: 'palette', value: next });
   }, []);
   const setResultsCollapsed = useCallback((value: SetStateAction<boolean>) => {
-    dispatchViewState({ type: 'results', value });
+    const current = viewStateRef.current;
+    const next = typeof value === 'function' ? value(current.resultsCollapsed) : value;
+    viewStateRef.current = { ...current, resultsCollapsed: next };
+    if (!current.analysisBoardOpen) workflowPanelStateRef.current.resultsCollapsed = next;
+    dispatchViewState({ type: 'results', value: next });
   }, []);
   const setAnalysisBoardOpen = useCallback((value: SetStateAction<boolean>) => {
-    dispatchViewState({ type: 'analysis-board', value });
+    const current = viewStateRef.current;
+    const next = typeof value === 'function' ? value(current.analysisBoardOpen) : value;
+    if (next === current.analysisBoardOpen) return;
+    if (next) {
+      workflowPanelStateRef.current = {
+        paletteCollapsed: current.paletteCollapsed,
+        resultsCollapsed: current.resultsCollapsed,
+      };
+      viewStateRef.current = {
+        paletteCollapsed: true,
+        resultsCollapsed: true,
+        analysisBoardOpen: true,
+      };
+      dispatchViewState({ type: 'palette', value: true });
+      dispatchViewState({ type: 'results', value: true });
+    } else {
+      viewStateRef.current = {
+        ...workflowPanelStateRef.current,
+        analysisBoardOpen: false,
+      };
+      dispatchViewState({ type: 'palette', value: workflowPanelStateRef.current.paletteCollapsed });
+      dispatchViewState({ type: 'results', value: workflowPanelStateRef.current.resultsCollapsed });
+    }
+    dispatchViewState({ type: 'analysis-board', value: next });
   }, []);
 
   const graph = useWorkflowGraph({ readOnly: Boolean(versionPreview) });
   const {
     nodes,
+    documentNodes,
     setNodes,
     edges,
     setEdges,
@@ -138,7 +177,7 @@ function WorkflowEditor({
   const boards = useAnalysisBoards({
     outputs: allRunOutputs,
     currentRunId: currentRun?.id ?? null,
-    nodes,
+    nodes: documentNodes,
     selectedNodeId: selectedId,
     readOnly: Boolean(versionPreview),
     boardOpen: analysisBoardOpen,
@@ -162,7 +201,7 @@ function WorkflowEditor({
   const components = useWorkflowComponents({
     projectId,
     user,
-    nodes,
+    nodes: documentNodes,
     setNodes,
     edges,
     setEdges,
@@ -186,7 +225,7 @@ function WorkflowEditor({
     initialWorkflowId,
     catalog,
     setCatalog,
-    nodes,
+    nodes: documentNodes,
     setNodes,
     edges,
     setEdges,
@@ -198,6 +237,7 @@ function WorkflowEditor({
     setTargetColumn,
     taskType,
     setTaskType,
+    restoreWorkflowCanvasViewport: workflowCanvas.restore,
     serializedBoards: serializedAnalysisBoards,
     analysisBoardSignature,
     activeBoardId,
@@ -222,7 +262,7 @@ function WorkflowEditor({
     inheritedIdColumn,
     availableRows,
   } = useNodeColumnContext({
-    nodes,
+    nodes: documentNodes,
     edges,
     nodesById,
     datasets,
@@ -264,7 +304,7 @@ function WorkflowEditor({
     renameNodeSources,
   });
   const execution = useWorkflowExecution({
-    nodes,
+    nodes: documentNodes,
     edges,
     selectedId,
     setSelectedId,
@@ -405,6 +445,9 @@ function WorkflowEditor({
         paletteCollapsed={paletteCollapsed}
         resultsCollapsed={resultsCollapsed}
         analysisBoardOpen={analysisBoardOpen}
+        workflowViewport={workflowCanvas.viewport}
+        onWorkflowViewportChange={workflowCanvas.update}
+        viewportStorageScope={viewportStorageScope}
         setPaletteCollapsed={setPaletteCollapsed}
         setResultsCollapsed={setResultsCollapsed}
         workflowDirtyForBoard={workflowDirtyForBoard}

@@ -471,7 +471,7 @@ overflow:hidden
 display:none!important
 }
 
-.iota-minimal-page .reference-back-row,.iota-minimal-page .profile-layout-reference,.iota-minimal-page .projects-reference-layout,.iota-minimal-page .project-detail-reference-layout,.iota-minimal-page .project-create-reference-layout {
+.iota-minimal-page .reference-back-row,.iota-minimal-page .profile-layout-reference,.iota-minimal-page .project-detail-reference-layout,.iota-minimal-page .project-create-reference-layout {
 position:relative;
 z-index:1;
 width:min(1180px,100%)!important;
@@ -480,13 +480,6 @@ margin-inline:auto!important
 
 .iota-minimal-page .reference-back-row {
 margin-bottom:12px!important
-}
-
-.iota-minimal-page .projects-reference-layout {
-display:grid!important;
-grid-template-columns:minmax(250px,300px) minmax(0,1fr)!important;
-gap:14px!important;
-min-height:calc(100dvh - 122px)!important
 }
 
 .iota-minimal-page .project-detail-reference-layout,.iota-minimal-page .project-create-reference-layout {
@@ -709,7 +702,7 @@ border:var(--theme-border-width) solid var(--theme-primary-soft)
 }
 
 @media (width <= 1180px) {
-.iota-minimal-page .projects-reference-layout,.iota-minimal-page .project-detail-reference-layout,.iota-minimal-page .project-create-reference-layout,.iota-minimal-page .profile-side-stack-reference {
+.iota-minimal-page .project-detail-reference-layout,.iota-minimal-page .project-create-reference-layout,.iota-minimal-page .profile-side-stack-reference {
 grid-template-columns:1fr!important
 }
 
@@ -836,6 +829,28 @@ gap:8px!important;
 padding:0 12px!important
 }
 
+.profile-form-grid-reference .profile-field-reference {
+position:relative!important;
+display:block!important
+}
+
+.profile-form-grid-reference .profile-field-label-reference {
+position:absolute!important;
+width:1px!important;
+height:1px!important;
+padding:0!important;
+margin:-1px!important;
+overflow:hidden!important;
+clip:rect(0,0,0,0)!important;
+white-space:nowrap!important;
+border:0!important
+}
+
+.profile-form-grid-reference input::placeholder {
+color:var(--theme-text-muted);
+opacity:1
+}
+
 .profile-form-grid-reference .input-with-icon-reference input {
 width:100%!important;
 min-width:0!important;
@@ -890,16 +905,3 @@ text-align:right!important
 direction:rtl!important;
 text-align:right!important
 }
-
-main.manager-page.projects-reference-page {
-padding-left:100px!important;
-padding-right:100px!important
-}
-
-main.manager-page.projects-reference-page > .projects-reference-layout {
-width:100%!important;
-max-width:none!important;
-margin:0!important;
-grid-template-columns:300px minmax(0,1fr)!important
-}
-

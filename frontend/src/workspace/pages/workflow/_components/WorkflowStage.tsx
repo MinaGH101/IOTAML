@@ -7,6 +7,7 @@ import type { SetStateAction } from 'react';
 import type { Dataset, NodeCatalogResponse, RegistryNode } from '../../../../shared/_types';
 import type { useWorkflowLayout } from '../../../_hooks/useWorkflowLayout';
 import { MAIN_ANALYSIS_BOARD_ID } from '../../../_model/graph';
+import type { WorkflowViewport } from '../../../_model/graph';
 import { BoardPage } from '../../board/BoardPage';
 import type { WorkflowComponentsController } from '../_features/components/_hooks/useWorkflowComponents';
 import type { useAnalysisBoards } from '../_hooks/useAnalysisBoards';
@@ -46,6 +47,9 @@ export function WorkflowStage({
   paletteCollapsed,
   resultsCollapsed,
   analysisBoardOpen,
+  workflowViewport,
+  onWorkflowViewportChange,
+  viewportStorageScope,
   setPaletteCollapsed,
   setResultsCollapsed,
   workflowDirtyForBoard,
@@ -70,6 +74,9 @@ export function WorkflowStage({
   paletteCollapsed: boolean;
   resultsCollapsed: boolean;
   analysisBoardOpen: boolean;
+  workflowViewport: WorkflowViewport;
+  onWorkflowViewportChange: (viewport: WorkflowViewport) => void;
+  viewportStorageScope: string;
   setPaletteCollapsed: (value: SetStateAction<boolean>) => void;
   setResultsCollapsed: (value: SetStateAction<boolean>) => void;
   workflowDirtyForBoard: boolean;
@@ -119,6 +126,7 @@ export function WorkflowStage({
               edges={graph.edges}
               nodeTypes={nodeTypes}
               onNodesChange={graph.onNodesChange}
+              onNodeDragStop={graph.commitNodePositions}
               onEdgesChange={graph.onEdgesChange}
               onConnect={canvas.onConnect}
               onSelectionChange={graph.onSelectionChange}
@@ -135,7 +143,8 @@ export function WorkflowStage({
               panOnDrag={!graph.ctrlSelectionActive}
               className={graph.ctrlSelectionActive ? 'workflow-ctrl-selection-active' : ''}
               onlyRenderVisibleElements
-              fitView
+              defaultViewport={workflowViewport}
+              onMoveEnd={(_, viewport) => onWorkflowViewportChange(viewport)}
             >
               <Controls />
               <MiniMap
@@ -164,7 +173,7 @@ export function WorkflowStage({
               onUpdateItem={boards.updateItem}
               onRemoveItem={boards.removeItem}
               onDuplicateItem={boards.duplicateItem}
-              onViewportChange={boards.updateViewport}
+              viewportStorageScope={viewportStorageScope}
               readOnly={readOnly}
             />
           </div>
