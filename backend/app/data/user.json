@@ -2,7 +2,6 @@
   "users": [
     {
       "username": "admin",
-      "password": "admin123",
       "first_name": "IOTA",
       "last_name": "Admin",
       "phone_number": "+994 00 000 00 00",
@@ -12,22 +11,61 @@
       "title": "Project Manager",
       "department": "AI Analytics",
       "activity": [
-        { "label": "Sat", "value": 4 },
-        { "label": "Sun", "value": 7 },
-        { "label": "Mon", "value": 5 },
-        { "label": "Tue", "value": 9 },
-        { "label": "Wed", "value": 6 },
-        { "label": "Thu", "value": 8 },
-        { "label": "Fri", "value": 3 }
+        {
+          "label": "Sat",
+          "value": 4
+        },
+        {
+          "label": "Sun",
+          "value": 7
+        },
+        {
+          "label": "Mon",
+          "value": 5
+        },
+        {
+          "label": "Tue",
+          "value": 9
+        },
+        {
+          "label": "Wed",
+          "value": 6
+        },
+        {
+          "label": "Thu",
+          "value": 8
+        },
+        {
+          "label": "Fri",
+          "value": 3
+        }
       ],
       "alarms": [
-        { "title": "Due date check", "message": "Review open projects with due dates this week.", "level": "warning" },
-        { "title": "Dataset quality", "message": "Check missing values before training models.", "level": "info" }
+        {
+          "title": "Due date check",
+          "message": "Review open projects with due dates this week.",
+          "level": "warning"
+        },
+        {
+          "title": "Dataset quality",
+          "message": "Check missing values before training models.",
+          "level": "info"
+        }
       ],
       "notifications": [
-        { "title": "Welcome", "message": "Project workspace is ready.", "time": "Today" },
-        { "title": "Workflow tip", "message": "Use project detail to keep data and workflows separated.", "time": "Today" }
-      ]
+        {
+          "title": "Welcome",
+          "message": "Project workspace is ready.",
+          "time": "Today"
+        },
+        {
+          "title": "Workflow tip",
+          "message": "Use project detail to keep data and workflows separated.",
+          "time": "Today"
+        }
+      ],
+      "password_hash": "pbkdf2_sha256$310000$ZGV2ZWxvcG1lbnQtc2FsdA$ry7BLpRy7BgQxApCqgsCBRsQ-CORCIMEijweYGKR5cE",
+      "development_default": true
     }
   ]
 }

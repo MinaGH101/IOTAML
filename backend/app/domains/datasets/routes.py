@@ -1,44 +1,69 @@
+"""Dataset routes with project-level authorization."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.core.config import get_settings
+from app.core.database import get_db
+from app.core.rate_limit import rate_limit
+from app.domains.auth.models import User
+from app.domains.auth.service import get_current_user_model
 from app.domains.datasets.repository import dataset_repository
 from app.domains.datasets.schemas import DatasetOut
 from app.domains.datasets.service import delete_dataset, get_dataset, read_dataset, upload_dataset
-from app.services.users import get_current_user
+from app.domains.projects.access import require_project_edit, require_project_view
 
-router = APIRouter(prefix="/datasets", tags=["datasets"])
+router = APIRouter(prefix='/datasets', tags=['datasets'])
 
 
-@router.post("/upload", response_model=DatasetOut)
+def _dataset_and_owner(db: Session, dataset_id: int, user: User, *, write: bool = False):
+    dataset = dataset_repository.get(db, dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail='Dataset not found.')
+    if dataset.project_id is None:
+        if dataset.owner_username.lower() != user.username.lower():
+            raise HTTPException(status_code=404, detail='Dataset not found.')
+    elif write:
+        require_project_edit(db, dataset.project_id, user)
+    else:
+        require_project_view(db, dataset.project_id, user)
+    return dataset, dataset.owner_username
+
+
+@router.post('/upload', response_model=DatasetOut)
 def upload_dataset_route(
-    file: UploadFile = File(...),
-    project_id: int | None = Form(default=None),
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    file: UploadFile = File(...), project_id: int | None = Form(default=None),
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model),
+    _: None = Depends(rate_limit('dataset_upload', limit=get_settings().upload_rate_limit_per_minute)),
 ):
-    return upload_dataset(db, upload=file, project_id=project_id, owner_username=str(current_user["username"]))
+    owner = current_user.username
+    if project_id is not None:
+        project, _ = require_project_edit(db, project_id, current_user)
+        owner = project.owner_username
+    return upload_dataset(db, upload=file, project_id=project_id, owner_username=owner)
 
 
-@router.get("", response_model=list[DatasetOut])
-def list_datasets(project_id: int | None = None, db: Session = Depends(get_db)):
-    return dataset_repository.list(db, project_id)
+@router.get('', response_model=list[DatasetOut])
+def list_datasets(project_id: int | None = None, limit: int = Query(default=50, ge=1), offset: int = Query(default=0, ge=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
+    owner = current_user.username
+    if project_id is not None:
+        project, _ = require_project_view(db, project_id, current_user)
+        owner = project.owner_username
+    return dataset_repository.list(db, owner, project_id, limit=min(limit, get_settings().api_max_page_size), offset=offset)
 
 
-@router.get("/{dataset_id}/preview")
-def preview_dataset(dataset_id: int, db: Session = Depends(get_db)):
-    dataset = get_dataset(db, dataset_id)
-    frame = read_dataset(db, dataset, max_rows=25)
-    return {"columns": dataset.columns, "rows": frame.where(frame.notna(), None).to_dict(orient="records")}
+@router.get('/{dataset_id}/preview')
+def preview_dataset(dataset_id: int, limit: int = Query(default=25, ge=1), db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
+    settings = get_settings()
+    dataset, _ = _dataset_and_owner(db, dataset_id, current_user)
+    frame = read_dataset(db, dataset, max_rows=min(limit, settings.upload_preview_max_rows))
+    frame = frame.iloc[:, : settings.upload_preview_max_columns]
+    return {'columns': [item for item in dataset.columns if item.get('name') in frame.columns], 'rows': frame.where(frame.notna(), None).to_dict(orient='records'), 'rows_total': dataset.row_count, 'columns_total': len(dataset.columns)}
 
 
-@router.delete("/{dataset_id}")
-def delete_dataset_route(
-    dataset_id: int,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    delete_dataset(db, dataset_id, str(current_user["username"]))
-    return {"ok": True}
+@router.delete('/{dataset_id}')
+def delete_dataset_route(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
+    _, owner = _dataset_and_owner(db, dataset_id, current_user, write=True)
+    delete_dataset(db, dataset_id, owner)
+    return {'ok': True}

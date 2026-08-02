@@ -7,8 +7,8 @@ import Cubes from './_components/Cubes';
 import type { UserProfile } from '../../../shared/_types';
 
 export function LoginPage({ onLogin }: { onLogin: (user: UserProfile) => void }) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,13 +48,13 @@ export function LoginPage({ onLogin }: { onLogin: (user: UserProfile) => void })
             </div>
 
             <label>
-              نام کاربری
+              ایمیل یا نام کاربری
               <div className="auth-input-wrap">
                 <User size={15} />
                 <input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  autoComplete="username"
+                  autoComplete="username" placeholder="name@example.com"
                 />
               </div>
             </label>

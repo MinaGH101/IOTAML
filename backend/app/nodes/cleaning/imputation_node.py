@@ -1,3 +1,5 @@
+"""Workflow node implementation for imputation node in the cleaning family."""
+
 from __future__ import annotations
 
 import json

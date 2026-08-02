@@ -1,7 +1,11 @@
+"""Core backend infrastructure for http."""
+
 from __future__ import annotations
 
 import json
 import logging
+import re
+import time
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
@@ -10,9 +14,11 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response, StreamingResponse
 
+from app.core.config import get_settings
 from app.core.errors import AppError
-from app.core.request_context import set_request_id
+from app.core.request_context import bind_context, reset_context
 from app.core.responses import error_payload, success_payload
+from app.infrastructure.observability import record_request
 
 logger = logging.getLogger("iota.api")
 
@@ -33,53 +39,62 @@ def _http_error_code(status_code: int) -> str:
 
 class ApiEnvelopeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        request_id = request.headers.get("X-Request-ID") or uuid4().hex
+        supplied = request.headers.get('X-Request-ID', '')
+        request_id = supplied if re.fullmatch(r'[A-Za-z0-9._-]{1,128}', supplied) else uuid4().hex
         request.state.request_id = request_id
-        set_request_id(request_id)
-
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-
-        if not request.url.path.startswith("/api"):
-            return response
-        if isinstance(response, StreamingResponse) and response.media_type not in {"application/json", None}:
-            return response
-        content_type = response.headers.get("content-type", "")
-        if "application/json" not in content_type:
-            return response
-
-        body = b""
-        async for chunk in response.body_iterator:
-            body += chunk
+        token = bind_context(request_id=request_id)
+        started = time.perf_counter()
+        response = None
         try:
-            payload = json.loads(body.decode("utf-8")) if body else None
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return Response(
-                content=body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
+            response = await call_next(request)
+            response.headers['X-Request-ID'] = request_id
 
-        if isinstance(payload, dict) and "success" in payload:
-            wrapped = payload
-        elif response.status_code >= 400:
-            detail = payload.get("detail") if isinstance(payload, dict) else None
-            wrapped = error_payload(
-                code=_http_error_code(response.status_code),
-                message=str(detail or "Request failed."),
-                request_id=request_id,
-            )
-        else:
-            wrapped = success_payload(payload, request_id=request_id)
+            if not request.url.path.startswith('/api'):
+                return response
+            if isinstance(response, StreamingResponse) and response.media_type not in {'application/json', None}:
+                return response
+            content_type = response.headers.get('content-type', '')
+            if 'application/json' not in content_type:
+                return response
 
-        headers = {
-            key: value
-            for key, value in response.headers.items()
-            if key.lower() not in {"content-length", "content-type", "x-request-id"}
-        }
-        headers["X-Request-ID"] = request_id
-        return JSONResponse(content=wrapped, status_code=response.status_code, headers=headers)
+            maximum = get_settings().api_max_response_bytes
+            body = bytearray()
+            async for chunk in response.body_iterator:
+                body.extend(chunk)
+                if len(body) > maximum:
+                    return JSONResponse(
+                        status_code=500,
+                        content=error_payload(
+                            code='RESPONSE_TOO_LARGE',
+                            message='The response exceeded the configured size limit.',
+                            details={'max_bytes': maximum},
+                            request_id=request_id,
+                        ),
+                        headers={'X-Request-ID': request_id},
+                    )
+            raw_body = bytes(body)
+            try:
+                payload = json.loads(raw_body.decode('utf-8')) if raw_body else None
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                return Response(content=raw_body, status_code=response.status_code, headers=dict(response.headers), media_type=response.media_type)
+
+            if isinstance(payload, dict) and 'success' in payload:
+                wrapped = payload
+            elif response.status_code >= 400:
+                detail = payload.get('detail') if isinstance(payload, dict) else None
+                wrapped = error_payload(code=_http_error_code(response.status_code), message=str(detail or 'Request failed.'), request_id=request_id)
+            else:
+                wrapped = success_payload(payload, request_id=request_id)
+
+            headers = {key: value for key, value in response.headers.items() if key.lower() not in {'content-length', 'content-type', 'x-request-id'}}
+            headers['X-Request-ID'] = request_id
+            return JSONResponse(content=wrapped, status_code=response.status_code, headers=headers)
+        finally:
+            duration_ms = round((time.perf_counter() - started) * 1000)
+            status_code = int(getattr(response, 'status_code', 500))
+            record_request(request.method, request.url.path, status_code, duration_ms)
+            logger.info('HTTP request completed', extra={'duration_ms': duration_ms, 'status_code': status_code})
+            reset_context(token)
 
 
 def install_exception_handlers(app: FastAPI) -> None:

@@ -1,3 +1,5 @@
+"""Artifacts domain repository for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,6 +25,8 @@ class ArtifactRepository:
         artifact_type: str | None = None,
         include_deleted: bool = False,
         include_internal: bool = False,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[Artifact]:
         query = db.query(Artifact).filter(Artifact.owner_username == owner_username)
         if not include_deleted:
@@ -37,7 +41,7 @@ class ArtifactRepository:
             query = query.filter(Artifact.node_id == node_id)
         if artifact_type:
             query = query.filter(Artifact.artifact_type == artifact_type)
-        return query.order_by(Artifact.created_at.desc()).all()
+        return query.order_by(Artifact.created_at.desc(), Artifact.id.desc()).offset(offset).limit(limit).all()
 
     def add(self, db: Session, artifact: Artifact) -> Artifact:
         db.add(artifact)

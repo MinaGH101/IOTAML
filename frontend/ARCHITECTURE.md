@@ -1,73 +1,95 @@
-# Frontend architecture
+# IOTA ML frontend architecture
 
-The frontend is organized by product capability. A feature owns its pages,
-components, API client, state helpers, and domain model. Code moves into
-`shared` only when at least two features genuinely reuse it.
+## Goal
+
+The frontend is organized around product capabilities and explicit state boundaries. Compatibility folders (`auth`, `projects`, `workspace`) remain where moving them would create unnecessary route/API risk; new infrastructure and decomposed implementations live under `app`, `features`, `entities`, and `shared`.
 
 ```text
 src/
-├── app/                         # Typed URL routing and application composition
-├── auth/
-│   ├── _service/                # Authentication/profile API
-│   └── pages/
-│       ├── login/
-│       │   └── _components/     # Login-only presentation
-│       └── profile/
-├── projects/
-│   ├── _components/             # Components shared by project pages
-│   ├── _service/                # Projects, datasets, artifacts API
-│   └── pages/
-│       ├── create-project/
-│       ├── project-management/
-│       └── project-detail/
-├── workspace/
-│   ├── _components/             # Editors used across workspace pages
-│   ├── _hooks/                  # Workspace orchestration hooks
-│   ├── _model/                  # Graph/runtime rules and unit tests
-│   ├── _service/                # Workflows, runs, components API
-│   └── pages/
-│       ├── workflow/
-│       │   ├── _components/     # Workflow-page shell panels
-│       │   ├── _hooks/          # Document, persistence, run and canvas controllers
-│       │   ├── _model/          # Page-local pure layout rules and tests
-│       │   └── _features/
-│       │       ├── boards/      # Board dialogs and UI state
-│       │       └── components/  # Component editor/library/model ownership
-│       └── board/
-│           ├── _components/     # Board cards and controls
-│           ├── _hooks/          # Viewport and pointer lifecycle
-│           └── _utils/          # Interaction primitives
+├── app/                    # application composition, route parsing, providers, root boundaries
+├── features/
+│   ├── execution/          # run API, single progress transport and polling policy
+│   ├── results/            # output renderers, chart registry, output references
+│   ├── workflow/           # workflow API, graph store, parameter editors, node dialog
+│   ├── components/         # reusable-component API
+│   ├── custom-nodes/       # catalog/custom-node API
+│   ├── assistant/          # assistant API
+│   └── auth/               # target boundary for subsequent route migration
+├── entities/               # stable cross-feature domain models
+├── auth/                   # compatible login/profile routes and API facade
+├── projects/               # project, dataset and artifact pages/API
+├── workspace/              # compatible workflow/Board route composition
 ├── shared/
-│   ├── _components/             # Feature-neutral UI primitives
-│   ├── _service/                # HTTP transport and session token
-│   ├── _types/                  # Cross-feature API contracts
-│   └── _utils/                  # Feature-neutral helpers
-└── styles/                       # Layered global style system
+│   ├── api/                # the only fetch boundary
+│   ├── auth/               # token storage adapter
+│   ├── state/              # request deduplication/cache boundary
+│   ├── _types/             # exact backend transport DTOs
+│   └── _components/        # feature-neutral controls
+└── styles/                 # theme, semantic tokens, base, feature sheets, utilities
 ```
 
-## Dependency rules
+## Application providers
 
-- `shared` never imports a product feature.
-- `auth` is independent of `projects` and `workspace`.
-- Cross-feature calls use another feature's `_service` boundary; features do
-  not reach into one another's components or internal model.
-- Page-only UI belongs in that page's `_components`; feature-wide UI belongs
-  in the feature's `_components`.
-- Business and graph rules stay outside React components in `_model` and are
-  covered by colocated tests.
-- `app` composes features and is the only layer that knows the complete
-  application navigation flow. Routes are canonical URLs built on the browser
-  History API, so project and workflow pages support refresh and deep links
-  without adding a second navigation state.
-- The workflow page is an orchestrator. Graph selection, column context,
-  analysis boards, run polling, datasets, custom nodes, document persistence,
-  version handling, execution, and component lifecycle each own their state in
-  focused hooks. Pure graph transformations and layout rules stay in `_model`.
-- Shared API contracts are split by domain and re-exported from
-  `shared/_types/index.ts` for compatibility.
+`AppProviders` composes the root error boundary, theme provider and authentication provider. `App.tsx` resolves routes and composes pages; it does not own workflow, execution, chart, Board or dialog internals.
 
-Run `npm run check:architecture` after moving or adding frontend files. The
-check validates relative imports, required folders, retired legacy paths, and
-the dependency rules above. It also rejects route pages over 500 lines and
-workflow hooks over 450 lines so orchestration cannot silently collapse back
-into a god component.
+## API boundary
+
+`shared/api/httpClient.ts` is the only module permitted to call `fetch`. It owns:
+
+- API base URL resolution.
+- bearer-token injection through `AuthTokenStorage`.
+- request timeout and caller cancellation.
+- success/error envelope parsing.
+- structured `ApiError` and request IDs.
+- 204 responses, JSON, uploads and downloads.
+- centralized unauthorized notification.
+
+Domain clients are split into auth, projects/datasets/artifacts, workflows, runs, nodes, components and assistant. `workspaceApi` is a temporary compatibility facade only.
+
+## Workflow document
+
+`features/workflow/model/workflowGraphStore.ts` creates a feature-scoped feature-scoped atomic external store. It separates persisted nodes/edges from live React Flow nodes and temporary selection/modal state. Atomic selectors are used by `useWorkflowGraph`; runtime status does not become persisted graph content and drag positions are committed at interaction boundaries.
+
+## Execution
+
+`useRunHistory` is the single owner of the active run and run history. `createRunProgressTransport` guarantees one abortable progress channel per active run, pauses while the tab is hidden, immediately resumes when visible, backs off failures and emits a connection state. The transport interface can be replaced by SSE/WebSocket without changing consumers.
+
+## Results and outputs
+
+The Results panel is registry-driven:
+
+```text
+ResultsPanel → OutputCards → OutputCard → OutputRenderer
+```
+
+Each output is isolated by an error boundary. Tables, interactive tables, charts, files and generic values are selected by declared output kind rather than one growing conditional component.
+
+Board cards persist an `OutputReference` (`runId`, `nodeId`, `outputId`, optional artifact/revision) plus layout only. Legacy bounded snapshots are read during migration but are not written for new cards. Results, maximize dialogs and Board cards resolve the same current output.
+
+## Chart lifecycle
+
+`features/results/charts/amcharts` owns chart transformation and construction:
+
+- `AmChartsRenderer` owns one root and disposal.
+- `chartCore` owns palette, axes, tooltip, legend and resize helpers.
+- renderers are separated by chart family.
+- delayed frames and `ResizeObserver` are cancelled at unmount.
+- hidden outputs are not constructed by Results renderers.
+
+## Parameter and node editing
+
+`ParamEditor` is a bounded registry orchestrator. Field families are in `features/workflow/parameter-editors`. The Node modal composes independent header, inputs, settings and outputs panels and is protected by a feature-level error boundary.
+
+## Reusable components
+
+The previous component-editor controller is split into state, navigation and action hooks. It reuses workflow graph rules rather than maintaining a second page-level graph controller.
+
+## CSS
+
+`theme.css` remains the palette authority. `styles/tokens/semantic.css` maps palette values to semantic surfaces, content, status, spacing, radius, motion and z-index roles. Base document invariants and accessibility/scrollbar utilities are separate. Existing large feature sheets remain for visual compatibility and are guarded by theme/CSS-debt checks while rules are migrated by ownership.
+
+## Enforced boundaries
+
+- `npm run check:architecture` rejects unresolved relative imports, retired roots and oversized route/hook orchestrators.
+- `npm run lint` rejects direct fetch, scattered token storage, unsafe TypeScript suppressions and placeholder implementation markers.
+- `npm run check:theme` rejects colors, theme variables, shadows and radii outside approved token files.

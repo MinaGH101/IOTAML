@@ -1,9 +1,11 @@
+"""Regression and contract tests for node cache."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
-from app.services.node_cache_keys import canonical_json, full_cache_key, sha256_json, static_fingerprint
-from app.services.node_cache_runtime import RuntimeNodeCache, _sha256_file
+from app.workflow.caching.keys import canonical_json, full_cache_key, sha256_json, static_fingerprint
+from app.workflow.caching.runtime import RuntimeNodeCache, _sha256_file
 
 
 def _node() -> dict:
@@ -112,12 +114,14 @@ def test_persisted_cache_records_create_artifacts_lineage_and_reusable_manifest(
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
-    from app.database import Base
+    from app.core.database import Base
     from app.domains.artifacts.models import ArtifactLineage, NodeCacheEntry, NodeExecution
     from app.infrastructure.storage.service import get_storage_backend
-    from app.models import Project, Run, Workflow
-    from app.services.node_cache import persist_run_cache_records, prepare_cache_manifest
-    from app.services.run_state import utcnow
+    from app.domains.projects.models import Project
+    from app.domains.runs.models import Run
+    from app.domains.workflows.models import Workflow
+    from app.workflow.caching.service import persist_run_cache_records, prepare_cache_manifest
+    from app.infrastructure.queue.state import utcnow
 
     get_storage_backend.cache_clear()
     engine = create_engine("sqlite+pysqlite:///:memory:")

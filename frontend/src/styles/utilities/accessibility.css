@@ -1,0 +1,59 @@
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
+.icon-action,
+.modal-close,
+button[aria-label] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fatal-error {
+  place-content: center;
+  place-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  text-align: center;
+  background: var(--surface-app);
+}
+
+.fatal-error h1,
+.fatal-error p {
+  margin: 0;
+}
+
+.fatal-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--ui-radius-control);
+  padding-inline: var(--space-3);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

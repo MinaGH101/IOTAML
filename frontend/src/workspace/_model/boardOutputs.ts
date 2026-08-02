@@ -35,6 +35,18 @@ export function findCurrentBoardOutput(
   lookup: Map<string, Output[]>,
 ) {
   const searchable = lookup.get(String(item.nodeId || '')) || [];
+  const referenceKey = item.outputRef?.outputId;
+  if (referenceKey) {
+    const referenced = searchable.find((output) => {
+      const id = String(output.output_id || output.id || boardOutputKey(output));
+      return id === referenceKey;
+    });
+    if (referenced) return referenced;
+  }
+  if (item.outputKey) {
+    const keyed = searchable.find((output) => boardOutputKey(output) === item.outputKey);
+    if (keyed) return keyed;
+  }
   const exact = searchable.find(
     (output) => String(output.title || '') === item.outputTitle
       || boardOutputTitle(output, item.outputIndex) === item.outputTitle,
@@ -57,7 +69,7 @@ export function resolveBoardItems(
     return {
       item,
       currentOutput,
-      output: workflowDirty ? (item.snapshot || currentOutput) : (currentOutput || item.snapshot),
+      output: currentOutput || item.snapshot,
       stale: workflowDirty || !currentOutput,
     };
   });

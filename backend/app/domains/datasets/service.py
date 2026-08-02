@@ -1,3 +1,5 @@
+"""Datasets domain service for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import NotFoundError, StorageUnavailableError, ValidationAppError
 from app.domains.artifacts.service import create_artifact_from_upload, delete_artifact, materialize_artifact
 from app.domains.datasets.repository import dataset_repository
-from app.models import Dataset
+from app.domains.datasets.models import Dataset
 
 
 CSV_EXTENSIONS = {".csv"}
@@ -96,6 +98,7 @@ def upload_dataset(db: Session, *, upload: UploadFile, project_id: int | None, o
         content_type=artifact.content_type,
         size_bytes=artifact.size_bytes,
         checksum_sha256=artifact.checksum_sha256,
+        owner_username=owner_username,
     )
     dataset_repository.add(db, dataset)
     db.commit()
@@ -103,15 +106,15 @@ def upload_dataset(db: Session, *, upload: UploadFile, project_id: int | None, o
     return dataset
 
 
-def get_dataset(db: Session, dataset_id: int) -> Dataset:
-    dataset = dataset_repository.get(db, dataset_id)
+def get_dataset(db: Session, dataset_id: int, owner_username: str | None = None) -> Dataset:
+    dataset = dataset_repository.get(db, dataset_id, owner_username)
     if not dataset:
         raise NotFoundError("DATASET_NOT_FOUND", "Dataset not found.", {"dataset_id": dataset_id})
     return dataset
 
 
 def delete_dataset(db: Session, dataset_id: int, owner_username: str) -> None:
-    dataset = get_dataset(db, dataset_id)
+    dataset = get_dataset(db, dataset_id, owner_username)
     artifact_id = dataset.artifact_id
     legacy_path = Path(dataset.path) if not dataset.path.startswith("artifact://") else None
     db.delete(dataset)

@@ -1,5 +1,8 @@
+"""Workflow node implementation for model nodes in the ml training family."""
+
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
@@ -135,14 +138,15 @@ COMMON_SETTINGS = [
 ]
 
 
-class _BaseSklearnModelNode(BaseNode):
+class _BaseSklearnModelNode(BaseNode, ABC):
     inputs = [port('training', 'Training Data / Split / Folds', 'any')]
     outputs = [port('model', 'Model', 'model'), port('metrics', 'Training Report', 'metrics')]
     settings_schema = COMMON_SETTINGS
     task_type = 'regression'
 
-    def build_model(self, settings: dict[str, Any]):
-        raise NotImplementedError
+    @abstractmethod
+    def build_model(self, settings: dict[str, Any]) -> Any:
+        """Construct the concrete estimator for this registered model node."""
 
     def run(self, node, inputs, settings, context):
         source = _extract_training_source(inputs, settings, context, str(node['id']))

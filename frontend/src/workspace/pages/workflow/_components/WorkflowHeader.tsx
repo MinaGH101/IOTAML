@@ -11,6 +11,7 @@ import {
   Play,
   RefreshCw,
   Save,
+  ShieldCheck,
   SlidersHorizontal,
   Square,
   Trash2,
@@ -25,6 +26,8 @@ type WorkflowHeaderProps = {
   topbarRightStyle: CSSProperties;
   onLogout: () => void;
   onProfile: () => void;
+  onAdmin: () => void;
+  showAdmin: boolean;
   onProjects: () => void;
   onCancelRun: () => void;
   runActive: boolean;
@@ -60,6 +63,8 @@ export const WorkflowHeader = memo(function WorkflowHeader({
   topbarRightStyle,
   onLogout,
   onProfile,
+  onAdmin,
+  showAdmin,
   onProjects,
   onCancelRun,
   runActive,
@@ -92,15 +97,23 @@ export const WorkflowHeader = memo(function WorkflowHeader({
       <div className="workflow-topbar-left" style={topbarLeftStyle}>
         <button className="icon-button icon-only topbar-danger-action" type="button" onClick={onLogout} title="خروج" aria-label="خروج"><LogOut size={17}/></button>
         <button className="icon-button icon-only" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل"><UserCircle size={17}/></button>
+        {showAdmin && <button className="icon-button icon-only" type="button" onClick={onAdmin} title="پنل مدیریت" aria-label="پنل مدیریت"><ShieldCheck size={17}/></button>}
         <ThemeToggle />
         <button className="icon-button icon-only" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها"><LayoutDashboard size={17}/></button>
-        {runActive && <button className="icon-button icon-only topbar-danger-action" type="button" onClick={onCancelRun} title="توقف اجرا" aria-label="توقف اجرا"><Square size={13} /></button>}
         <button className="icon-button icon-only" type="button" onClick={onExport} title="Export workflow JSON" aria-label="Export workflow JSON"><Download size={17}/></button>
         <button className="icon-button icon-only" type="button" disabled={readOnly} onClick={onLayout} title="چیدمان خودکار" aria-label="چیدمان خودکار"><LayoutGrid size={17}/></button>
         <button className="icon-button icon-only" type="button" disabled={createComponentDisabled} onClick={onCreateComponent} title="تبدیل نودهای انتخاب‌شده به کامپوننت" aria-label="ساخت کامپوننت"><Layers3 size={17}/></button>
       </div>
       <div className="workflow-topbar-center" style={topbarCenterStyle}>
-        <button className="icon-button icon-only topbar-primary-action" title={runSelectedNode ? 'اجرای مسیر نود انتخاب‌شده' : 'اجرای برد'} aria-label="اجرا" disabled={runDisabled} onClick={onRun}>{runBusy ? <RefreshCw size={17} className="spin" /> : <Play size={17}/>}</button>
+        <button
+          className={`icon-button icon-only topbar-primary-action ${runActive ? 'topbar-danger-action' : ''}`}
+          title={runActive ? 'توقف اجرای جاری' : runSelectedNode ? 'اجرای نود انتخاب‌شده و ورودی‌های آن' : 'اجرای کل جریان'}
+          aria-label={runActive ? 'توقف اجرا' : 'اجرا'}
+          disabled={!runActive && runDisabled}
+          onClick={runActive ? onCancelRun : onRun}
+        >
+          {runActive ? <Square size={14} /> : runBusy ? <RefreshCw size={17} className="spin" /> : <Play size={17}/>}
+        </button>
         <button className={`icon-button icon-only ${boardOpen ? 'active' : ''}`} type="button" onClick={onToggleBoard} title={boardOpen ? 'بازگشت به Workflow' : 'Analysis Board'} aria-label={boardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><KanbanSquare size={17}/></button>
         <button className="icon-button icon-only topbar-primary-action" type="button" disabled={saveDisabled} onClick={onSaveVersion} title="ذخیره نسخه نام‌گذاری‌شده" aria-label="ذخیره نسخه نام‌گذاری‌شده">{versionBusy ? <RefreshCw size={17} className="spin" /> : <Save size={17}/>}</button>
         {boardOpen && <button className="icon-button icon-only" type="button" disabled={readOnly} onClick={onRenameBoard} title="تغییر نام برد فعال" aria-label="تغییر نام برد فعال"><Pencil size={17}/></button>}

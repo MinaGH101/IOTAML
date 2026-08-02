@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Run, RunSummary } from '../../../../shared/_types';
 import { workspaceApi } from '../../../_service/workspaceApi';
 import { mergeRunProgress, upsertRunSummary } from '../../../_model/runtimeContext';
+import { createRunProgressTransport, type RunProgressTransportState } from '../../../../features/execution/model/runProgressTransport';
 
 export const terminalRunStatuses = new Set([
   'succeeded',
@@ -24,6 +25,8 @@ export function useRunHistory({
   const [runHistory, setRunHistory] = useState<RunSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [lastRunSignature, setLastRunSignature] = useState('');
+  const [progressTransportState, setProgressTransportState] = useState<RunProgressTransportState>('closed');
+  const lastProgressErrorRef = useRef('');
 
   const refreshRunHistory = useCallback(async () => {
     const runs = await workspaceApi.listRuns(projectId);
@@ -75,20 +78,29 @@ export function useRunHistory({
 
   useEffect(() => {
     const runId = currentRun?.id;
-    if (!runId || terminalRunStatuses.has(currentRun.status)) {
+    const initialStatus = currentRun?.status;
+    if (!runId || !initialStatus || terminalRunStatuses.has(initialStatus)) {
       setBusy(false);
+      setProgressTransportState('closed');
       return undefined;
     }
 
-    let cancelled = false;
-    let timer = 0;
-    const poll = async () => {
-      try {
-        const snapshot = await workspaceApi.runProgress(runId);
-        if (cancelled) return;
+    const transport = createRunProgressTransport({
+      runId,
+      initialStatus,
+      isTerminal: (status) => terminalRunStatuses.has(status),
+      onStateChange: setProgressTransportState,
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : 'دریافت وضعیت اجرا ناموفق بود';
+        if (message !== lastProgressErrorRef.current) {
+          lastProgressErrorRef.current = message;
+          setMessage(message);
+        }
+      },
+      onSnapshot: async (snapshot) => {
+        lastProgressErrorRef.current = '';
         if (terminalRunStatuses.has(snapshot.status)) {
           const completed = await workspaceApi.getRun(runId);
-          if (cancelled) return;
           setCurrentRun(completed);
           if (completed.status === 'succeeded') setWorkflowLastRunId(completed.id);
           setRunHistory((items) => upsertRunSummary(items, completed));
@@ -99,19 +111,10 @@ export function useRunHistory({
         setCurrentRun((run) => (
           run && run.id === runId ? mergeRunProgress(run, snapshot) : run
         ));
-        timer = window.setTimeout(poll, snapshot.status === 'queued' ? 900 : 650);
-      } catch (error) {
-        if (cancelled) return;
-        setMessage(error instanceof Error ? error.message : 'دریافت وضعیت اجرا ناموفق بود');
-        timer = window.setTimeout(poll, 1500);
-      }
-    };
+      },
+    });
 
-    timer = window.setTimeout(poll, 120);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
+    return () => transport.close();
   }, [currentRun?.id, currentRun?.status, refreshRunHistory, setMessage]);
 
   return {
@@ -130,5 +133,6 @@ export function useRunHistory({
     retryRun,
     cancelRun,
     selectHistoricalRun,
+    progressTransportState,
   };
 }

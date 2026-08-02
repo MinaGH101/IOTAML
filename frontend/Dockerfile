@@ -17,8 +17,12 @@ ENV VITE_API_URL=$VITE_API_URL \
 RUN npm run build
 
 FROM nginx:1.27.4-alpine3.21 AS production
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV API_UPSTREAM=api:8000
+COPY nginx-upgrade-map.conf /etc/nginx/conf.d/00-upgrade-map.conf
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+RUN find /usr/share/nginx/html -type f -exec chmod 0444 {} \; \
+    && find /usr/share/nginx/html -type d -exec chmod 0555 {} \;
 EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=3s --retries=5 \
   CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1

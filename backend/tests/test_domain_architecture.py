@@ -1,3 +1,5 @@
+"""Regression and contract tests for domain architecture."""
+
 from pathlib import Path
 
 

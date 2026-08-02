@@ -1,3 +1,5 @@
+"""Workflow node implementation for scaler nodes in the transformation family."""
+
 from __future__ import annotations
 
 import pandas as pd

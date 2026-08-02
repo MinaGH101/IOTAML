@@ -188,7 +188,6 @@ export function useComponentLibrary({
   }, [confirmDeleteVersion, refreshManagedVersions, setBusy, setMessage]);
 
   return {
-    busy,
     confirmDelete,
     setConfirmDelete,
     managed,

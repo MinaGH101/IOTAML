@@ -1,8 +1,10 @@
+"""Artifacts domain schemas for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ArtifactOut(BaseModel):
@@ -22,7 +24,11 @@ class ArtifactOut(BaseModel):
     size_bytes: int
     checksum_sha256: str
     cache_key: str | None = None
-    schema_json: dict | None = None
+    schema_data: dict | None = Field(
+        default=None,
+        validation_alias=AliasChoices("schema_data", "schema_json"),
+        serialization_alias="schema_json",
+    )
     metadata_json: dict | None = None
     pinned: bool = False
     last_accessed_at: datetime | None = None
@@ -30,8 +36,7 @@ class ArtifactOut(BaseModel):
     expires_at: datetime | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class ArtifactDownloadOut(BaseModel):

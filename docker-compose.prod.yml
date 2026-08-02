@@ -11,6 +11,11 @@ x-production-backend: &production-backend
   MINIO_SECURE: ${MINIO_SECURE:-true}
   ARTIFACT_BUCKET: ${ARTIFACT_BUCKET:-iota-artifacts}
   AUTH_SECRET: ${AUTH_SECRET:?Set a random AUTH_SECRET of at least 32 characters}
+  ADMIN_BOOTSTRAP_ENABLED: ${ADMIN_BOOTSTRAP_ENABLED:-true}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+  ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-IOTA}
+  ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Admin}
   CORS_ORIGINS: ${CORS_ORIGINS:?Set the production frontend origin}
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
@@ -51,13 +56,18 @@ services:
 
   migrate:
     environment: *production-backend
+    volumes: !override []
     logging: *production-logging
 
   storage-init:
     logging: *production-logging
 
   api:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers"]
     environment: *production-backend
+    ports: !override []
+    volumes: !override
+      - backend_storage:/app/storage
     mem_limit: ${API_MEMORY_LIMIT:-2g}
     cpus: ${API_CPU_LIMIT:-2.0}
     pids_limit: 256
@@ -71,14 +81,25 @@ services:
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
       NUMEXPR_NUM_THREADS: "1"
+    volumes: !override
+      - backend_storage:/app/storage
     mem_limit: ${WORKER_MEMORY_LIMIT:-6g}
     cpus: ${WORKER_CPU_LIMIT:-4.0}
     pids_limit: 512
     logging: *production-logging
 
   frontend:
-    ports:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_AMCHARTS_LICENSE_KEY: ${VITE_AMCHARTS_LICENSE_KEY:-}
+    command: null
+    environment: !override {}
+    ports: !override
       - "${HTTP_PORT:-8080}:80"
+    volumes: !override []
     mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
     cpus: ${FRONTEND_CPU_LIMIT:-1.0}
     pids_limit: 128

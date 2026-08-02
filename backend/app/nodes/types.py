@@ -1,3 +1,5 @@
+"""IOTA ML backend application module for types."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -1,3 +1,5 @@
+"""Workflow node implementation for python code node in the utilities family."""
+
 from __future__ import annotations
 
 import ast
@@ -9,6 +11,9 @@ import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any
+
+from app.core.config import get_settings
+from app.core.errors import ValidationAppError
 
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import first_json_payload, first_upstream_df, json_output, node_label, safe_json, table_output
@@ -65,6 +70,10 @@ def _run_code(code: str, input_data: Any, timeout: int, memory_mb: int) -> dict[
                 import resource
                 resource.setrlimit(resource.RLIMIT_AS, (memory_mb * 1024 * 1024, memory_mb * 1024 * 1024))
                 resource.setrlimit(resource.RLIMIT_CPU, (max(1, timeout), max(1, timeout + 1)))
+                resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+                resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+                if hasattr(resource, 'RLIMIT_NPROC'):
+                    resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
             preexec = limit_resources
         proc = subprocess.run([sys.executable, '-I', '-S', str(script_path)], cwd=tmp, env=env, capture_output=True, text=True, timeout=timeout, preexec_fn=preexec)
     if proc.returncode != 0:
@@ -90,6 +99,12 @@ class PythonCodeNode(BaseNode):
     ]
 
     def run(self, node, inputs, settings, context):
+        if not get_settings().allow_custom_code:
+            raise ValidationAppError(
+                'CUSTOM_CODE_DISABLED',
+                'Python code execution is disabled for this installation.',
+                {'node_id': str(node.get('id') or ''), 'node_type': self.id},
+            )
         df = first_upstream_df(inputs)
         input_data = safe_json(df.head(1000)) if df is not None else first_json_payload(inputs)
         result = _run_code(str(settings.get('code') or 'return input_data'), input_data, int(settings.get('timeout') or 30), int(settings.get('memory_limit') or 256))

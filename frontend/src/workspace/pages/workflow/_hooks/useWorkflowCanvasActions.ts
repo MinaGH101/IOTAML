@@ -159,7 +159,7 @@ export function useWorkflowCanvasActions({
   const onDrop = useCallback((event: DragEvent) => {
     event.preventDefault();
     if (readOnly) return;
-    const nodeId = event.dataTransfer.getData('application/nocodeml-node');
+    const nodeId = event.dataTransfer.getData('application/iotaml-node');
     const registryNode = registry.find((node) => node.id === nodeId);
     if (!registryNode) return;
     const newNode = makeNode(

@@ -1,3 +1,5 @@
+"""Workflow node implementation for model analysis nodes in the ml analysis family."""
+
 from __future__ import annotations
 
 from typing import Any

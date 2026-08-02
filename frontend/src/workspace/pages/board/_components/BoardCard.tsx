@@ -22,6 +22,7 @@ type BoardCardProps = {
   onDuplicateItem: (item: AnalysisBoardItem) => void;
   onFocus: (focused: FocusedOutput) => void;
   readOnly: boolean;
+  active: boolean;
 };
 
 function startBoardPointerAction(
@@ -112,6 +113,7 @@ export const BoardCard = memo(function BoardCard({
   onDuplicateItem,
   onFocus,
   readOnly,
+  active,
 }: BoardCardProps) {
   const title = item.sourceLabel
     ? `${item.sourceLabel} · ${item.outputTitle}`
@@ -140,8 +142,10 @@ export const BoardCard = memo(function BoardCard({
         {!readOnly && <button className="tiny-action icon-action" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => onRemoveItem(item.id)} title="Remove"><X size={12} /></button>}
       </div>
       <div className="analysis-board-card-body">
-        {output
-          ? <OutputBody output={output} collectionMode />
+        {output && active
+          ? <OutputBody output={output} collectionMode active />
+          : output
+            ? <div className="output-suspended-placeholder" aria-hidden="true" />
           : <div className="empty-state small">این خروجی در اجرای فعلی پیدا نشد. Workflow را Run کنید.</div>}
       </div>
       <div

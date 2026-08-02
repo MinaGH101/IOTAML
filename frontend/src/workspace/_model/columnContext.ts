@@ -16,7 +16,7 @@ const DEMO_COLUMNS: Record<string, string[]> = {
   data_demo_breast_cancer: ['mean radius', 'mean texture', 'mean perimeter', 'mean area', 'mean smoothness', 'mean compactness', 'mean concavity', 'mean concave points', 'mean symmetry', 'mean fractal dimension', 'target'],
 };
 
-function parseColumnParam(value: unknown): string[] {
+export function parseColumnParam(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value !== 'string') return [];
   const text = value.trim();

@@ -3,6 +3,10 @@ import type { AnalysisBoardItem, AnalysisBoardTab, BoardViewport } from './board
 import type { Output } from './output';
 import type { RegistryNode } from '../../shared/_types';
 import { resolveRegistryId, type LegacyNodeAliases } from './catalog';
+import { parseColumnParam } from './columnContext';
+import { createOutputSnapshot } from './outputSnapshot';
+import { restoreOutputReference } from '../../features/results/model/outputReference';
+export { connectedGraph } from './executionGraph';
 export { inputColumnContextForNode, inputColumnsForNode } from './columnContext';
 
 export type FlowGraph = {
@@ -181,41 +185,10 @@ export function defaultGraph(registry: RegistryNode[], aliases: LegacyNodeAliase
   };
 }
 
-export function connectedGraph(allNodes: Node[], allEdges: Edge[], selectedNodeId: string | null) {
-  if (!selectedNodeId || !allNodes.some((node) => node.id === selectedNodeId)) {
-    return { nodes: allNodes, edges: allEdges, mode: 'all' as const };
-  }
-  const adjacent = new Map<string, Set<string>>();
-  allNodes.forEach((node) => adjacent.set(node.id, new Set()));
-  allEdges.forEach((edge) => {
-    adjacent.get(edge.source)?.add(edge.target);
-    adjacent.get(edge.target)?.add(edge.source);
-  });
-  const keep = new Set<string>();
-  const queue = [selectedNodeId];
-  while (queue.length) {
-    const current = queue.shift()!;
-    if (keep.has(current)) continue;
-    keep.add(current);
-    adjacent.get(current)?.forEach((next) => !keep.has(next) && queue.push(next));
-  }
-  return {
-    nodes: allNodes.filter((node) => keep.has(node.id)),
-    edges: allEdges.filter((edge) => keep.has(edge.source) && keep.has(edge.target)),
-    mode: 'selected' as const,
-  };
-}
-
 export function isTextInput(target: EventTarget | null): boolean {
   return target instanceof HTMLInputElement
     || target instanceof HTMLTextAreaElement
     || target instanceof HTMLSelectElement;
-}
-
-export function boardOutputTitle(output: Output, index: number) {
-  const base = String(output.title || `خروجی ${index + 1}`);
-  const source = String(output.source_label || output.branch || '').trim();
-  return source ? `${base} · ${source}` : base;
 }
 
 export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
@@ -225,6 +198,7 @@ export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
     .map((item, index) => ({
       id: String(item.id || `board-${Date.now()}-${index}`),
       nodeId: item.nodeId ? String(item.nodeId) : null,
+      outputKey: item.outputKey ? String(item.outputKey) : undefined,
       outputIndex: Number(item.outputIndex || 0),
       outputTitle: String(item.outputTitle || `خروجی ${index + 1}`),
       outputKind: String(item.outputKind || 'json'),
@@ -234,16 +208,21 @@ export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
       w: Number.isFinite(Number(item.w)) ? Number(item.w) : 430,
       h: Number.isFinite(Number(item.h)) ? Number(item.h) : 320,
       runId: item.runId === undefined ? null : Number(item.runId) || null,
-      snapshot: item.snapshot,
+      outputRef: restoreOutputReference(item.outputRef),
+      snapshot: restoreOutputReference(item.outputRef) ? undefined : createOutputSnapshot(item.snapshot),
       createdAt: String(item.createdAt || new Date().toISOString()),
     }));
 }
 
 export function serializeAnalysisBoardItems(items: AnalysisBoardItem[]) {
-  // Board cards are pinned result snapshots. Persisting the already bounded
-  // visible output keeps plots available after tab/page changes without
-  // reloading large internal dataframe artifacts.
-  return items.map((item) => ({ ...item, snapshot: item.snapshot }));
+  return items.map((item) => {
+    const { snapshot, ...persistent } = item;
+    return {
+      ...persistent,
+      // Keep a bounded legacy snapshot only until the item is migrated to an output reference.
+      ...(item.outputRef ? {} : { snapshot: createOutputSnapshot(snapshot) }),
+    };
+  });
 }
 
 

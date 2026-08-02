@@ -905,3 +905,38 @@ text-align:right!important
 direction:rtl!important;
 text-align:right!important
 }
+
+/* Wider, shorter project details layout */
+.iota-minimal-page .project-detail-reference-layout {
+  width: min(1480px, 100%) !important;
+  grid-template-columns: minmax(400px, 450px) minmax(0, 1fr) !important;
+  align-items: start;
+}
+
+.iota-minimal-page .project-info-reference {
+  max-height: calc(100dvh - 112px);
+  overflow: visible;
+}
+
+.iota-minimal-page .project-info-reference .project-form {
+  gap: 9px !important;
+}
+
+.iota-minimal-page .project-info-reference textarea {
+  min-height: 68px !important;
+  max-height: 90px;
+}
+
+.iota-minimal-page .project-info-reference .project-edit-actions {
+  margin-top: 10px;
+}
+
+@media (max-width: 1050px) {
+  .iota-minimal-page .project-detail-reference-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .iota-minimal-page .project-info-reference {
+    position: static !important;
+    max-height: none;
+  }
+}

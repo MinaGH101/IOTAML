@@ -1,0 +1,48 @@
+:root {
+  /* Semantic surfaces */
+  --surface-app: var(--theme-app-bg);
+  --surface-workspace: var(--theme-workspace-bg);
+  --surface-canvas: var(--theme-board-bg);
+  --surface-topbar: var(--theme-topbar-bg);
+  --surface-panel: var(--theme-panel-bg);
+  --surface-muted: var(--theme-panel-muted);
+  --surface-raised: var(--theme-panel-raised);
+  --surface-control: var(--theme-control-bg);
+  --surface-popup: var(--theme-popup-bg);
+  --surface-hover: var(--theme-hover-bg);
+  --surface-selected: var(--theme-selected-bg);
+
+  /* Semantic content */
+  --text-primary: var(--theme-text);
+  --text-secondary: var(--theme-text-secondary);
+  --text-muted: var(--theme-text-muted);
+  --border-subtle: var(--theme-divider);
+  --border-control: var(--theme-control-border);
+  --accent-primary: var(--theme-primary);
+  --status-success: var(--theme-success);
+  --status-running: var(--theme-info);
+  --status-warning: var(--theme-warning);
+  --status-error: var(--theme-danger);
+
+  /* Compact product geometry */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --ui-radius-control: 4px;
+  --ui-radius-panel: 6px;
+  --ui-radius-dialog: 8px;
+  --motion-fast: 120ms ease;
+  --motion-standard: 170ms ease;
+
+  /* One documented stacking scale */
+  --z-canvas: 0;
+  --z-node: 10;
+  --z-panel: 30;
+  --z-menu: 60;
+  --z-tooltip: 80;
+  --z-dialog-backdrop: 100;
+  --z-dialog: 110;
+  --z-toast: 130;
+}

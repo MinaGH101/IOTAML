@@ -1,3 +1,5 @@
+"""IOTA ML backend application module for table file."""
+
 from __future__ import annotations
 
 import base64

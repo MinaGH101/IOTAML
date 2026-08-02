@@ -1,3 +1,5 @@
+"""Sorted-gap outlier node for detecting abrupt jumps in distribution tails."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,6 +14,7 @@ from app.nodes.io import coerce_numeric_series, dataframe_payload, dataframe_res
 
 @dataclass
 class TailResult:
+    """Boundary and diagnostic values for one detected distribution tail."""
     boundary: float | None
     cut_index: int | None
     gap: float | None
@@ -19,6 +22,7 @@ class TailResult:
 
 
 def _robust_gap_threshold(gaps: np.ndarray, sensitivity: float) -> float:
+    """Calculate a robust minimum gap size using median and MAD statistics."""
     finite = gaps[np.isfinite(gaps)]
     if finite.size == 0:
         return float('inf')
@@ -30,6 +34,7 @@ def _robust_gap_threshold(gaps: np.ndarray, sensitivity: float) -> float:
 
 
 def _tail_cut(values: np.ndarray, *, side: str, sensitivity: float, max_fraction: float, min_regular: int) -> TailResult:
+    """Find the strongest eligible gap at the requested sorted-value tail."""
     size = len(values)
     if size < max(5, min_regular + 1):
         return TailResult(None, None, None, None)
@@ -53,6 +58,7 @@ def _tail_cut(values: np.ndarray, *, side: str, sensitivity: float, max_fraction
 
 
 def _replacement_value(mode: str, clean_values: pd.Series, boundary: float, side: str) -> float | None:
+    """Resolve the configured replacement value for one detected outlier."""
     if mode == 'nearest_boundary':
         return boundary
     if mode == 'median':
@@ -65,6 +71,7 @@ def _replacement_value(mode: str, clean_values: pd.Series, boundary: float, side
 
 
 class SortedGapOutlierNode(BaseNode):
+    """Detect and optionally replace abrupt lower/upper-tail sorted gaps."""
     id = 'AD-005'
     name = 'Sorted Gap Outlier'
     category = 'Anomaly Detection'
@@ -89,6 +96,7 @@ class SortedGapOutlierNode(BaseNode):
     cache_version = '2'
 
     def run(self, node, inputs, settings, context):
+        """Detect sorted-gap outliers and return corrected data, report and plots."""
         payload = dataframe_payload(inputs, 'data')
         source = ensure_df(payload.df if payload else None, str(node['id']))
         corrected = source.copy()

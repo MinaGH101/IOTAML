@@ -1,3 +1,5 @@
+"""Workflow node implementation for detection limit node in the cleaning family."""
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,3 +1,5 @@
+"""Core backend infrastructure for security."""
+
 from __future__ import annotations
 
 def sanitize_filename(name: str) -> str:

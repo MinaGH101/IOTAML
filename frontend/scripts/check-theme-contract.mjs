@@ -4,6 +4,7 @@ import path from 'node:path';
 const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const themeFile = path.join(srcRoot, 'styles', 'theme.css');
+const tokenRoot = path.join(srcRoot, 'styles', 'tokens');
 const supportedExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.jsx']);
 
 function walk(directory) {
@@ -15,11 +16,12 @@ function walk(directory) {
 
 const sourceFiles = walk(srcRoot).filter((file) => supportedExtensions.has(path.extname(file)));
 const cssFiles = sourceFiles.filter((file) => file.endsWith('.css'));
-const componentCssFiles = cssFiles.filter((file) => file !== themeFile);
-const themeCss = fs.readFileSync(themeFile, 'utf8');
+const tokenFiles = cssFiles.filter((file) => file === themeFile || file.startsWith(tokenRoot + path.sep));
+const componentCssFiles = cssFiles.filter((file) => !tokenFiles.includes(file));
+const tokenCss = tokenFiles.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
 
 const definedVariables = new Set(
-  [...themeCss.matchAll(/(^|[;{\s])(--[A-Za-z0-9_-]+)\s*:/gm)].map((match) => match[2])
+  [...tokenCss.matchAll(/(^|[;{\s])(--[A-Za-z0-9_-]+)\s*:/gm)].map((match) => match[2])
 );
 
 const runtimeVariables = new Set([
@@ -97,7 +99,7 @@ for (const file of sourceFiles) {
   const content = fs.readFileSync(file, 'utf8');
   const relative = path.relative(root, file);
 
-  if (file !== themeFile) {
+  if (!tokenFiles.includes(file)) {
     const rawColors = [...content.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g)];
     stats.rawColorLiteralsOutsideTheme += rawColors.length;
     if (rawColors.length) failures.push(`${relative}: ${rawColors.length} raw color literal(s)`);

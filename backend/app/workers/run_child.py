@@ -1,3 +1,5 @@
+"""Background execution worker support for run child."""
+
 from __future__ import annotations
 
 import json
@@ -12,8 +14,8 @@ from typing import Any
 
 import pandas as pd
 
-from app.services.node_cache_runtime import RuntimeNodeCache
-from app.services.run_state import RunCancelledError, initial_node_statuses, progress_payload
+from app.workflow.caching.runtime import RuntimeNodeCache
+from app.infrastructure.queue.state import RunCancelledError, initial_node_statuses, progress_payload
 
 
 def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
@@ -116,40 +118,21 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
     save_progress()
 
     try:
-        from app.workflow.executor import execute_scientific_workflow, is_legacy_graph
-        if is_legacy_graph(graph):
-            from app.services.workflow_executor import execute_workflow as execute_legacy_workflow
-            result = execute_legacy_workflow(
-                graph,
-                _load_dataset(snapshot.get('dataset_path')),
-                snapshot.get('target_column'),
-                snapshot.get('task_type') or 'auto',
-                Path(snapshot.get('run_path') or work_dir / 'artifacts'),
-                progress_callback=progress_callback,
-                cancel_check=cancel_check,
-            )
-            normalized = {
-                'metrics': {
-                    'branches': len(result.get('branches') or []),
-                    'errors': len(result.get('errors') or []),
-                    'status': 'failed' if result.get('errors') else 'success',
-                },
-                'artifacts': result,
-                'error': (result.get('errors') or [{}])[0].get('error') if result.get('errors') else None,
-            }
-        else:
-            normalized = execute_scientific_workflow(
-                graph,
-                snapshot.get('dataset_id'),
-                snapshot.get('target_column'),
-                snapshot.get('task_type') or 'auto',
-                snapshot.get('project_id'),
-                snapshot.get('run_id'),
-                dataset_path=snapshot.get('dataset_path'),
-                progress_callback=progress_callback,
-                cancel_check=cancel_check,
-                runtime_cache=runtime_cache,
-            )
+        from app.workflow.execution.executor import execute_workflow
+        normalized = execute_workflow(
+            graph,
+            snapshot.get('dataset_id'),
+            snapshot.get('target_column'),
+            snapshot.get('task_type') or 'auto',
+            snapshot.get('project_id'),
+            snapshot.get('run_id'),
+            dataset_path=snapshot.get('dataset_path'),
+            selected_node_id=snapshot.get('selected_node_id'),
+            run_path=snapshot.get('run_path'),
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
+            runtime_cache=runtime_cache,
+        )
         if cancel_check():
             raise RunCancelledError('Cancellation requested.')
         status = 'failed' if normalized.get('error') else 'succeeded'

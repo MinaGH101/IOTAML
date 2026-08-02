@@ -1,3 +1,5 @@
+"""Regression and contract tests for components."""
+
 from __future__ import annotations
 
 import pytest
@@ -5,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError
-from app.database import Base
+from app.core.database import Base
 from app.domains.components.schemas import ComponentCreate, ComponentImportPackage, ComponentVersionCreate
 from app.domains.components.service import (
     component_to_registry_node,
@@ -19,7 +21,8 @@ from app.domains.components.service import (
     set_current_version,
     usage_count,
 )
-from app.models import Project, Workflow
+from app.domains.projects.models import Project
+from app.domains.workflows.models import Workflow
 
 
 def make_session() -> Session:
@@ -142,7 +145,7 @@ def test_component_export_import_round_trip() -> None:
 
 
 def test_component_executes_as_a_real_node_with_namespaced_internal_statuses() -> None:
-    from app.workflow.executor import execute_scientific_workflow
+    from app.workflow.execution.executor import execute_scientific_workflow
 
     snapshot = {
         "component_id": 1,

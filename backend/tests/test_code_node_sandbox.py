@@ -1,3 +1,5 @@
+"""Regression and contract tests for code node sandbox."""
+
 from __future__ import annotations
 
 import pytest

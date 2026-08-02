@@ -1,3 +1,5 @@
+"""Regression and contract tests for run queue."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -5,10 +7,10 @@ from datetime import timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.database import Base
-from app.models import Run
-from app.services.run_queue import claim_next_run, fail_or_requeue, recover_stale_runs, request_cancel
-from app.services.run_state import initial_node_statuses, progress_payload, utcnow
+from app.core.database import Base
+from app.domains.runs.models import Run
+from app.infrastructure.queue.repository import claim_next_run, fail_or_requeue, recover_stale_runs, request_cancel
+from app.infrastructure.queue.state import initial_node_statuses, progress_payload, utcnow
 
 
 def make_session() -> Session:

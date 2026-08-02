@@ -1168,6 +1168,19 @@ min-height:280px!important
   white-space:nowrap
 }
 
+.ml-node .node-runtime-state.running {
+  position:absolute;
+  top:-10px;
+  left:50%;
+  z-index:5;
+  transform:translateX(-50%);
+  padding:4px 7px;
+  border:1px solid color-mix(in srgb,var(--theme-primary) 60%,var(--theme-control-border));
+  border-radius:var(--theme-radius-pill);
+  background:var(--theme-panel-bg);
+  font-size:9px
+}
+
 .node-runtime-state.running,.node-runtime-state.cached {
   color:var(--theme-primary)
 }

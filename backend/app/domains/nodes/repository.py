@@ -1,5 +1,7 @@
+"""Nodes domain repository for the IOTA ML backend."""
+
 from sqlalchemy.orm import Session
-from app.models import CustomNode
+from app.domains.nodes.models import CustomNode
 
 
 class CustomNodeRepository:

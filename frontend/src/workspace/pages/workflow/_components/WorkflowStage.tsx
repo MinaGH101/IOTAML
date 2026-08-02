@@ -119,65 +119,68 @@ export function WorkflowStage({
         style={layout.floatingBoardStyle}
       >
         {message && <div className="toast">{message}</div>}
-        {!analysisBoardOpen && (
-          <div className="workflow-flow-layer">
-            <ReactFlow
-              nodes={canvas.flowNodes}
-              edges={graph.edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={graph.onNodesChange}
-              onNodeDragStop={graph.commitNodePositions}
-              onEdgesChange={graph.onEdgesChange}
-              onConnect={canvas.onConnect}
-              onSelectionChange={graph.onSelectionChange}
-              onNodeClick={graph.onNodeClick}
-              onNodeDoubleClick={canvas.onNodeDoubleClick}
-              onEdgeClick={graph.onEdgeClick}
-              onPaneClick={graph.onPaneClick}
-              nodesDraggable={!readOnly && !graph.ctrlSelectionActive}
-              nodesConnectable={!readOnly}
-              edgesReconnectable={!readOnly}
-              selectionOnDrag={graph.ctrlSelectionActive}
-              selectionKeyCode={null}
-              multiSelectionKeyCode={multiSelectionKeys}
-              panOnDrag={!graph.ctrlSelectionActive}
-              className={graph.ctrlSelectionActive ? 'workflow-ctrl-selection-active' : ''}
-              onlyRenderVisibleElements
-              defaultViewport={workflowViewport}
-              onMoveEnd={(_, viewport) => onWorkflowViewportChange(viewport)}
-            >
-              <Controls />
-              <MiniMap
-                className="workflow-minimap-visible"
-                pannable
-                zoomable
-                style={{
-                  left: paletteCollapsed ? 76 : 304,
-                  right: 'auto',
-                  bottom: 24,
-                }}
-              />
-            </ReactFlow>
-          </div>
-        )}
-        {analysisBoardOpen && (
-          <div className="analysis-board-mount-layer">
-            <BoardPage
-              tabs={boards.boards}
-              activeBoardId={boards.activeBoardId}
-              items={activeBoard?.items || []}
-              run={runs.currentRun}
-              workflowDirty={workflowDirtyForBoard}
-              onSelectBoard={boards.selectBoard}
-              onCreateBoard={boards.createBoard}
-              onUpdateItem={boards.updateItem}
-              onRemoveItem={boards.removeItem}
-              onDuplicateItem={boards.duplicateItem}
-              viewportStorageScope={viewportStorageScope}
-              readOnly={readOnly}
+        <div
+          className={`workflow-flow-layer ${analysisBoardOpen ? 'is-hidden' : ''}`}
+          aria-hidden={analysisBoardOpen}
+        >
+          <ReactFlow
+            nodes={canvas.flowNodes}
+            edges={graph.edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={graph.onNodesChange}
+            onNodeDragStop={graph.commitNodePositions}
+            onEdgesChange={graph.onEdgesChange}
+            onConnect={canvas.onConnect}
+            onSelectionChange={graph.onSelectionChange}
+            onNodeClick={graph.onNodeClick}
+            onNodeDoubleClick={canvas.onNodeDoubleClick}
+            onEdgeClick={graph.onEdgeClick}
+            onPaneClick={graph.onPaneClick}
+            nodesDraggable={!readOnly && !graph.ctrlSelectionActive}
+            nodesConnectable={!readOnly}
+            edgesReconnectable={!readOnly}
+            selectionOnDrag={graph.ctrlSelectionActive}
+            selectionKeyCode={null}
+            multiSelectionKeyCode={multiSelectionKeys}
+            panOnDrag={!graph.ctrlSelectionActive}
+            className={graph.ctrlSelectionActive ? 'workflow-ctrl-selection-active' : ''}
+            onlyRenderVisibleElements
+            defaultViewport={workflowViewport}
+            onMoveEnd={(_, viewport) => onWorkflowViewportChange(viewport)}
+          >
+            <Controls />
+            <MiniMap
+              className="workflow-minimap-visible"
+              pannable
+              zoomable
+              style={{
+                left: paletteCollapsed ? 76 : 304,
+                right: 'auto',
+                bottom: 24,
+              }}
             />
-          </div>
-        )}
+          </ReactFlow>
+        </div>
+        <div
+          className={`analysis-board-mount-layer ${analysisBoardOpen ? '' : 'is-hidden'}`}
+          aria-hidden={!analysisBoardOpen}
+        >
+          <BoardPage
+            tabs={boards.boards}
+            activeBoardId={boards.activeBoardId}
+            items={activeBoard?.items || []}
+            run={runs.currentRun}
+            workflowDirty={workflowDirtyForBoard}
+            onSelectBoard={boards.selectBoard}
+            onCreateBoard={boards.createBoard}
+            onUpdateItem={boards.updateItem}
+            onRemoveItem={boards.removeItem}
+            onDuplicateItem={boards.duplicateItem}
+            viewportStorageScope={viewportStorageScope}
+            active={analysisBoardOpen}
+            readOnly={readOnly}
+          />
+        </div>
       </section>
 
       <RightPanel

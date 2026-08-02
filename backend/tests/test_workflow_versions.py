@@ -1,12 +1,17 @@
+"""Regression and contract tests for workflow versions."""
+
 from __future__ import annotations
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.database import Base
+from app.core.database import Base
 from app.domains.workflows.schemas import WorkflowAutosaveIn, WorkflowCreate, WorkflowVersionCreate
 from app.domains.workflows.service import autosave_workflow, create_version, create_workflow, delete_workflow, rename_workflow, restore_version
-from app.models import Project, Run, Workflow, WorkflowVersion
+from app.domains.projects.models import Project
+from app.domains.runs.models import Run
+from app.domains.workflows.models import Workflow, WorkflowVersion
+from app.workflow.validation.service import validate_workflow_graph
 
 
 def make_session() -> Session:
@@ -44,6 +49,78 @@ def test_autosave_is_noop_for_identical_draft_and_revises_changed_graph() -> Non
         )
         assert changed.revision == 2
         assert changed.graph == changed_graph
+
+
+def test_autosave_accepts_missing_node_settings_but_run_validation_rejects_them() -> None:
+    with make_session() as db:
+        db.add(Project(id=1, name="Project", owner_username="admin"))
+        db.commit()
+        graph = {
+            "nodes": [{
+                "id": "detection-limit",
+                "type": "CL-010",
+                "data": {
+                    "registryId": "CL-010",
+                    "params": {
+                        "dl_file": None,
+                        "condition": "<=",
+                        "replacement": "2/3DL",
+                        "max_output_rows": 100,
+                    },
+                },
+            }],
+            "edges": [],
+            "meta": {},
+        }
+        workflow = create_workflow(
+            db,
+            WorkflowCreate(name="Incomplete draft", graph=graph, project_id=1, last_run_id=None),
+            "admin",
+        )
+
+        saved = autosave_workflow(
+            db,
+            workflow.id,
+            WorkflowAutosaveIn(name="Incomplete draft", graph=graph, project_id=1, last_run_id=None, base_revision=1),
+            "admin",
+        )
+
+        assert saved.id == workflow.id
+        assert not validate_workflow_graph(graph).valid
+        assert validate_workflow_graph(
+            graph,
+            require_settings=False,
+            require_connections=False,
+        ).valid
+
+
+def test_run_validation_rejects_a_node_without_its_required_input_connection() -> None:
+    graph = {
+        "nodes": [{
+            "id": "detection-limit",
+            "type": "CL-010",
+            "data": {
+                "registryId": "CL-010",
+                "params": {
+                    "dl_file": "detection-limits.csv",
+                    "condition": "<=",
+                    "replacement": "2/3DL",
+                    "max_output_rows": 100,
+                },
+            },
+        }],
+        "edges": [],
+        "meta": {},
+    }
+
+    validation = validate_workflow_graph(graph)
+
+    assert not validation.valid
+    assert any(
+        error.type == "missing_required_input_connection"
+        and error.nodeId == "detection-limit"
+        for error in validation.errors
+    )
 
 
 def test_named_versions_are_immutable_snapshots_and_can_be_restored() -> None:

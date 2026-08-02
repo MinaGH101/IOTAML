@@ -2,6 +2,7 @@ import type { Edge, Node } from '@xyflow/react';
 import { ChevronDown, ChevronUp, Trash2, Ungroup } from 'lucide-react';
 import { useState } from 'react';
 import type { Dataset, RegistryNode } from '../../shared/_types';
+import type { SelectOption } from '../../shared/_components/CustomSelect';
 import { categoryLabel } from './NodePalette';
 import { ParamEditor } from './ParamEditor';
 
@@ -15,6 +16,7 @@ type Props = {
   availableIdColumns?: string[];
   inheritedIdColumn?: string | null;
   availableRows?: Record<string, unknown>[];
+  inputDataframes?: SelectOption[];
   onChange: (nodeId: string, params: Record<string, unknown>) => void;
   onRename: (nodeId: string, label: string) => void;
   onDelete: () => void;
@@ -23,7 +25,7 @@ type Props = {
   readOnly?: boolean;
 };
 
-export function Inspector({ selectedNode, selectedEdge, registry, aliases, datasets, availableColumns, availableIdColumns = [], inheritedIdColumn = null, availableRows = [], onChange, onRename, onDelete, onUngroupComponent, embedded = false, readOnly = false }: Props) {
+export function Inspector({ selectedNode, selectedEdge, registry, aliases, datasets, availableColumns, availableIdColumns = [], inheritedIdColumn = null, availableRows = [], inputDataframes = [], onChange, onRename, onDelete, onUngroupComponent, embedded = false, readOnly = false }: Props) {
   const [collapsed, setCollapsed] = useState(true);
 
   const edgeBody = selectedEdge ? (
@@ -55,7 +57,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
         )}
       </div>
       <fieldset className="inspector-readonly-fieldset" disabled={readOnly}>
-        <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} onParamsChange={onChange} onRename={onRename} />
+        <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} inputDataframes={inputDataframes} onParamsChange={onChange} onRename={onRename} />
       </fieldset>
     </>
   ) : null;
@@ -104,7 +106,7 @@ export function Inspector({ selectedNode, selectedEdge, registry, aliases, datas
           <p>برای پنجره کامل شبیه n8n روی نود دابل‌کلیک کنید.</p>
         </div>
         <fieldset className="inspector-readonly-fieldset" disabled={readOnly}>
-          <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} onParamsChange={onChange} onRename={onRename} />
+          <ParamEditor selectedNode={selectedNode} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} inputDataframes={inputDataframes} onParamsChange={onChange} onRename={onRename} />
         </fieldset>
       </>}
     </aside>

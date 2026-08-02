@@ -1,7 +1,11 @@
+"""Declarative node, port, setting, and execution interfaces."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Literal
+
+from app.workflow.contracts.errors import NodeContractError
 
 PortType = Literal[
     'dataframe', 'json', 'json_items', 'series', 'columns', 'model', 'metrics',
@@ -117,12 +121,27 @@ class BaseNode:
         return self.definition().to_api()
 
     def validate_settings(self, settings: dict[str, Any]) -> None:
+        """Validate required settings using the shared workflow error contract."""
         for setting in self.settings_schema:
             if setting.required and settings.get(setting.name) in [None, '', []]:
-                raise ValueError(f'Missing required setting: {setting.label}')
+                raise NodeContractError(
+                    "NODE_SETTING_REQUIRED",
+                    f"Required setting '{setting.label}' is empty.",
+                    category="setting",
+                    setting=setting.name,
+                    expected="a non-empty value",
+                    actual=settings.get(setting.name),
+                    suggested_fix=f"Open the node settings and fill '{setting.label}'.",
+                )
 
     def run(self, node: dict[str, Any], inputs: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
-        raise NotImplementedError(f'{self.id} has no run implementation.')
+        raise NodeContractError(
+            'NODE_IMPLEMENTATION_UNAVAILABLE',
+            f"Node '{self.id}' has no executable implementation.",
+            category='execution',
+            responsibility='application',
+            suggested_fix='Install a backend version that provides this node implementation.',
+        )
 
 
 def port(id: str, name: str, type: str, required: bool = True, multiple: bool = False) -> PortDefinition:

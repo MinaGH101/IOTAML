@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.database import SessionLocal
+from app.core.database import SessionLocal
 from app.domains.artifacts.service import create_artifact_from_path
-from app.models import Dataset
+from app.domains.datasets.models import Dataset
 
 
 def main() -> None:

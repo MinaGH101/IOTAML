@@ -1,0 +1,7 @@
+import type { Node } from '@xyflow/react';
+import { Play, Square, X } from 'lucide-react';
+import { categoryLabel, nodeIcon } from '../../../workspace/_components/NodePalette';
+
+export function NodeDialogHeader({ node, typeLabel, category, busy, onRunNode, onCancelRun, onRename, onClose }: { node: Node; typeLabel: string; category: string; busy: boolean; onRunNode(): void; onCancelRun(): void; onRename(nodeId: string, label: string): void; onClose(): void }) {
+  return <header className="node-modal-header workflow-shell-header n8n-node-modal-header"><div className="node-modal-actions n8n-node-modal-actions n8n-node-left-actions"><button className={`n8n-execute-icon ${busy ? 'topbar-danger-action' : ''}`} type="button" onClick={busy ? onCancelRun : onRunNode} title={busy ? 'توقف اجرا' : 'اجرای نود'} aria-label={busy ? 'توقف اجرا' : 'اجرای نود'}>{busy ? <Square size={14}/> : <Play size={15}/>}</button><button className="modal-close" type="button" aria-label="بستن" title="بستن" onClick={onClose}><X size={16}/></button></div><div className="n8n-node-title-block n8n-node-title-block-right"><span className="node-modal-kicker n8n-node-kicker"><i>{nodeIcon({ id: String(node.data.registryId || ''), label: typeLabel, description: String(node.data.description || ''), category } as never, 14)}</i>{categoryLabel(category)} · {typeLabel}</span><input className="node-modal-name n8n-node-name" dir="ltr" value={String(node.data.label || '')} aria-label="نام نود" onChange={(event) => onRename(node.id, event.target.value)}/></div></header>;
+}

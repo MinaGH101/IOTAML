@@ -1,3 +1,5 @@
+"""Regression and contract tests for output port selection."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -5,8 +7,8 @@ import pandas as pd
 from app.nodes.io import dataframe_result, first_upstream_df, output, table_output
 from app.nodes.transformation.normalization_node import NormalizationNode
 from app.nodes.visualization.pp_plot_node import PPPlotNode
-from app.workflow.executor import visible_node_output
-from app.workflow.graph import upstream_outputs
+from app.workflow.execution.executor import visible_node_output
+from app.workflow.graph.operations import upstream_outputs
 
 
 def test_upstream_outputs_routes_only_selected_source_port() -> None:

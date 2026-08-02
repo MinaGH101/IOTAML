@@ -118,7 +118,7 @@ export function nodeIcon(node: RegistryNode, size = 15): ReactNode {
 }
 
 function onDragStart(event: DragEvent<HTMLDivElement>, node: RegistryNode) {
-  event.dataTransfer.setData('application/nocodeml-node', node.id);
+  event.dataTransfer.setData('application/iotaml-node', node.id);
   event.dataTransfer.effectAllowed = 'move';
 }
 

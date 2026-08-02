@@ -1,3 +1,5 @@
+"""Background execution worker support for worker."""
+
 from app.workers.reliable_worker import run_worker
 
 if __name__ == '__main__':

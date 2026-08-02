@@ -1,3 +1,5 @@
+"""Regression and contract tests for scientific quality nodes."""
+
 from __future__ import annotations
 
 import base64

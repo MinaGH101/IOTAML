@@ -1,3 +1,5 @@
+"""Workflow node implementation for normalization node in the transformation family."""
+
 from __future__ import annotations
 
 import json
@@ -102,6 +104,12 @@ class NormalizationNode(BaseNode):
         changed_cols = list(dict.fromkeys(changed_cols))
         preview_cols = ([id_column] if id_column and id_column in df.columns else []) + changed_cols
         preview_df = df[preview_cols].head(int(settings.get('max_output_rows') or 100)).copy() if preview_cols else df.head(0)
+        rename_map = {
+            col: f'N_{col}'
+            for col in changed_cols
+            if col in preview_df.columns
+        }
+        preview_df = preview_df.rename(columns=rename_map)
         if id_column and id_column in preview_df.columns:
             preview_df = preview_df.rename(columns={id_column: 'id'})
         report = {'blocks': len(blocks), 'normalized_columns': changed_cols, 'normalized_column_count': len(changed_cols), 'details': report_rows}

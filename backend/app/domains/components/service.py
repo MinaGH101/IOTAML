@@ -1,3 +1,5 @@
+"""Components domain service for the IOTA ML backend."""
+
 from __future__ import annotations
 
 import copy
@@ -10,9 +12,11 @@ from sqlalchemy.orm import Session
 from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationAppError
 from app.domains.components.repository import component_repository
 from app.domains.components.schemas import ComponentCreate, ComponentImportPackage, ComponentUpdate, ComponentVersionCreate
-from app.models import Project, Workflow, WorkflowComponent, WorkflowComponentVersion, WorkflowVersion
-from app.services.node_cache_keys import sha256_json
-from app.workflow.validator import validate_workflow_graph
+from app.domains.projects.models import Project
+from app.domains.workflows.models import Workflow, WorkflowVersion
+from app.domains.components.models import WorkflowComponent, WorkflowComponentVersion
+from app.workflow.caching.keys import sha256_json
+from app.workflow.validation.service import validate_workflow_graph
 
 COMPONENT_REGISTRY_PREFIX = "COMP"
 
@@ -228,8 +232,8 @@ def create_component(db: Session, payload: ComponentCreate, owner: str, *, commi
     return component
 
 
-def list_components(db: Session, owner: str, project_id: int | None = None, include_archived: bool = False):
-    return component_repository.list_accessible(db, owner, _accessible_project_id(db, owner, project_id), include_archived)
+def list_components(db: Session, owner: str, project_id: int | None = None, include_archived: bool = False, *, limit: int = 50, offset: int = 0):
+    return component_repository.list_accessible(db, owner, _accessible_project_id(db, owner, project_id), include_archived, limit=limit, offset=offset)
 
 
 def get_component(db: Session, component_id: int, owner: str, project_id: int | None = None):

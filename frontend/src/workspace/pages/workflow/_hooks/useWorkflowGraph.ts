@@ -1,244 +1,104 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-  type Dispatch,
-  type MouseEvent as ReactMouseEvent,
-  type SetStateAction,
-} from 'react';
-import {
-  applyEdgeChanges,
-  applyNodeChanges,
-  type Edge,
-  type EdgeChange,
-  type Node,
-  type NodeChange,
-} from '@xyflow/react';
+import { useCallback, useEffect, useMemo, useRef, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from 'react';
+import type { Edge, EdgeChange, Node, NodeChange } from '@xyflow/react';
+import { useAtomicStore } from '../../../../shared/state/atomicStore';
+import { createWorkflowGraphStore } from '../../../../features/workflow/model/workflowGraphStore';
 import { connectedGraph, isTextInput } from '../../../_model/graph';
 import { sameStringArray } from '../../../../shared/_utils/appShared';
-import {
-  hasDocumentNodeChange,
-  mergeCommittedPositions,
-} from '../_model/interactiveGraph';
 
-type InteractiveNodeState = {
-  live: Node[];
-  committed: Node[];
-};
+export function useWorkflowGraph({ readOnly }: { readOnly: boolean }) {
+  const storeRef = useRef<ReturnType<typeof createWorkflowGraphStore> | null>(null);
+  if (!storeRef.current) storeRef.current = createWorkflowGraphStore();
+  const store = storeRef.current;
 
-type InteractiveNodeAction =
-  | { type: 'replace'; value: SetStateAction<Node[]> }
-  | { type: 'flow-change'; changes: NodeChange[] }
-  | { type: 'commit-position' };
+  const nodes = useAtomicStore(store, (state) => state.liveNodes);
+  const documentNodes = useAtomicStore(store, (state) => state.documentNodes);
+  const edges = useAtomicStore(store, (state) => state.edges);
+  const selectedId = useAtomicStore(store, (state) => state.selectedId);
+  const selectedIds = useAtomicStore(store, (state) => state.selectedIds);
+  const selectedEdgeId = useAtomicStore(store, (state) => state.selectedEdgeId);
+  const selectedEdgeIds = useAtomicStore(store, (state) => state.selectedEdgeIds);
+  const modalNodeId = useAtomicStore(store, (state) => state.modalNodeId);
+  const ctrlSelectionActive = useAtomicStore(store, (state) => state.ctrlSelectionActive);
 
-function interactiveNodeReducer(
-  state: InteractiveNodeState,
-  action: InteractiveNodeAction,
-): InteractiveNodeState {
-  if (action.type === 'replace') {
-    const next = typeof action.value === 'function'
-      ? action.value(state.live)
-      : action.value;
-    return next === state.live ? state : { live: next, committed: next };
-  }
-  if (action.type === 'flow-change') {
-    const live = applyNodeChanges(action.changes, state.live);
-    return {
-      live,
-      committed: hasDocumentNodeChange(action.changes) ? live : state.committed,
-    };
-  }
-  const committed = mergeCommittedPositions(state.committed, state.live);
-  return committed === state.committed ? state : { ...state, committed };
-}
+  const setNodes = useCallback<Dispatch<SetStateAction<Node[]>>>((value) => store.getState().setNodes(value), [store]);
+  const setEdges = useCallback<Dispatch<SetStateAction<Edge[]>>>((value) => store.getState().setEdges(value), [store]);
+  const setSelectedId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setSelectedId(value), [store]);
+  const setSelectedIds = useCallback<Dispatch<SetStateAction<string[]>>>((value) => store.getState().setSelectedIds(value), [store]);
+  const setSelectedEdgeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setSelectedEdgeId(value), [store]);
+  const setSelectedEdgeIds = useCallback<Dispatch<SetStateAction<string[]>>>((value) => store.getState().setSelectedEdgeIds(value), [store]);
+  const setModalNodeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setModalNodeId(value), [store]);
 
-export function useWorkflowGraph({
-  readOnly,
-}: {
-  readOnly: boolean;
-}) {
-  const [nodeState, dispatchNodes] = useReducer(interactiveNodeReducer, {
-    live: [],
-    committed: [],
-  });
-  const nodes = nodeState.live;
-  const documentNodes = nodeState.committed;
-  const setNodes = useCallback<Dispatch<SetStateAction<Node[]>>>((value) => {
-    dispatchNodes({ type: 'replace', value });
-  }, []);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
-  const [ctrlSelectionActive, setCtrlSelectionActive] = useState(false);
-  const [modalNodeId, setModalNodeId] = useState<string | null>(null);
+  const nodesById = useMemo(() => new Map(documentNodes.map((node) => [node.id, node])), [documentNodes]);
+  const selectedNode = useMemo(() => nodesById.get(selectedId || '') || null, [nodesById, selectedId]);
+  const selectedEdge = useMemo(() => edges.find((edge) => edge.id === selectedEdgeId) || null, [edges, selectedEdgeId]);
+  const selectedFlow = useMemo(() => connectedGraph(documentNodes, edges, selectedId), [documentNodes, edges, selectedId]);
+  const modalNode = useMemo(() => nodesById.get(modalNodeId || '') || null, [modalNodeId, nodesById]);
 
-  const nodesById = useMemo(
-    () => new Map(documentNodes.map((node) => [node.id, node])),
-    [documentNodes],
-  );
-  const selectedNode = useMemo(
-    () => nodesById.get(selectedId || '') || null,
-    [nodesById, selectedId],
-  );
-  const selectedEdge = useMemo(
-    () => edges.find((edge) => edge.id === selectedEdgeId) || null,
-    [edges, selectedEdgeId],
-  );
-  const selectedFlow = useMemo(
-    () => connectedGraph(documentNodes, edges, selectedId),
-    [documentNodes, edges, selectedId],
-  );
-  const modalNode = useMemo(
-    () => nodesById.get(modalNodeId || '') || null,
-    [modalNodeId, nodesById],
-  );
-
-  const clearSelection = useCallback(() => {
-    setSelectedId(null);
-    setSelectedIds([]);
-    setSelectedEdgeId(null);
-    setSelectedEdgeIds([]);
-    setModalNodeId(null);
-  }, []);
-
+  const clearSelection = useCallback(() => store.getState().resetSelection(), [store]);
   const selectNode = useCallback((nodeId: string, openModal = false) => {
-    setSelectedId(nodeId);
-    setSelectedIds([nodeId]);
-    setSelectedEdgeId(null);
-    setSelectedEdgeIds([]);
-    if (openModal) setModalNodeId(nodeId);
-  }, []);
+    const state = store.getState();
+    state.setSelectedId(nodeId); state.setSelectedIds([nodeId]);
+    state.setSelectedEdgeId(null); state.setSelectedEdgeIds([]);
+    if (openModal) state.setModalNodeId(nodeId);
+  }, [store]);
+  const onNodesChange = useCallback((changes: NodeChange[]) => store.getState().applyNodeChanges(changes), [store]);
+  const commitNodePositions = useCallback(() => store.getState().commitNodePositions(), [store]);
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => store.getState().applyEdgeChanges(changes), [store]);
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => dispatchNodes({ type: 'flow-change', changes }),
-    [],
-  );
-  const commitNodePositions = useCallback(() => {
-    dispatchNodes({ type: 'commit-position' });
-  }, []);
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => setEdges((items) => applyEdgeChanges(changes, items)),
-    [],
-  );
-
-  const onSelectionChange = useCallback(({
-    nodes: selectedNodes,
-    edges: selectedEdges,
-  }: {
-    nodes: Node[];
-    edges: Edge[];
-  }) => {
+  const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const nextNodeIds = selectedNodes.map((node) => node.id);
     const nextEdgeIds = selectedEdges.map((edge) => edge.id);
-    setSelectedIds((previous) => sameStringArray(previous, nextNodeIds) ? previous : nextNodeIds);
-    setSelectedEdgeIds((previous) => sameStringArray(previous, nextEdgeIds) ? previous : nextEdgeIds);
+    const state = store.getState();
+    state.setSelectedIds((previous) => sameStringArray(previous, nextNodeIds) ? previous : nextNodeIds);
+    state.setSelectedEdgeIds((previous) => sameStringArray(previous, nextEdgeIds) ? previous : nextEdgeIds);
     if (nextNodeIds.length) {
-      const nextSelectedId = nextNodeIds[nextNodeIds.length - 1];
-      setSelectedId((previous) => previous === nextSelectedId ? previous : nextSelectedId);
-      setSelectedEdgeId(null);
+      state.setSelectedId(nextNodeIds[nextNodeIds.length - 1]); state.setSelectedEdgeId(null);
     } else if (nextEdgeIds.length) {
-      const nextSelectedEdgeId = nextEdgeIds[nextEdgeIds.length - 1];
-      setSelectedEdgeId((previous) => previous === nextSelectedEdgeId ? previous : nextSelectedEdgeId);
-      setSelectedId(null);
+      state.setSelectedEdgeId(nextEdgeIds[nextEdgeIds.length - 1]); state.setSelectedId(null);
     } else {
-      setSelectedId(null);
-      setSelectedEdgeId(null);
+      state.setSelectedId(null); state.setSelectedEdgeId(null);
     }
-  }, []);
+  }, [store]);
 
-  const onNodeClick = useCallback((_: ReactMouseEvent, node: Node) => {
-    selectNode(node.id);
-  }, [selectNode]);
-
+  const onNodeClick = useCallback((_: ReactMouseEvent, node: Node) => selectNode(node.id), [selectNode]);
   const onEdgeClick = useCallback((_: ReactMouseEvent, edge: Edge) => {
-    setSelectedEdgeId(edge.id);
-    setSelectedEdgeIds([edge.id]);
-    setSelectedId(null);
-    setSelectedIds([]);
-  }, []);
-
+    const state = store.getState();
+    state.setSelectedEdgeId(edge.id); state.setSelectedEdgeIds([edge.id]);
+    state.setSelectedId(null); state.setSelectedIds([]);
+  }, [store]);
   const onPaneClick = useCallback(() => clearSelection(), [clearSelection]);
 
   const deleteSelected = useCallback(() => {
     if (readOnly) return;
-    const nodeIds = selectedIds.length ? selectedIds : (selectedId ? [selectedId] : []);
-    const edgeIds = selectedEdgeIds.length ? selectedEdgeIds : (selectedEdgeId ? [selectedEdgeId] : []);
+    const state = store.getState();
+    const nodeIds = state.selectedIds.length ? state.selectedIds : (state.selectedId ? [state.selectedId] : []);
+    const edgeIds = state.selectedEdgeIds.length ? state.selectedEdgeIds : (state.selectedEdgeId ? [state.selectedEdgeId] : []);
     if (nodeIds.length) {
       const remove = new Set(nodeIds);
-      setNodes((items) => items.filter((node) => !remove.has(node.id)));
-      setEdges((items) => items.filter((edge) => !remove.has(edge.source) && !remove.has(edge.target)));
-      clearSelection();
-      return;
-    }
-    if (edgeIds.length) {
+      state.setNodes((items) => items.filter((node) => !remove.has(node.id)));
+      state.setEdges((items) => items.filter((edge) => !remove.has(edge.source) && !remove.has(edge.target)));
+      state.resetSelection();
+    } else if (edgeIds.length) {
       const remove = new Set(edgeIds);
-      setEdges((items) => items.filter((edge) => !remove.has(edge.id)));
-      setSelectedEdgeId(null);
-      setSelectedEdgeIds([]);
+      state.setEdges((items) => items.filter((edge) => !remove.has(edge.id)));
+      state.setSelectedEdgeId(null); state.setSelectedEdgeIds([]);
     }
-  }, [clearSelection, readOnly, selectedEdgeId, selectedEdgeIds, selectedId, selectedIds]);
+  }, [readOnly, store]);
 
   useEffect(() => {
-    const updateModifier = (event: KeyboardEvent) => {
-      setCtrlSelectionActive(event.ctrlKey || event.metaKey);
-    };
-    const clearModifier = () => setCtrlSelectionActive(false);
-    window.addEventListener('keydown', updateModifier);
-    window.addEventListener('keyup', updateModifier);
-    window.addEventListener('blur', clearModifier);
-    return () => {
-      window.removeEventListener('keydown', updateModifier);
-      window.removeEventListener('keyup', updateModifier);
-      window.removeEventListener('blur', clearModifier);
-    };
-  }, []);
+    const updateModifier = (event: KeyboardEvent) => store.getState().setCtrlSelectionActive(event.ctrlKey || event.metaKey);
+    const clearModifier = () => store.getState().setCtrlSelectionActive(false);
+    window.addEventListener('keydown', updateModifier); window.addEventListener('keyup', updateModifier); window.addEventListener('blur', clearModifier);
+    return () => { window.removeEventListener('keydown', updateModifier); window.removeEventListener('keyup', updateModifier); window.removeEventListener('blur', clearModifier); };
+  }, [store]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (
-        (event.key === 'Delete' || event.key === 'Backspace')
-        && !isTextInput(event.target)
-      ) deleteSelected();
+      if ((event.key === 'Delete' || event.key === 'Backspace') && !isTextInput(event.target)) deleteSelected();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [deleteSelected]);
 
-  return {
-    nodes,
-    documentNodes,
-    setNodes: setNodes as Dispatch<SetStateAction<Node[]>>,
-    edges,
-    setEdges: setEdges as Dispatch<SetStateAction<Edge[]>>,
-    nodesById,
-    selectedNode,
-    selectedEdge,
-    selectedFlow,
-    modalNode,
-    selectedId,
-    setSelectedId,
-    selectedIds,
-    setSelectedIds,
-    selectedEdgeId,
-    setSelectedEdgeId,
-    selectedEdgeIds,
-    setSelectedEdgeIds,
-    modalNodeId,
-    setModalNodeId,
-    ctrlSelectionActive,
-    clearSelection,
-    selectNode,
-    onNodesChange,
-    commitNodePositions,
-    onEdgesChange,
-    onSelectionChange,
-    onNodeClick,
-    onEdgeClick,
-    onPaneClick,
-    deleteSelected,
-  };
+  return { nodes, documentNodes, setNodes, edges, setEdges, nodesById, selectedNode, selectedEdge, selectedFlow, modalNode, selectedId, setSelectedId, selectedIds, setSelectedIds, selectedEdgeId, setSelectedEdgeId, selectedEdgeIds, setSelectedEdgeIds, modalNodeId, setModalNodeId, ctrlSelectionActive, clearSelection, selectNode, onNodesChange, commitNodePositions, onEdgesChange, onSelectionChange, onNodeClick, onEdgeClick, onPaneClick, deleteSelected };
 }

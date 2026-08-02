@@ -1,3 +1,5 @@
+"""Workflow node implementation for duplicate error node in the inspection family."""
+
 from __future__ import annotations
 
 from typing import Any, Callable

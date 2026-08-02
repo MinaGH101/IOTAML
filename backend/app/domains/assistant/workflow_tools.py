@@ -1,3 +1,5 @@
+"""Assistant domain workflow tools for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from typing import Any

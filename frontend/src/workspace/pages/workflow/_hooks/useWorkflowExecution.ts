@@ -1,8 +1,28 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { Edge, Node } from '@xyflow/react';
 import type { Run, RunSummary, Workflow } from '../../../../shared/_types';
+import { ApiError } from '../../../../shared/_service/httpClient';
 import { connectedGraph, normalizeEdgeHandles } from '../../../_model/graph';
 import { workspaceApi } from '../../../_service/workspaceApi';
+
+function executionErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return error instanceof Error ? error.message : 'اجرا ناموفق بود';
+  }
+  const problems = Array.isArray(error.details.errors)
+    ? error.details.errors as Array<Record<string, unknown>>
+    : [];
+  if (!problems.length) {
+    return `${error.message}${error.requestId ? ` · request ${error.requestId}` : ''}`;
+  }
+  const first = problems[0];
+  const location = [
+    first.nodeId ? `نود ${String(first.nodeId)}` : '',
+    first.field ? `تنظیم ${String(first.field)}` : '',
+    first.port ? `پورت ${String(first.port)}` : '',
+  ].filter(Boolean).join(' · ');
+  return `${String(first.message || error.message)}${location ? ` (${location})` : ''}${first.suggestedFix ? ` — ${String(first.suggestedFix)}` : ''}`;
+}
 
 export function useWorkflowExecution({
   nodes,
@@ -114,7 +134,7 @@ export function useWorkflowExecution({
       setMessage('جریان در صف اجرا قرار گرفت');
     } catch (error) {
       if (!(error instanceof Error && error.message === 'AUTOSAVE_SUPERSEDED')) {
-        setMessage(error instanceof Error ? error.message : 'اجرا ناموفق بود');
+        setMessage(executionErrorMessage(error));
       }
       setBusy(false);
     }

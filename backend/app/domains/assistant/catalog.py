@@ -1,3 +1,5 @@
+"""Assistant domain catalog for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,13 +1,15 @@
+"""Components domain repository for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.models import WorkflowComponent, WorkflowComponentVersion
+from app.domains.components.models import WorkflowComponent, WorkflowComponentVersion
 
 
 class ComponentRepository:
-    def list_accessible(self, db: Session, owner: str, project_id: int | None = None, include_archived: bool = False):
+    def list_accessible(self, db: Session, owner: str, project_id: int | None = None, include_archived: bool = False, *, limit: int = 50, offset: int = 0):
         query = db.query(WorkflowComponent).filter(
             or_(
                 (WorkflowComponent.owner_username == owner) & (WorkflowComponent.visibility == "private"),
@@ -17,7 +19,7 @@ class ComponentRepository:
         )
         if not include_archived:
             query = query.filter(WorkflowComponent.archived.is_(False))
-        return query.order_by(WorkflowComponent.updated_at.desc()).all()
+        return query.order_by(WorkflowComponent.updated_at.desc(), WorkflowComponent.id.desc()).offset(offset).limit(limit).all()
 
     def get_accessible(self, db: Session, component_id: int, owner: str, project_id: int | None = None):
         return db.query(WorkflowComponent).filter(
@@ -41,10 +43,10 @@ class ComponentRepository:
             WorkflowComponentVersion.component_id == component_id,
         ).first()
 
-    def list_versions(self, db: Session, component_id: int):
+    def list_versions(self, db: Session, component_id: int, *, limit: int = 100, offset: int = 0):
         return db.query(WorkflowComponentVersion).filter(
             WorkflowComponentVersion.component_id == component_id
-        ).order_by(WorkflowComponentVersion.version_number.desc()).all()
+        ).order_by(WorkflowComponentVersion.version_number.desc()).offset(offset).limit(limit).all()
 
 
 component_repository = ComponentRepository()

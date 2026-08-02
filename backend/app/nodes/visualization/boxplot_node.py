@@ -1,3 +1,5 @@
+"""Workflow node implementation for boxplot node in the visualization family."""
+
 from __future__ import annotations
 
 from typing import Any

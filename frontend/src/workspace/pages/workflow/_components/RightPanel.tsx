@@ -7,6 +7,7 @@ import { ComponentLibraryPanel } from '../../../_components/ComponentLibraryPane
 import { Inspector } from '../../../_components/Inspector';
 import type { AnalysisBoardTab } from '../../../_model/board';
 import { ResultsPanel, type Output } from '../../../_components/ResultsPanel';
+import type { InteractiveTableState } from '../../../_components/output/InteractiveTableOutput';
 import type { Dataset, RegistryNode, Run, RunSummary, WorkflowComponent, WorkflowVersionSummary } from '../../../../shared/_types';
 import { RunHistoryPanel } from './RunHistoryPanel';
 import { WorkflowVersionsPanel } from './WorkflowVersionsPanel';
@@ -127,10 +128,26 @@ function RightPanelComponent({
   readOnly
 }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<RightTab>('results');
+  const inputDataframes = selectedNode
+    ? selectedFlow.edges
+        .filter((edge) => edge.target === selectedNode.id)
+        .map((edge) => {
+          const sourceNode = selectedFlow.nodes.find((node) => node.id === edge.source);
+          const sourceLabel = String(sourceNode?.data?.label || sourceNode?.data?.typeLabel || edge.source);
+          return { value: edge.source, label: `${sourceLabel} · ${String(edge.sourceHandle || 'dataframe')}` };
+        })
+    : [];
 
   const openTab = (tab: RightTab) => {
     setActiveTab(tab);
     setResultsCollapsed(false);
+  };
+
+  const updateInteractiveTable = (nodeId: string, tableState: InteractiveTableState) => {
+    if (readOnly) return;
+    const target = selectedFlow.nodes.find((node) => node.id === nodeId);
+    const params = (target?.data?.params || {}) as Record<string, unknown>;
+    updateNodeParams(nodeId, { ...params, table_state: tableState });
   };
 
   const renderTabButton = (tab: RightTab) => {
@@ -193,13 +210,20 @@ function RightPanelComponent({
                     <small>{analysisBoardOpen ? 'Pin به برد انتخاب‌شده اضافه می‌شود.' : 'در Workflow، Pin همیشه به برد اصلی می‌رود.'}</small>
                   </div>
                 )}
-                <ResultsPanel run={currentRun} selectedNodeId={selectedId} collapsed={false} onToggle={() => setResultsCollapsed(true)} onAddToBoard={onAddOutputToBoard} />
+                <ResultsPanel
+                  run={currentRun}
+                  selectedNodeId={selectedId}
+                  collapsed={false}
+                  onToggle={() => setResultsCollapsed(true)}
+                  onAddToBoard={onAddOutputToBoard}
+                  onInteractiveTableChange={updateInteractiveTable}
+                />
               </div>
             )}
 
             {activeTab === 'settings' && (
               <div className="workflow-right-tab-body workflow-settings-tab">
-                <Inspector embedded readOnly={readOnly} selectedNode={selectedNode} selectedEdge={selectedEdge} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} onChange={updateNodeParams} onRename={renameNode} onDelete={deleteSelected} onUngroupComponent={onUngroupComponent} />
+                <Inspector embedded readOnly={readOnly} selectedNode={selectedNode} selectedEdge={selectedEdge} registry={registry} aliases={aliases} datasets={datasets} availableColumns={availableColumns} availableIdColumns={availableIdColumns} inheritedIdColumn={inheritedIdColumn} availableRows={availableRows} inputDataframes={inputDataframes} onChange={updateNodeParams} onRename={renameNode} onDelete={deleteSelected} onUngroupComponent={onUngroupComponent} />
               </div>
             )}
 

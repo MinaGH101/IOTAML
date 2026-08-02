@@ -69,6 +69,7 @@ export function WorkflowOverlays({
           run={runs.currentRun}
           busy={runs.busy}
           onRunNode={() => execution.runGraphFromNode(graph.modalNode!.id)}
+          onCancelRun={() => { if (runs.currentRun) void runs.cancelRun(runs.currentRun); }}
           onParamsChange={canvas.updateNodeParams}
           onRename={canvas.renameNode}
           onPinnedChange={canvas.updateNodePinned}

@@ -1,3 +1,5 @@
+"""Workflow node implementation for data overview node in the inspection family."""
+
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port, setting

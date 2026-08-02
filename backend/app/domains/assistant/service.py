@@ -1,11 +1,15 @@
+"""Assistant domain service for the IOTA ML backend."""
+
 from __future__ import annotations
 
 import json
-import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from openai import AsyncOpenAI
+if TYPE_CHECKING:
+    from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
 
 from .tools import CATALOG_TOOLS, execute_catalog_tool
 from .workflow_tools import (
@@ -50,16 +54,49 @@ VALIDATE_CURRENT_WORKFLOW_TOOL: dict[str, Any] = {
 }
 
 
+class AssistantNotConfiguredError(RuntimeError):
+    """Raised only when the optional assistant is used without credentials."""
+
+
+class AssistantProviderError(RuntimeError):
+    """Raised when the configured AI provider rejects or fails a request."""
+
+
 class AssistantService:
     MAX_TOOL_ROUNDS = 5
 
-    def __init__(self) -> None:
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self.client = AsyncOpenAI(
-            api_key=os.environ["OPENAI_API_KEY"],
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        model: str | None = None,
+        client: "AsyncOpenAI | Any | None" = None,
+    ) -> None:
+        settings = get_settings()
+        self.model = (model or settings.openai_model).strip() or "gpt-4o-mini"
+        self._api_key = (
+            settings.openai_api_key if api_key is None else api_key
+        ).strip()
+        self._client = client
+
+    @property
+    def is_configured(self) -> bool:
+        return self._client is not None or bool(self._api_key)
+
+    def _require_client(self) -> Any:
+        if self._client is not None:
+            return self._client
+        if not self._api_key:
+            raise AssistantNotConfiguredError(
+                "The optional AI assistant is not configured."
+            )
+        from openai import AsyncOpenAI
+        self._client = AsyncOpenAI(
+            api_key=self._api_key,
             timeout=60.0,
             max_retries=2,
         )
+        return self._client
 
     async def chat(
         self,
@@ -69,6 +106,7 @@ class AssistantService:
         workflow_id: int | None,
         owner_username: str,
     ) -> str:
+        client = self._require_client()
         conversation_input: list[Any] = [
             {
                 "role": "user",
@@ -82,9 +120,10 @@ class AssistantService:
             VALIDATE_CURRENT_WORKFLOW_TOOL,
         ]
         for _ in range(self.MAX_TOOL_ROUNDS):
-            response = await self.client.responses.create(
-                model=self.model,
-                instructions=(
+            try:
+                response = await client.responses.create(
+                    model=self.model,
+                    instructions=(
                     "You are the AI assistant inside IOTA ML. "
                     "Help users inspect and design valid machine-learning workflows. "
 
@@ -113,9 +152,17 @@ class AssistantService:
                 input=conversation_input,
                 tools=tools,
                 tool_choice="auto",
-                max_output_tokens=1_200,
-                store=False,
-            )
+                    max_output_tokens=1_200,
+                    store=False,
+                )
+            except Exception as exc:
+                try:
+                    from openai import OpenAIError
+                except ImportError:
+                    raise
+                if isinstance(exc, OpenAIError):
+                    raise AssistantProviderError("The AI provider request failed.") from exc
+                raise
 
             function_calls = [
                 item

@@ -5,7 +5,7 @@ import { workspaceApi } from '../../../workspace/_service/workspaceApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
 import { DatasetUploader } from '../../_components/DatasetUploader';
 import { ProjectForm } from '../../_components/ProjectForm';
-import type { ArtifactUsage, Dataset, Project, ProjectPayload, UserProfile, Workflow } from '../../../shared/_types';
+import type { ArtifactUsage, AssignableUser, Dataset, Project, ProjectPayload, UserProfile, Workflow } from '../../../shared/_types';
 import { formatDate, messageFromError, payloadFromProject, type UiMessage } from '../../../shared/_utils/appShared';
 import { readWorkflowJson } from '../../../shared/_utils/workflowJson';
 
@@ -24,6 +24,7 @@ export function ProjectDetailPage({
   onOpenEditor,
   onProjectUpdated,
   onProfile,
+  onAdmin,
   onLogout
 }: {
   user: UserProfile;
@@ -32,9 +33,11 @@ export function ProjectDetailPage({
   onOpenEditor: (workflowId: number | null) => void;
   onProjectUpdated: (project: Project) => void;
   onProfile: () => void;
+  onAdmin: () => void;
   onLogout: () => void;
 }) {
   const [draft, setDraft] = useState<ProjectPayload>(() => payloadFromProject(project));
+  const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [artifactUsage, setArtifactUsage] = useState<ArtifactUsage | null>(null);
@@ -66,6 +69,10 @@ export function ProjectDetailPage({
     setDraft(payloadFromProject(project));
     refresh().catch((error) => setMessage(messageFromError(error, 'دریافت جزئیات پروژه ناموفق بود')));
   }, [project.id, refresh]);
+
+  useEffect(() => {
+    if (project.can_manage_assignments) projectsApi.assignableUsers().then(setAssignableUsers).catch(() => setAssignableUsers([]));
+  }, [project.can_manage_assignments]);
 
   const saveProject = async () => {
     if (!draft.name.trim()) {
@@ -191,7 +198,7 @@ export function ProjectDetailPage({
 
   return (
     <div className="app-shell manager-shell">
-      <AppTopNav user={user} title={project.name} subtitle="جزئیات پروژه، داده‌ها و جریان‌های ذخیره‌شده" onBack={onBack} onProfile={onProfile} onLogout={onLogout} />
+      <AppTopNav user={user} title={project.name} subtitle="جزئیات پروژه، داده‌ها و جریان‌های ذخیره‌شده" onBack={onBack} onProfile={onProfile} onAdmin={onAdmin} onLogout={onLogout} />
 
       <main className="manager-page project-detail-reference-page iota-minimal-page">
         {message && <div className={`manager-toast ${message.tone}`}>{message.text}</div>}
@@ -209,17 +216,17 @@ export function ProjectDetailPage({
               </div>
             </div>
 
-            <ProjectForm value={draft} onChange={setDraft} />
-            <div className="project-edit-actions project-edit-actions-reference">
+            <ProjectForm value={draft} onChange={setDraft} readOnly={!project.can_edit} canManageAssignments={project.can_manage_assignments} assignableUsers={assignableUsers} />
+            {project.can_edit ? <div className="project-edit-actions project-edit-actions-reference">
               <button className="primary" type="button" disabled={busy} onClick={saveProject}>{busy ? <RefreshCw size={15} className="spin" /> : <Save size={15} />} ذخیره اطلاعات</button>
-              <button className="danger" type="button" disabled={busy} onClick={deleteProject}><Trash2 size={15} /> حذف پروژه</button>
-            </div>
+              {project.can_delete && <button className="danger" type="button" disabled={busy} onClick={deleteProject}><Trash2 size={15} /> حذف پروژه</button>}
+            </div> : <div className="readonly-project-note">این پروژه با دسترسی مشاهده باز شده است و قابل ویرایش یا اجرا نیست.</div>}
           </aside>
 
           <section className="detail-main-stack detail-main-stack-reference">
             <article className="manager-panel project-data-card project-data-reference">
               <div className="reference-card-head"><div className="reference-step-title"><Upload size={16} /><div><b>داده‌های پروژه</b><span>دیتاست‌های CSV پروژه</span></div></div></div>
-              <DatasetUploader datasets={datasets} onUpload={uploadDataset} onDelete={deleteDataset} />
+              <DatasetUploader datasets={datasets} onUpload={uploadDataset} onDelete={deleteDataset} disabled={!project.can_edit} disabledText="دسترسی شما به این پروژه فقط مشاهده است." />
               {artifactUsage && (
                 <div className="artifact-usage-summary">
                   <div className="artifact-usage-head">
@@ -237,11 +244,11 @@ export function ProjectDetailPage({
             <article className="manager-panel workflows-reference-card">
               <div className="reference-card-head workflow-reference-head">
                 <div><b>جریان‌های پروژه</b><span>هر جریان، داده و اجرای خودش را داخل همین پروژه نگه می‌دارد.</span></div>
-                <div className="workflow-create-actions">
+                {project.can_edit && <div className="workflow-create-actions">
                   <input ref={workflowImportRef} type="file" accept=".json,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importWorkflow(file); event.currentTarget.value = ''; }} />
                   <button className="icon-button" type="button" disabled={importingWorkflow} onClick={() => workflowImportRef.current?.click()}>{importingWorkflow ? <RefreshCw size={15} className="spin" /> : <FileUp size={15} />} Import JSON</button>
                   <button className="primary" type="button" onClick={() => onOpenEditor(null)}><PlusCircle size={15} /> جریان جدید</button>
-                </div>
+                </div>}
               </div>
               <div className="workflow-card-grid workflow-card-grid-reference">
                 {workflows.map((workflow) => (
@@ -250,7 +257,7 @@ export function ProjectDetailPage({
                       <WorkflowIcon />
                       <div><b>{workflow.name}</b><span>آخرین تغییر: {formatDate(workflow.updated_at)}</span></div>
                     </button>
-                    <div className={`workflow-name-editor ${editingWorkflowId === workflow.id ? 'is-editing' : 'is-viewing'}`}>
+                    {project.can_edit && <div className={`workflow-name-editor ${editingWorkflowId === workflow.id ? 'is-editing' : 'is-viewing'}`}>
                       {editingWorkflowId === workflow.id ? (
                         <>
                           <input
@@ -315,7 +322,7 @@ export function ProjectDetailPage({
                           </button>
                         </>
                       )}
-                    </div>
+                    </div>}
                   </article>
                 ))}
                 {workflows.length === 0 && <div className="empty-manager">هنوز جریانی برای این پروژه ذخیره نشده است.</div>}

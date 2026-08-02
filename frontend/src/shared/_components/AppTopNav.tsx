@@ -1,4 +1,4 @@
-import { ArrowRight, LayoutDashboard, LogOut, UserCircle, Cpu } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, LogOut, ShieldCheck, UserCircle } from 'lucide-react';
 import type { UserProfile } from '../_types';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -9,7 +9,8 @@ export function AppTopNav({
   onProfile,
   onLogout,
   onBack,
-  onProjects
+  onProjects,
+  onAdmin
 }: {
   user: UserProfile;
   title: string;
@@ -18,6 +19,7 @@ export function AppTopNav({
   onLogout: () => void;
   onBack?: () => void;
   onProjects?: () => void;
+  onAdmin?: () => void;
 }) {
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
 
@@ -47,6 +49,11 @@ export function AppTopNav({
           <button className="icon-button profile-button" type="button" onClick={onProjects} title="پنل پروژه‌ها">
             <LayoutDashboard size={16} />
             <span>پروژه‌ها</span>
+          </button>
+        )}
+        {user.role === 'admin' && onAdmin && (
+          <button className="icon-button profile-button profile-icon-only" type="button" onClick={onAdmin} title="پنل مدیریت" aria-label="پنل مدیریت">
+            <ShieldCheck size={16} />
           </button>
         )}
         <button className="icon-button profile-button profile-icon-only" type="button" onClick={onProfile} title="پروفایل" aria-label="پروفایل">

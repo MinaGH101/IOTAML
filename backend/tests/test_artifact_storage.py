@@ -1,3 +1,5 @@
+"""Regression and contract tests for artifact storage."""
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -7,8 +9,9 @@ from fastapi import UploadFile
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.database import Base
+from app.core.database import Base
 from app.domains.artifacts.models import Artifact
+from app.domains.projects.models import Project
 from app.domains.artifacts.service import create_artifact_from_upload, delete_artifact, materialize_artifact, usage_payload
 from app.infrastructure.storage.service import get_storage_backend
 
@@ -23,6 +26,8 @@ def make_session(tmp_path: Path) -> Session:
 
 def test_local_artifact_round_trip_and_usage(tmp_path: Path) -> None:
     with make_session(tmp_path) as db:
+        db.add(Project(id=7, name='Test', owner_username='admin'))
+        db.commit()
         upload = UploadFile(filename='sample.csv', file=BytesIO(b'a,b\n1,2\n'), headers={'content-type': 'text/csv'})
         artifact = create_artifact_from_upload(
             db,

@@ -59,9 +59,9 @@ export function DatasetUploader({
                 <button type="button" className="tiny-icon" title="نمایش ستون‌ها" onClick={() => setExpandedId(isOpen ? null : dataset.id)}>
                   {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                 </button>
-                <button type="button" className="tiny-icon danger" title="حذف دیتاست" aria-label="حذف دیتاست" onClick={() => onDelete(dataset.id)}>
+                {!disabled && <button type="button" className="tiny-icon danger" title="حذف دیتاست" aria-label="حذف دیتاست" onClick={() => onDelete(dataset.id)}>
                   <Trash2 size={12} />
-                </button>
+                </button>}
               </div>
 
               {isOpen && (

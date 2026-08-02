@@ -10,17 +10,21 @@ export function ProfilePage({
   onBack,
   onProjects,
   onSaved,
+  onAdmin,
   onLogout
 }: {
   user: UserProfile;
   onBack: () => void;
   onProjects: () => void;
   onSaved: (user: UserProfile) => void;
+  onAdmin: () => void;
   onLogout: () => void;
 }) {
   const [draft, setDraft] = useState<UserProfile>(user);
   const [message, setMessage] = useState<UiMessage>(null);
   const [busy, setBusy] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const activity = draft.activity || [];
   const alarms = draft.alarms || [];
@@ -44,6 +48,22 @@ export function ProfilePage({
     } finally {
       setBusy(false);
     }
+  };
+
+  const savePassword = async () => {
+    if (!currentPassword || newPassword.length < 10) {
+      setMessage({ text: 'رمز جدید باید حداقل ۱۰ کاراکتر باشد', tone: 'error' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await authApi.changePassword({ current_password: currentPassword, new_password: newPassword });
+      setCurrentPassword(''); setNewPassword('');
+      setMessage({ text: 'رمز عبور تغییر کرد. برای امنیت، دوباره وارد شوید.', tone: 'success' });
+      onLogout();
+    } catch (error) {
+      setMessage(messageFromError(error, 'تغییر رمز عبور ناموفق بود'));
+    } finally { setBusy(false); }
   };
 
   const uploadProfileImage = async (file: File | null) => {
@@ -71,6 +91,7 @@ export function ProfilePage({
         onBack={onBack}
         onProjects={onProjects}
         onProfile={() => {}}
+        onAdmin={onAdmin}
         onLogout={onLogout}
       />
 
@@ -135,6 +156,12 @@ export function ProfilePage({
           </article>
 
           <aside className="profile-side-stack-reference">
+            <section className="manager-panel profile-password-card">
+              <div className="panel-heading"><ShieldCheck size={16} /><div><b>تغییر رمز عبور</b><span>پس از تغییر، نشست‌های قبلی بسته می‌شوند.</span></div></div>
+              <label>رمز فعلی<input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></label>
+              <label>رمز جدید<input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></label>
+              <button className="icon-button full-width" type="button" disabled={busy} onClick={() => void savePassword()}>ذخیره رمز جدید</button>
+            </section>
             <section className="manager-panel activity-panel activity-panel-reference">
               <div className="panel-heading"><Clock3 size={16} /><div><b>نمودار فعالیت</b><span>فعالیت هفتگی کاربر</span></div></div>
               <div className="activity-bars activity-bars-ai activity-bars-reference">

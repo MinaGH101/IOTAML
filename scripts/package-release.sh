@@ -2,14 +2,14 @@
 set -eu
 
 root="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
-output="${1:-$(dirname "$root")/iota_ml-clean.zip}"
+output="${1:-$(dirname "$root")/iotaml-clean.zip}"
 case "$output" in
   /*) ;;
   *) output="$(pwd)/$output" ;;
 esac
 
 cd "$root"
-"$root/scripts/scan-secrets.sh"
+sh "$root/scripts/scan-secrets.sh"
 rm -f "$output"
 
 find . -type f | while IFS= read -r path; do

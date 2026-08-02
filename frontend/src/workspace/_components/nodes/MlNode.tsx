@@ -1,7 +1,8 @@
 import { memo } from 'react';
+import { LoaderCircle } from 'lucide-react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { categoryClassName, nodeIcon } from '../NodePalette';
-import type { PortDefinition, RunNodeStatus } from '../../../shared/_types';
+import type { PortDefinition, RegistryNode, RunNodeStatus } from '../../../shared/_types';
 
 type EditableNodeData = Record<string, unknown> & {
   label?: string;
@@ -33,7 +34,19 @@ function MlNodeComponent({ id, data, selected }: NodeProps) {
   const category = String(nodeData.category || 'Data Input');
   const label = String(nodeData.label || 'Node');
   const typeLabel = String(nodeData.typeLabel || nodeData.label || 'Node Type');
-  const iconNode = { id: String(nodeData.registryId || ''), label: typeLabel, description: String(nodeData.description || ''), category } as any;
+  const iconNode: RegistryNode = {
+    id: String(nodeData.registryId || ''),
+    label: typeLabel,
+    description: String(nodeData.description || ''),
+    category: category as RegistryNode['category'],
+    inputs: [],
+    outputs: [],
+    settingsSchema: [],
+    params: [],
+    executionMode: 'instant',
+    supportsDynamicParameters: false,
+    implemented: true,
+  };
   const runtimeStatus = nodeData.runtimeStatus || null;
 
   const visualRuntimeStatus = runtimeStatus && !['cached', 'succeeded', 'skipped'].includes(runtimeStatus) ? runtimeStatus : null;
@@ -47,6 +60,12 @@ function MlNodeComponent({ id, data, selected }: NodeProps) {
           <input className="node-title-input nodrag nopan" dir="ltr" value={label} aria-label="نام نود" onChange={(event) => nodeData.onRename?.(id, event.target.value)} onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()} />
         ) : <div className="node-title">{label}</div>}
         <div className="node-port-summary" dir="ltr">{nodeData.executionMode || 'instant'}{nodeData.comingSoon ? ' · coming soon' : ''}</div>
+        {runtimeStatus === 'running' && (
+          <div className="node-runtime-state running" role="status" aria-live="polite">
+            <LoaderCircle size={10} className="spin" />
+            <span>در حال اجرا</span>
+          </div>
+        )}
       </div>
       <PortHandles ports={(nodeData.outputs as PortDefinition[]) || []} type="source" />
     </div>

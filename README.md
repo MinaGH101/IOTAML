@@ -1,5 +1,11 @@
 # IOTA ML
 
+Workflow execution, structured errors, anomaly output contracts, and dataframe
+utility-node behavior are documented in:
+
+- `docs/WORKFLOW_EXECUTION_AND_ERRORS.md`
+- `docs/DATAFRAME_UTILITY_NODES.md`
+
 A Docker-based no-code machine-learning workflow platform with React, FastAPI,
 PostgreSQL, Redis workers, and MinIO-compatible artifact storage.
 
@@ -66,6 +72,25 @@ Errors use:
 The frontend unwraps this contract centrally and maps stable error codes to
 user-facing Persian messages.
 
+## Authentication and role-based access
+
+The application opens at the login page and redirects authenticated users to
+the Projects panel. Authorization combines system roles (`admin`, `manager`,
+`expert`, `guest`) with project permissions (`owner`, `edit`, `view`). Admin,
+manager, expert, and guest behavior is enforced across projects, workflows,
+runs, datasets, artifacts, boards, and reusable components.
+
+The Admin panel supports user creation, profile/role/status updates, password
+resets, deletion guards, and inspection of each user's owned and assigned
+projects. Managers can assign one Expert as editor and multiple users as
+viewers on projects they own. New assignments are shown first until opened.
+
+The configured bootstrap admin is created only when missing. Restarting the
+application or applying database migrations does not overwrite a password that
+was changed in the application. See
+[`docs/AUTHORIZATION.md`](docs/AUTHORIZATION.md) for the complete role matrix,
+assignment rules, endpoints, and migration behavior.
+
 ## Artifact storage
 
 New datasets and generated run files are stored through the artifact domain.
@@ -89,15 +114,39 @@ MinIO console: `http://localhost:9001`
 
 ## Development
 
-Copy the development template and start the hot-reload overrides:
+Copy the development template and start the default hot-reload stack:
 
 ```bash
 cp .env.development.example .env
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose up -d --build
 ```
 
 Development exposes PostgreSQL, Redis, MinIO, API, and Vite on localhost. Source
-mounts and filesystem polling exist only in `docker-compose.dev.yml`.
+mounts are enabled by default. Filesystem polling is disabled to avoid continuous
+CPU use on Docker Desktop and WSL-mounted drives; set `CHOKIDAR_USEPOLLING=true`
+only when native file-change events do not work on the current host.
+`OPENAI_API_KEY` is optional: when blank, login and the main application still
+work, while only the Assistant tab remains unavailable.
+
+The development database and user are both named `iotaml`. PostgreSQL applies
+`POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` only when its data volume
+is created. To intentionally discard all local development data and initialize
+fresh credentials, run:
+
+```bash
+docker compose down -v --remove-orphans
+rm -f .env
+cp .env.development.example .env
+docker compose up -d --build --force-recreate --renew-anon-volumes
+```
+
+After changing frontend dependencies, recreate the containers and the anonymous
+`node_modules` volume while preserving the named database and object-storage
+volumes:
+
+```bash
+docker compose up -d --build --force-recreate --renew-anon-volumes
+```
 
 ## Production
 
@@ -147,10 +196,10 @@ npm run check
 Compose and release validation:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose config --quiet
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
-./scripts/scan-secrets.sh
-./scripts/package-release.sh ../iota_ml-clean.zip
+sh scripts/scan-secrets.sh
+sh scripts/package-release.sh ../iotaml-clean.zip
 ```
 
 Database migration design and recovery procedures are documented in
@@ -162,8 +211,8 @@ Inside the backend container or another environment with PostgreSQL client
 utilities:
 
 ```bash
-BACKUP_DIR=/backups ./scripts/backup.sh
-./scripts/restore.sh /backups/YYYYMMDD-HHMMSS
+BACKUP_DIR=/backups sh ./scripts/backup.sh
+sh ./scripts/restore.sh /backups/YYYYMMDD-HHMMSS
 ```
 
 Backups include a PostgreSQL custom-format dump and all objects in the artifact

@@ -1,11 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, FileUp, FolderOpen, GitBranch, Info, PlusCircle, RefreshCw, Save, Upload } from 'lucide-react';
 import { projectsApi } from '../../_service/projectsApi';
 import { workspaceApi } from '../../../workspace/_service/workspaceApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
 import { DatasetUploader } from '../../_components/DatasetUploader';
 import { ProjectForm } from '../../_components/ProjectForm';
-import type { Dataset, Project, ProjectPayload, UserProfile, Workflow } from '../../../shared/_types';
+import type { AssignableUser, Dataset, Project, ProjectPayload, UserProfile, Workflow } from '../../../shared/_types';
 import { formatDate, messageFromError, defaultProjectPayload, payloadFromProject, type UiMessage } from '../../../shared/_utils/appShared';
 import { readWorkflowJson } from '../../../shared/_utils/workflowJson';
 
@@ -16,6 +16,7 @@ export function CreateProjectPage({
   onOpenProject,
   onOpenEditor,
   onProfile,
+  onAdmin,
   onLogout
 }: {
   user: UserProfile;
@@ -24,9 +25,11 @@ export function CreateProjectPage({
   onOpenProject: (project: Project) => void;
   onOpenEditor: (project: Project, workflowId: number | null) => void;
   onProfile: () => void;
+  onAdmin: () => void;
   onLogout: () => void;
 }) {
   const [draft, setDraft] = useState<ProjectPayload>(() => defaultProjectPayload(user));
+  const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [createdProject, setCreatedProject] = useState<Project | null>(null);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -37,6 +40,12 @@ export function CreateProjectPage({
   const [creatingWorkflow, setCreatingWorkflow] = useState(false);
   const [importingWorkflow, setImportingWorkflow] = useState(false);
   const workflowImportRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user.role === 'manager' || user.role === 'admin') {
+      projectsApi.assignableUsers().then(setAssignableUsers).catch(() => setAssignableUsers([]));
+    }
+  }, [user.role]);
 
   const refreshProjectAssets = useCallback(async (projectId: number) => {
     const [datasetList, workflowList] = await Promise.all([projectsApi.datasets(projectId), workspaceApi.workflows(projectId)]);
@@ -180,6 +189,7 @@ export function CreateProjectPage({
         subtitle="اطلاعات پایه، داده و جریان کاری پروژه را ثبت کنید"
         onBack={onBack}
         onProfile={onProfile}
+        onAdmin={onAdmin}
         onLogout={onLogout}
       />
 
@@ -202,7 +212,7 @@ export function CreateProjectPage({
             {createdProject ? (
               <div className="create-created-reference">
                 <div className="success-note-reference"><CheckCircle2 size={16} /> پروژه ساخته شد. می‌توانید مشخصات را ویرایش کنید.</div>
-                <ProjectForm value={draft} onChange={setDraft} />
+                <ProjectForm value={draft} onChange={setDraft} canManageAssignments={user.role === 'manager' || user.role === 'admin'} assignableUsers={assignableUsers} />
                 <button className="primary full-width" type="button" disabled={busy} onClick={saveProject}>
                   {busy ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
                   ذخیره اطلاعات
@@ -211,7 +221,7 @@ export function CreateProjectPage({
               </div>
             ) : (
               <>
-                <ProjectForm value={draft} onChange={setDraft} />
+                <ProjectForm value={draft} onChange={setDraft} canManageAssignments={user.role === 'manager' || user.role === 'admin'} assignableUsers={assignableUsers} />
                 <button className="primary full-width" type="button" disabled={busy} onClick={saveProject}>
                   {busy ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
                   ساخت پروژه

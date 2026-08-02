@@ -1,3 +1,5 @@
+"""Workflow node implementation for custom python node in the utilities family."""
+
 from __future__ import annotations
 
 import json
@@ -8,6 +10,9 @@ import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any
+
+from app.core.config import get_settings
+from app.core.errors import ValidationAppError
 
 import pandas as pd
 
@@ -112,6 +117,10 @@ def _run_custom_code(code: str, payload: dict[str, Any], timeout: int = 30, memo
                 import resource
                 resource.setrlimit(resource.RLIMIT_AS, (memory_mb * 1024 * 1024, memory_mb * 1024 * 1024))
                 resource.setrlimit(resource.RLIMIT_CPU, (max(1, timeout), max(1, timeout + 1)))
+                resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+                resource.setrlimit(resource.RLIMIT_NOFILE, (32, 32))
+                if hasattr(resource, 'RLIMIT_NPROC'):
+                    resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
             preexec = limit_resources
         proc = subprocess.run(
             [sys.executable, '-I', '-S', str(script_path)],
@@ -159,6 +168,12 @@ class CustomPythonNode(BaseNode):
         return super().definition()
 
     def run(self, node, inputs, settings, context):
+        if not get_settings().allow_custom_code:
+            raise ValidationAppError(
+                'CUSTOM_CODE_DISABLED',
+                'Custom node execution is disabled for this installation.',
+                {'node_id': str(node.get('id') or ''), 'node_type': self.id},
+            )
         input_values = _collect_inputs(inputs, list(self.record.inputs or []))
         result = _run_custom_code(
             str(self.record.code),

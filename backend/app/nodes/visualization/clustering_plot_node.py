@@ -1,3 +1,5 @@
+"""Workflow node implementation for clustering plot node in the visualization family."""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,5 @@
+"""Workflow node implementation for ratio node in the transformation family."""
+
 from __future__ import annotations
 
 import numpy as np

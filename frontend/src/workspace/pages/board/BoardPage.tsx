@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadOutput, normalizeOutputs, OutputBody } from '../../_components/ResultsPanel';
 import type { AnalysisBoardItem, AnalysisBoardTab } from '../../_model/board';
-import { boardOutputTitle, resolveBoardItems } from '../../_model/boardOutputs';
+import { boardOutputKey, boardOutputTitle, resolveBoardItems } from '../../_model/boardOutputs';
+import { createOutputReference } from '../../../features/results/model/outputReference';
 import type { Run } from '../../../shared/_types';
 import { BoardCard, type FocusedOutput } from './_components/BoardCard';
 import { BoardTabs } from './_components/BoardControls';
@@ -21,6 +22,7 @@ type BoardPageProps = {
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (item: AnalysisBoardItem) => void;
   viewportStorageScope: string;
+  active: boolean;
   readOnly?: boolean;
 };
 
@@ -36,6 +38,7 @@ export function BoardPage({
   onRemoveItem,
   onDuplicateItem,
   viewportStorageScope,
+  active,
   readOnly = false,
 }: BoardPageProps) {
   const [focusedOutput, setFocusedOutput] = useState<FocusedOutput | null>(null);
@@ -56,17 +59,22 @@ export function BoardPage({
   });
 
   useEffect(() => {
-    if (workflowDirty || run?.status !== 'succeeded' || !run.id) return;
+    if (!active || workflowDirty || run?.status !== 'succeeded' || !run.id) return;
     resolvedItems.forEach(({ item, currentOutput }) => {
       if (!currentOutput || item.runId === run.id) return;
       onUpdateItem(item.id, {
-        snapshot: currentOutput,
+        outputRef: createOutputReference(currentOutput, run.id, item.nodeId, boardOutputKey(currentOutput)),
+        outputKey: boardOutputKey(currentOutput),
         runId: run.id,
         outputKind: String(currentOutput.kind || item.outputKind || 'json'),
         outputTitle: boardOutputTitle(currentOutput, item.outputIndex),
       });
     });
-  }, [onUpdateItem, resolvedItems, run?.id, run?.status, workflowDirty]);
+  }, [active, onUpdateItem, resolvedItems, run?.id, run?.status, workflowDirty]);
+
+  useEffect(() => {
+    if (!active) setFocusedOutput(null);
+  }, [active]);
 
   return (
     <div className="analysis-board" dir="rtl">
@@ -100,6 +108,7 @@ export function BoardPage({
               onDuplicateItem={onDuplicateItem}
               onFocus={setFocusedOutput}
               readOnly={readOnly}
+              active={active}
             />
           ))}
         </div>
@@ -115,7 +124,7 @@ export function BoardPage({
                 <button className="modal-close" title="بستن" aria-label="بستن" onClick={() => setFocusedOutput(null)}><X size={16}/></button>
               </div>
             </div>
-            <div className="output-fullscreen-body"><OutputBody output={focusedOutput.output} /></div>
+            <div className="output-fullscreen-body"><OutputBody output={focusedOutput.output} fillContainer /></div>
           </div>
         </div>,
         document.body,

@@ -7,6 +7,13 @@ const errors = [];
 
 const requiredDirectories = [
   'app',
+  'features/auth',
+  'features/components',
+  'features/custom-nodes',
+  'features/execution',
+  'features/results',
+  'features/workflow',
+  'entities',
   'auth/pages/login/_components',
   'auth/_service',
   'projects/pages/create-project',
@@ -39,7 +46,6 @@ const requiredDirectories = [
 const retiredPaths = [
   'api.ts',
   'components',
-  'features',
   'nodes',
   'pages',
   'types',

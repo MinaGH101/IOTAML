@@ -1,3 +1,5 @@
+"""Workflow node implementation for passthrough node in the utilities family."""
+
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port

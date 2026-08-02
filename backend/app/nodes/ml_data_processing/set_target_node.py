@@ -1,3 +1,5 @@
+"""Workflow node implementation for set target node in the ml data processing family."""
+
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port, setting

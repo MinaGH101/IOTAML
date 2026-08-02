@@ -2,9 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Node } from '@xyflow/react';
 import type { AnalysisBoardItem, AnalysisBoardTab } from '../../../_model/board';
 import type { Output } from '../../../_model/output';
-import {
-  boardOutputTitle,
-} from '../../../_model/graph';
+import { boardOutputKey, boardOutputTitle } from '../../../_model/boardOutputs';
+import { createOutputReference } from '../../../../features/results/model/outputReference';
 import {
   createMainAnalysisBoard,
   MAIN_ANALYSIS_BOARD_ID,
@@ -83,6 +82,7 @@ export function useAnalysisBoards({
       return [...items, {
         id: `board-${crypto.randomUUID()}`,
         nodeId,
+        outputKey: boardOutputKey(output),
         outputIndex,
         outputTitle: boardOutputTitle(output, outputIndex),
         outputKind: String(output.kind || 'json'),
@@ -92,7 +92,7 @@ export function useAnalysisBoards({
         w: 440,
         h: 330,
         runId: currentRunId,
-        snapshot: output,
+        outputRef: createOutputReference(output, currentRunId, nodeId, boardOutputKey(output)),
         createdAt: new Date().toISOString(),
       }];
     });
@@ -185,6 +185,7 @@ export function useAnalysisBoards({
     items: board.items.map((item) => ({
       id: item.id,
       nodeId: item.nodeId,
+      outputKey: item.outputKey,
       outputIndex: item.outputIndex,
       outputTitle: item.outputTitle,
       outputKind: item.outputKind,
@@ -195,8 +196,9 @@ export function useAnalysisBoards({
       h: item.h,
       runId: item.runId,
       createdAt: item.createdAt,
-      snapshotKind: item.snapshot?.kind,
-      snapshotTitle: item.snapshot?.title,
+      outputRef: item.outputRef,
+      legacySnapshotKind: item.outputRef ? undefined : item.snapshot?.kind,
+      legacySnapshotTitle: item.outputRef ? undefined : item.snapshot?.title,
     })),
   })), [boards]);
 

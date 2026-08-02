@@ -1,3 +1,5 @@
+"""Regression and contract tests for api envelope."""
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 

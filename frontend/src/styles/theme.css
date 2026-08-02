@@ -400,7 +400,7 @@ body,
 .analysis-board-toolbar,
 .analysis-output-picker,
 .plot-group-item,
-.mui-table-wrap,
+.output-table,
 .amchart-wrap {
   background: var(--theme-panel-muted) !important;
   background-image: none !important;
@@ -701,44 +701,28 @@ button.danger:hover {
 
 /* Tables: alternating surfaces replace dense grid lines. */
 table,
-.MuiDataGrid-root,
-.MuiDataGrid-main,
-.MuiDataGrid-virtualScroller,
-.MuiDataGrid-footerContainer {
+.output-table {
   background: var(--theme-panel-bg) !important;
   border: 0 !important;
   color: var(--theme-text) !important;
 }
 
-th,
-.MuiDataGrid-columnHeaders,
-.MuiDataGrid-columnHeader {
+th {
   background: var(--theme-table-header) !important;
   color: var(--theme-text-secondary) !important;
   border: 0 !important;
 }
 
-td,
-.MuiDataGrid-cell,
-.MuiDataGrid-footerContainer {
+td {
   border-color: transparent !important;
 }
 
-tbody tr:nth-child(even),
-.MuiDataGrid-row:nth-of-type(even) {
+tbody tr:nth-child(even) {
   background: var(--theme-table-row-alt) !important;
 }
 
-tbody tr:hover,
-.MuiDataGrid-row:hover {
+tbody tr:hover {
   background: var(--theme-table-row-hover) !important;
-}
-
-.MuiDataGrid-root {
-  --DataGrid-containerBackground: var(--theme-table-header) !important;
-  --DataGrid-t-header-background-base: var(--theme-table-header) !important;
-  --DataGrid-rowBorderColor: transparent !important;
-  border-radius: var(--theme-radius-panel) !important;
 }
 
 

@@ -44,7 +44,7 @@ export type PortDefinition = {
 export type NodeParam = {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors';
+  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'input_dataframe' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors' | 'interactive_table_state';
   default: unknown;
   required?: boolean;
   options: unknown[];

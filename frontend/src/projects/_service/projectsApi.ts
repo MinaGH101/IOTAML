@@ -4,11 +4,14 @@ import type {
   Dataset,
   Project,
   ProjectPayload,
+  AssignableUser,
 } from '../../shared/_types';
 import { jsonHeaders, projectQuery, request } from '../../shared/_service/httpClient';
 
 export const projectsApi = {
   list: () => request<Project[]>('/api/projects'),
+  assignableUsers: () => request<AssignableUser[]>('/api/projects/assignable-users'),
+  acknowledge: (id: number) => request<{ ok: boolean }>(`/api/projects/${id}/acknowledge`, { method: 'POST' }),
   create: (payload: ProjectPayload) =>
     request<Project>('/api/projects', {
       method: 'POST',

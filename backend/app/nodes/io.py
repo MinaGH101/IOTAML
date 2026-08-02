@@ -1,3 +1,5 @@
+"""Shared dataframe, lineage, input-resolution, and visible-output contracts."""
+
 from __future__ import annotations
 
 import json
@@ -9,6 +11,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from app.workflow.contracts.errors import NodeContractError
 
 from app.nodes.types import DataFrameLineage, DataFramePayload, JsonPayload, ModelPayload, PlotPayload, FilePayload
 
@@ -361,10 +365,27 @@ def first_model(inputs: dict[str, Any]) -> Any:
 
 
 def ensure_df(df: pd.DataFrame | None, node_id: str) -> pd.DataFrame:
+    """Require a non-empty dataframe and identify the failing input contract."""
     if df is None:
-        raise ValueError(f'Node {node_id} requires dataframe input.')
+        raise NodeContractError(
+            "NODE_DATAFRAME_INPUT_REQUIRED",
+            f"Node {node_id} requires a dataframe input.",
+            category="input",
+            port="data",
+            expected="connected dataframe",
+            actual="missing or incompatible input",
+            suggested_fix="Connect a dataframe-producing output to this node.",
+        )
     if df.empty:
-        raise ValueError(f'Node {node_id} received an empty dataframe.')
+        raise NodeContractError(
+            "NODE_DATAFRAME_EMPTY",
+            f"Node {node_id} received an empty dataframe.",
+            category="data",
+            port="data",
+            expected="at least one row",
+            actual=0,
+            suggested_fix="Check the upstream filter/input or provide rows before running this node.",
+        )
     return df.copy()
 
 
@@ -456,8 +477,8 @@ def read_dataset(dataset_id: Any) -> pd.DataFrame:
 
 
 def materialize_dataset_path(dataset_id: Any) -> Path:
-    from app.database import SessionLocal
-    from app.models import Dataset
+    from app.core.database import SessionLocal
+    from app.domains.datasets.models import Dataset
     if not dataset_id:
         raise ValueError('Select a dataset in the workflow settings or Upload CSV/Excel node.')
     with SessionLocal() as db:

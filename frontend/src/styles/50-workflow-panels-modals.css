@@ -1000,10 +1000,11 @@ overflow:hidden!important
 
 .output-fullscreen-body {
 flex:1 1 auto;
+display:flex!important;
 width:100%!important;
 min-width:0!important;
 min-height:0!important;
-overflow:auto!important
+overflow:hidden!important
 }
 
 .output-fullscreen-card .table-wrap,.output-fullscreen-card .output-body {

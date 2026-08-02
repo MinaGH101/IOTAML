@@ -1,3 +1,5 @@
+"""Workflow node implementation for manual trigger node in the data input family."""
+
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port

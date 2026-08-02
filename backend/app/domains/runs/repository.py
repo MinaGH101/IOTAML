@@ -1,5 +1,7 @@
+"""Runs domain repository for the IOTA ML backend."""
+
 from sqlalchemy.orm import Session
-from app.models import Run
+from app.domains.runs.models import Run
 
 
 class RunRepository:

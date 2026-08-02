@@ -1,3 +1,5 @@
+"""Workflow node implementation for manual json node in the data input family."""
+
 from __future__ import annotations
 
 import json

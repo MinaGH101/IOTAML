@@ -62,7 +62,8 @@ export const defaultProjectPayload = (user?: UserProfile | null): ProjectPayload
   project_manager: user ? `${user.first_name} ${user.last_name}`.trim() || user.username : '',
   state: 'open',
   priority: 'medium',
-  color: getDefaultProjectColor()
+  color: getDefaultProjectColor(),
+  assignments: []
 });
 
 export const payloadFromProject = (project: Project): ProjectPayload => ({
@@ -73,7 +74,8 @@ export const payloadFromProject = (project: Project): ProjectPayload => ({
   project_manager: project.project_manager || '',
   state: project.state,
   priority: project.priority || 'medium',
-  color: project.color || getDefaultProjectColor()
+  color: project.color || getDefaultProjectColor(),
+  assignments: project.assignments.map((item) => ({ user_id: item.user_id, access_type: item.access_type }))
 });
 
 export function formatDate(value?: string | null) {

@@ -19,6 +19,7 @@ const edges = [
 test('component boundary exposes only external connections', () => {
   const boundary = analyzeComponentBoundary(nodes, edges, ['a', 'b']);
   assert.ok(boundary);
+  if (!boundary) throw new Error('Expected a valid component boundary');
   assert.equal(boundary.disconnected, false);
   assert.equal(boundary.inputs[0].type, 'dataframe');
   assert.equal(boundary.inputs[0].internal_node_id, 'a');

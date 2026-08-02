@@ -1,3 +1,5 @@
+"""Workflow node implementation for csv node in the data input family."""
+
 from __future__ import annotations
 
 from app.nodes.base import BaseNode, port, setting
@@ -19,12 +21,24 @@ class CsvInputNode(BaseNode):
     ]
 
     def run(self, node, inputs, settings, context):
-        selected_dataset_id = settings.get('dataset_id') or context.dataset_id
-        if context.dataset_path and (not settings.get('dataset_id') or str(settings.get('dataset_id')) == str(context.dataset_id)):
-            source_path = context.dataset_path
+        compatibility_dataset = str((node.get('data') or {}).get('compatibilityDataset') or '').strip()
+        if compatibility_dataset:
+            from sklearn.datasets import load_breast_cancer, load_iris, load_wine
+            loaders = {
+                'iris': load_iris,
+                'wine': load_wine,
+                'breast_cancer': load_breast_cancer,
+            }
+            dataset = loaders.get(compatibility_dataset, load_iris)(as_frame=True)
+            df = dataset.frame.copy()
+            source_path = f'builtin://{compatibility_dataset}'
         else:
-            source_path = materialize_dataset_path(selected_dataset_id)
-        df = read_dataset_path(source_path)
+            selected_dataset_id = settings.get('dataset_id') or context.dataset_id
+            if context.dataset_path and (not settings.get('dataset_id') or str(settings.get('dataset_id')) == str(context.dataset_id)):
+                source_path = context.dataset_path
+            else:
+                source_path = materialize_dataset_path(selected_dataset_id)
+            df = read_dataset_path(source_path)
         id_column = settings.get('id_column')
         id_column = str(id_column).strip() if id_column not in [None, ''] else None
 

@@ -1,3 +1,5 @@
+"""Background execution worker support for reliable worker."""
+
 from __future__ import annotations
 
 import json
@@ -14,19 +16,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
 
-from redis import Redis
+try:
+    from redis import Redis
+except ImportError:  # Redis only accelerates wakeups; PostgreSQL remains durable.
+    Redis = None  # type: ignore[assignment]
 from sqlalchemy import select
 from sqlalchemy.orm import load_only
 
-from app.config import get_settings
-from app.database import SessionLocal
-from app.models import CustomNode, Dataset, Run, Workflow
+from app.core.config import get_settings
+from app.core.database import SessionLocal
+from app.domains.nodes.models import CustomNode
+from app.domains.datasets.models import Dataset
+from app.domains.runs.models import Run, RunAttempt
+from app.domains.workflows.models import Workflow
 from app.domains.datasets.service import materialize_dataset
 from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths
-from app.services.node_cache import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
-from app.services.jobs import QUEUE_NAME
-from app.services.run_queue import claim_next_run, fail_or_requeue, recover_stale_runs
-from app.services.run_state import append_log, progress_payload, utcnow
+from app.workflow.caching.service import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
+from app.infrastructure.queue.notifications import QUEUE_NAME
+from app.infrastructure.queue.repository import claim_next_run, classify_failure, fail_or_requeue, recover_stale_runs
+from app.infrastructure.queue.state import append_log, progress_payload, utcnow
 
 
 class WorkerWakeup:
@@ -35,6 +43,8 @@ class WorkerWakeup:
     def __init__(self) -> None:
         self._pubsub = None
         try:
+            if Redis is None:
+                return
             client = Redis.from_url(
                 get_settings().redis_url,
                 socket_connect_timeout=0.5,
@@ -112,8 +122,7 @@ def _preload_execution_runtime() -> None:
         import numpy  # noqa: F401
         import pandas  # noqa: F401
         import sklearn  # noqa: F401
-        from app.workflow import executor as scientific_executor  # noqa: F401
-        from app.services import workflow_executor as legacy_executor  # noqa: F401
+        from app.workflow.execution import executor as canonical_executor  # noqa: F401
     except Exception:
         # The normal subprocess path remains available if preloading fails.
         return
@@ -144,6 +153,7 @@ def _run_forked_child(
 @dataclass
 class ActiveRun:
     run_id: int
+    worker_id: str
     process: Any
     started_monotonic: float
     timeout_seconds: int
@@ -277,6 +287,7 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         'project_id': run.project_id,
         'target_column': run.target_column,
         'task_type': run.task_type,
+        'selected_node_id': run.selected_node_id,
         'run_path': str(Path(get_settings().storage_dir) / 'runs' / str(run.id)),
         'network_disabled': get_settings().job_network_disabled,
         'external_inputs': external_inputs,
@@ -364,6 +375,7 @@ def start_run(run_id: int, worker_id: str) -> ActiveRun:
         started = time.monotonic()
         return ActiveRun(
             run_id=run.id,
+            worker_id=worker_id,
             process=process,
             started_monotonic=started,
             timeout_seconds=run.timeout_seconds,
@@ -374,9 +386,25 @@ def start_run(run_id: int, worker_id: str) -> ActiveRun:
         )
 
 
-def _read_json(path: Path) -> dict[str, Any] | None:
+def _read_tail(path: Path, max_bytes: int) -> str:
+    if not path.exists():
+        return ''
     try:
-        return json.loads(path.read_text(encoding='utf-8')) if path.exists() else None
+        size = path.stat().st_size
+        with path.open('rb') as handle:
+            handle.seek(max(0, size - max_bytes))
+            return handle.read(max_bytes).decode('utf-8', errors='replace')
+    except OSError:
+        return ''
+
+
+def _read_json(path: Path, *, max_bytes: int | None = None) -> dict[str, Any] | None:
+    try:
+        if not path.exists():
+            return None
+        if max_bytes is not None and path.stat().st_size > max_bytes:
+            return None
+        return json.loads(path.read_text(encoding='utf-8'))
     except (OSError, json.JSONDecodeError):
         return None
 
@@ -390,7 +418,7 @@ def _sync_progress(db, run: Run, active: ActiveRun, *, force: bool = False) -> b
     if not force and mtime_ns == active.progress_mtime_ns:
         return False
 
-    payload = _read_json(progress_path)
+    payload = _read_json(progress_path, max_bytes=get_settings().job_result_max_bytes)
     if not payload:
         return False
     active.progress_mtime_ns = mtime_ns
@@ -405,20 +433,22 @@ def _sync_progress(db, run: Run, active: ActiveRun, *, force: bool = False) -> b
 def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forced_error: str | None = None) -> None:
     active.stdout_handle.close()
     active.stderr_handle.close()
-    result = _read_json(active.paths['result']) or {}
-    stdout = active.paths['stdout'].read_text(encoding='utf-8', errors='replace')[-8000:] if active.paths['stdout'].exists() else ''
-    stderr = active.paths['stderr'].read_text(encoding='utf-8', errors='replace')[-8000:] if active.paths['stderr'].exists() else ''
+    settings = get_settings()
+    result = _read_json(active.paths['result'], max_bytes=settings.job_result_max_bytes) or {}
+    stdout = _read_tail(active.paths['stdout'], settings.job_stdout_max_bytes)
+    stderr = _read_tail(active.paths['stderr'], settings.job_stderr_max_bytes)
 
     with SessionLocal() as db:
         run = db.get(Run, active.run_id)
-        if run is None:
+        if run is None or run.locked_by != active.worker_id:
             return
         _sync_progress(db, run, active, force=True)
         run.worker_exit_code = active.process.returncode
-        status = forced_status or str(result.get('status') or ('succeeded' if active.process.returncode == 0 else 'failed'))
+        result_missing = not bool(result)
+        status = forced_status or str(result.get('status') or ('failed' if result_missing else ('succeeded' if active.process.returncode == 0 else 'failed')))
         if forced_status is None and active.process.returncode == -getattr(signal, 'SIGXCPU', 24):
             status = 'timed_out'
-        error = forced_error or result.get('error') or (stderr.strip()[-3000:] if status != 'succeeded' else None)
+        error = forced_error or result.get('error') or ('Worker result file was missing, malformed, or exceeded its size limit.' if result_missing else None) or (stderr.strip()[-3000:] if status != 'succeeded' else None)
         if status == 'timed_out' and not error:
             error = 'Run exceeded its CPU or wall-clock timeout.'
         cache_records = result.get('cache_records')
@@ -435,10 +465,14 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
         if stdout or stderr:
             artifacts = dict(artifacts or {})
             artifacts['worker_logs'] = {'stdout': stdout, 'stderr': stderr}
+        artifact_failure: Exception | None = None
         try:
             artifacts = ingest_run_artifact_paths(db, run, artifacts)
         except Exception as artifact_exc:
-            run.logs = append_log(run.logs, 'warning', 'Some run artifact files could not be persisted.', error=str(artifact_exc))
+            artifact_failure = artifact_exc
+            status = 'failed'
+            error = f'Required artifact publication failed: {artifact_exc}'
+            run.logs = append_log(run.logs, 'error', 'Required run artifacts could not be persisted.', error=str(artifact_exc))
         run.metrics = {**(result.get('metrics') or {}), 'cache': cache_stats}
         run.artifacts = artifacts
         if status in {'cancelled', 'timed_out'}:
@@ -462,6 +496,11 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
             run.error = None
             run.finished_at = utcnow()
             run.progress = {**(run.progress or {}), 'percent': 100.0}
+            attempt = db.execute(select(RunAttempt).where(RunAttempt.run_id == run.id, RunAttempt.attempt_number == run.attempts)).scalar_one_or_none()
+            if attempt:
+                attempt.status = 'succeeded'
+                attempt.finished_at = utcnow()
+                attempt.retryable = False
             run.logs = append_log(run.logs, 'info', 'Run succeeded.', exit_code=active.process.returncode)
             run.locked_by = None
             run.locked_at = None
@@ -469,11 +508,18 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
             run.process_pid = None
         elif status == 'cancelled':
             run.cancel_requested = True
-            fail_or_requeue(db, run, error=error or 'Cancelled by user.', status='cancelled')
+            fail_or_requeue(db, run, error=error or 'Cancelled by user.', status='cancelled', failure_code='RUN_CANCELLED', retryable=False)
         elif status == 'timed_out':
-            fail_or_requeue(db, run, error=error or 'Run exceeded its timeout.', status='timed_out')
+            fail_or_requeue(db, run, error=error or 'Run exceeded its timeout.', status='timed_out', failure_code='RUN_TIMEOUT', retryable=True)
         else:
-            fail_or_requeue(db, run, error=error or 'Workflow process failed.', status='failed')
+            structured_errors = ((result.get('artifacts') or {}).get('errors') or []) if isinstance(result.get('artifacts'), dict) else []
+            first_problem = structured_errors[0] if structured_errors and isinstance(structured_errors[0], dict) else {}
+            failure_code, inferred_retryable = classify_failure(error, 'failed')
+            fail_or_requeue(
+                db, run, error=error or 'Workflow process failed.', status='failed',
+                failure_code=str(first_problem.get('cause_code') or first_problem.get('code') or failure_code),
+                retryable=bool(first_problem.get('retryable')) if 'retryable' in first_problem else (True if artifact_failure else inferred_retryable),
+            )
         db.commit()
 
 
@@ -533,14 +579,23 @@ def monitor_active(active: ActiveRun, worker_id: str) -> bool:
 
     if should_cancel:
         active.paths['cancel'].touch(exist_ok=True)
-        _terminate_process(active.process)
-        finalize_active(active, forced_status='cancelled', forced_error='Cancelled by user.')
-        return True
+        if active.cancellation_sent_at is None:
+            active.cancellation_sent_at = now_mono
+            return False
+        if active.process.poll() is not None:
+            finalize_active(active, forced_status='cancelled', forced_error='Cancelled by user.')
+            return True
+        if now_mono - active.cancellation_sent_at >= min(5, settings.job_shutdown_grace_seconds):
+            _terminate_process(active.process)
+            finalize_active(active, forced_status='cancelled', forced_error='Cancelled by user.')
+            return True
     return False
 
 
 def publish_worker_health(worker_id: str, active_count: int) -> None:
     try:
+        if Redis is None:
+            return
         redis = Redis.from_url(get_settings().redis_url, socket_connect_timeout=0.5, socket_timeout=0.5)
         redis.setex(f'iota:worker:{worker_id}', get_settings().job_stale_after_seconds, json.dumps({'active': active_count, 'host': socket.gethostname(), 'timestamp': time.time()}))
     except Exception:
@@ -568,9 +623,12 @@ def run_worker() -> None:
     _preload_execution_runtime()
     worker_id = os.getenv('WORKER_ID') or f'{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:8]}'
     stopping = False
+    shutdown_started: float | None = None
 
     def stop(_signum, _frame):
-        nonlocal stopping
+        nonlocal stopping, shutdown_started
+        if not stopping:
+            shutdown_started = time.monotonic()
         stopping = True
 
     signal.signal(signal.SIGTERM, stop)
@@ -599,6 +657,17 @@ def run_worker() -> None:
             last_cleanup = now
 
         for run_id, item in list(active.items()):
+            if stopping:
+                item.paths['cancel'].touch(exist_ok=True)
+                if item.process.poll() is not None:
+                    finalize_active(item, forced_status='failed', forced_error='Worker shutdown interrupted execution.')
+                    active.pop(run_id, None)
+                    continue
+                if shutdown_started is not None and now - shutdown_started >= settings.job_shutdown_grace_seconds:
+                    _terminate_process(item.process)
+                    finalize_active(item, forced_status='failed', forced_error='Worker shutdown grace period expired.')
+                    active.pop(run_id, None)
+                continue
             if monitor_active(item, worker_id):
                 active.pop(run_id, None)
 
@@ -619,7 +688,7 @@ def run_worker() -> None:
                     with SessionLocal() as db:
                         failed = db.get(Run, run_id)
                         if failed:
-                            fail_or_requeue(db, failed, error=f'Failed to start isolated process: {exc}')
+                            fail_or_requeue(db, failed, error=f'Failed to start isolated process: {exc}', failure_code='WORKER_START_FAILED', retryable=True)
                             db.commit()
 
         if now - last_health_publish >= settings.job_worker_health_interval_seconds:
@@ -630,6 +699,7 @@ def run_worker() -> None:
 
     wakeup.close()
     for item in active.values():
+        item.paths['cancel'].touch(exist_ok=True)
         _terminate_process(item.process)
         finalize_active(item, forced_status='failed', forced_error='Worker shut down during execution.')
 

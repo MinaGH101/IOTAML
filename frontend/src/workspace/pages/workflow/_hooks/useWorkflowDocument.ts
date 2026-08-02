@@ -215,7 +215,7 @@ export function useWorkflowDocument(options: UseWorkflowDocumentOptions) {
   useEffect(() => {
     let alive = true;
     Promise.all([
-      workspaceApi.nodeCatalog(),
+      workspaceApi.nodeCatalog(projectId),
       refreshDatasets(),
       workspaceApi.workflows(projectId),
       workspaceApi.listRuns(projectId),

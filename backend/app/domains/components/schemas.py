@@ -1,3 +1,5 @@
+"""Components domain schemas for the IOTA ML backend."""
+
 from __future__ import annotations
 
 from datetime import datetime

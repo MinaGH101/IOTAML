@@ -1,0 +1,1 @@
+"""Generated node-catalog support."""

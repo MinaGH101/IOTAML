@@ -1,14 +1,19 @@
 /*
- * IOTA ML global stylesheet entry point.
- *
- * Files are imported in the exact order of the previous monolithic stylesheet.
- * Keep this order unchanged unless you intentionally want to alter the cascade.
+ * IOTA ML stylesheet cascade.
+ * Semantic tokens and document invariants are loaded first; legacy feature
+ * sheets remain isolated while individual rules are migrated feature-by-feature.
  */
+@import "./styles/theme.css";
+@import "./styles/tokens/semantic.css";
+@import "./styles/base/document.css";
 @import "./styles/00-foundation-workflow.css";
 @import "./styles/10-manager-auth-pages.css";
 @import "./styles/20-projects-ai-reference.css";
+@import "./styles/25-rbac-access.css";
 @import "./styles/30-workflow-shell.css";
 @import "./styles/40-auth-minimal.css";
 @import "./styles/50-workflow-panels-modals.css";
 @import "./styles/60-analysis-board-custom-nodes.css";
-@import "./styles/theme.css";
+@import "./styles/65-interactive-workflow.css";
+@import "./styles/utilities/scrollbars.css";
+@import "./styles/utilities/accessibility.css";

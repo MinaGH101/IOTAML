@@ -1,3 +1,5 @@
+"""Workflow node implementation for convert type node in the cleaning family."""
+
 from __future__ import annotations
 
 import pandas as pd
