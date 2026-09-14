@@ -5,7 +5,6 @@ export type AutosaveWorkflowPayload = {
   name: string;
   graph: Record<string, unknown>;
   project_id?: number | null;
-  last_run_id?: number | null;
   base_revision?: number | null;
   client_graph_hash?: string | null;
 };

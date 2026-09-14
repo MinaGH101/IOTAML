@@ -5,12 +5,14 @@ from __future__ import annotations
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from app.nodes.ml_data_processing.preprocessing_node import require_unfitted_input
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import dataframe_result, metrics_output, node_label, table_output
 from app.nodes.ml_data_processing.ml_utils import feature_target_from_inputs, training_frame
 
 
 class TrainTestSplitNode(BaseNode):
+    cache_version = '2'
     id = 'MP-001'
     name = 'Train/Test Split'
     category = 'ML Data Processing'
@@ -28,12 +30,13 @@ class TrainTestSplitNode(BaseNode):
 
     def run(self, node, inputs, settings, context):
         x, y, target, features, payload = feature_target_from_inputs(inputs, settings, context, str(node['id']))
+        require_unfitted_input(payload)
         data = pd.concat([x, y.rename(target)], axis=1).dropna(subset=[target])
         x = data[features]
         y = data[target]
 
         test_size = float(settings.get('test_size') or 0.2)
-        random_state = int(settings.get('random_state') or 42)
+        random_state = int(settings.get('random_state') if settings.get('random_state') is not None else 42)
         shuffle = bool(settings.get('shuffle', True))
         stratify_enabled = bool(settings.get('stratify', False))
         stratify = y if stratify_enabled and y.nunique(dropna=True) > 1 else None

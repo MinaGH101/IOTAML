@@ -1,0 +1,24 @@
+/* workspace styles extracted from 20-projects-ai-reference.css. */
+.icon-button {
+border-radius:var(--theme-radius-control);
+}
+.icon-button {
+background:var(--theme-transparent);
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text-secondary)
+}
+.icon-button:hover {
+background:var(--theme-hover-bg);
+border-color:color-mix(in srgb,var(--theme-primary) 44%,var(--theme-control-border));
+color:var(--theme-primary)
+}
+.topbar .iota-page-title-block h1 {
+color:var(--theme-text);
+font-size:15px!important;
+font-weight:850!important;
+line-height:1.2
+}
+.topbar .iota-page-title-block p {
+display:block!important;
+color:var(--theme-text-muted)
+}

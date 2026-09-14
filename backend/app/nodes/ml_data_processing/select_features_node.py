@@ -9,6 +9,7 @@ from app.nodes.io import calculation_columns, dataframe_payload, dataframe_resul
 
 
 class SelectFeaturesNode(BaseNode):
+    cache_version = '2'
     id = 'MP-002'
     name = 'Select Features & Target'
     category = 'ML Data Processing'
@@ -53,6 +54,7 @@ class SelectFeaturesNode(BaseNode):
                 'target_column': target,
             },
             features_df=feature_df,
+            features=dataframe_result(feature_df, reset_lineage=True)['dataframe'],
             target_series=target_series,
             feature_columns=[str(c) for c in features],
             target_column=target,

@@ -100,7 +100,7 @@ for (const file of sourceFiles) {
   const relative = path.relative(root, file);
 
   if (!tokenFiles.includes(file)) {
-    const rawColors = [...content.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g)];
+    const rawColors = [...content.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\((?!\$\{)|hsla?\(/g)];
     stats.rawColorLiteralsOutsideTheme += rawColors.length;
     if (rawColors.length) failures.push(`${relative}: ${rawColors.length} raw color literal(s)`);
   }

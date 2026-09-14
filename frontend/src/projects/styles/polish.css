@@ -1,0 +1,1318 @@
+/* Shared project cards, headings and compact data rows. */
+.projects-reference-page {
+  background-image: radial-gradient(ellipse 110% 40% at 50% 0, var(--theme-primary-soft), var(--theme-transparent) 70%), var(--theme-app-bg) !important;
+  background-size: 100% 100% !important;
+}
+.project-data-reference { overflow: visible !important; }
+.project-info-reference,
+.project-create-info-reference,
+.projects-toolbar { overflow: visible !important; }
+.sql-import {
+  margin-block: 18px 8px;
+  border: var(--theme-border-width) solid var(--theme-divider);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-muted);
+}
+.sql-import > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 16px;
+  list-style: none;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sql-import > summary::-webkit-details-marker { display: none; }
+.sql-import > summary > svg:first-child { color: var(--theme-primary); }
+.sql-import > summary:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+.sql-import-chevron { margin-inline-start: auto; color: var(--theme-icon); transition: transform var(--theme-transition-fast); }
+.sql-import[open] .sql-import-chevron { transform: rotate(180deg); }
+.sql-import[open] > summary { border-bottom: var(--theme-border-width) solid var(--theme-divider); }
+.sql-import-body { display: grid; gap: 16px; padding: 18px 16px; }
+.sql-import-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sql-import-field { display: grid; gap: 8px; min-width: 0; }
+.sql-import-field > span { font-size: 12px; font-weight: 500; color: var(--theme-text-secondary); }
+.sql-import-field button[aria-haspopup] { min-height: 40px; }
+.sql-import-hint { margin: 0; color: var(--theme-text-muted); font-size: 12px; line-height: 1.8; }
+.sql-import-actions { display: flex; justify-content: flex-start; }
+.sql-import-message { margin: 0; padding: 10px 12px; background: var(--theme-control-bg); border-radius: var(--theme-radius-control); font-size: 12px; line-height: 1.8; }
+@media (width <= 760px) {
+  .sql-import-fields { grid-template-columns: minmax(0, 1fr); }
+}
+.manager-page .project-reference-card {
+  padding: 20px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-bg);
+  text-align: start;
+  transition: border-color var(--theme-transition-fast), background var(--theme-transition-fast);
+}
+.manager-page .project-reference-card:hover {
+  border-color: var(--theme-primary);
+  background: var(--theme-panel-muted);
+}
+.manager-page .project-reference-card-head b { font-size: 16px; font-weight: 700; }
+.manager-page .project-reference-card-head small {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.manager-page .project-reference-card-meta {
+  padding-top: 12px;
+  border-top: var(--theme-border-width) solid var(--theme-divider);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.manager-page .project-people-line { font-size: 12px; line-height: 1.8; }
+.manager-page .reference-card-head b { font-size: 16px; font-weight: 700; }
+.manager-page .reference-card-head span { font-size: 12px; line-height: 1.8; }
+.manager-page .dataset-mini-row,
+.manager-page .workflow-card { padding: 14px; }
+.manager-page .dataset-mini-row b,
+.manager-page .workflow-card b { font-size: 13px; }
+.manager-page .empty-manager {
+  padding: 24px 16px;
+  border: var(--theme-border-width) dashed var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.manager-page .upload-zone {
+  padding: 18px;
+  border: var(--theme-border-width) dashed var(--theme-control-border);
+  border-radius: var(--theme-radius-control);
+}
+@media (width <= 760px) {
+  .manager-page .project-reference-card { padding: 16px; }
+  .manager-page .project-reference-card-meta { flex-wrap: wrap; gap: 8px 14px; }
+}
+
+/* Project editor: three equal, calm work surfaces with one shared action area. */
+.iota-minimal-page .reference-back-row,
+.iota-minimal-page .project-detail-reference-layout,
+.iota-minimal-page .project-page-actions {
+  width: min(1480px, 100%) !important;
+  margin-inline: auto !important;
+}
+.iota-minimal-page .project-detail-reference-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: start;
+}
+.iota-minimal-page .project-info-reference {
+  position: static !important;
+  top: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.iota-minimal-page .project-info-reference,
+.iota-minimal-page .project-data-reference,
+.iota-minimal-page .workflows-reference-card {
+  background: var(--theme-panel-bg) !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
+  border-radius: var(--theme-radius-panel) !important;
+}
+.project-page-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 16px 0 4px;
+  border-top: var(--theme-border-width) solid var(--theme-divider);
+}
+.project-data-reference .dataset-card,
+.project-data-reference .sql-import {
+  min-width: 0;
+}
+.project-data-reference .sql-import {
+  border-radius: var(--theme-radius-control);
+  isolation: isolate;
+}
+.project-data-reference .sql-import-body {
+  padding: 16px;
+}
+.workflow-manage-card {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.iota-minimal-page .workflow-card-reference:hover {
+  transform: translateY(-2px) !important;
+  background: color-mix(in srgb, var(--theme-primary) 8%, var(--theme-panel-muted)) !important;
+  border-color: color-mix(in srgb, var(--theme-primary) 48%, var(--theme-divider)) !important;
+}
+.workflow-card-open { width: 100%; }
+.workflow-create-name {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: var(--theme-border-width) solid var(--theme-divider);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-panel-muted);
+}
+.workflow-create-name > span { color: var(--theme-text-secondary); font-size: 12px; font-weight: 700; }
+.workflow-create-name input { min-width: 0; }
+.workflow-card-meta {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+.workflow-card-meta > span { white-space: nowrap; }
+@media (width <= 1050px) {
+  .iota-minimal-page .project-detail-reference-layout { grid-template-columns: 1fr !important; }
+}
+@media (width <= 760px) {
+  .project-page-actions { display: grid; grid-template-columns: 1fr; }
+  .project-data-reference .sql-import-fields { grid-template-columns: 1fr; }
+  .workflow-create-name { grid-template-columns: 1fr; gap: 7px; }
+}
+
+/* Redesign reference: compact dark technical shell for project list and editor. */
+.iota-reference-shell {
+  --theme-primary: #2dd4bf;
+  --theme-primary-hover: #14b8a6;
+  --theme-primary-active: #2dd4bf;
+  --theme-primary-soft: rgb(45 212 191 / 10%);
+  --theme-secondary: #818cf8;
+  --theme-app-bg: #0b0d0f;
+  --theme-workspace-bg: #0b0d0f;
+  --theme-topbar-bg: #121518;
+  --theme-panel-bg: #121518;
+  --theme-panel-muted: #0e1012;
+  --theme-panel-raised: #181c1f;
+  --theme-control-bg: #0b0d0f;
+  --theme-popup-bg: #121518;
+  --theme-hover-bg: #141618;
+  --theme-text: #dde1e6;
+  --theme-text-secondary: #a0aab4;
+  --theme-text-muted: #6b7682;
+  --theme-placeholder: #374048;
+  --theme-divider: #1f2428;
+  --theme-control-border: #1f2428;
+  --theme-focus: rgb(45 212 191 / 42%);
+  --theme-button-primary-bg: #2dd4bf;
+  --theme-button-primary-bg-hover: #14b8a6;
+  --theme-button-primary-text: #071a19;
+  --theme-button-secondary-bg: #121518;
+  --theme-button-secondary-bg-hover: #181c1f;
+  --theme-button-secondary-text: #a0aab4;
+  background: #0b0d0f;
+}
+
+.iota-reference-shell .app-main-topbar.iota-ai-topbar {
+  min-height: 56px !important;
+  background: rgb(18 21 24 / 96%);
+  border-bottom: 1px solid #1f2428;
+  box-shadow: 0 1px 0 rgb(45 212 191 / 4%);
+}
+
+.iota-reference-shell .iota-brand-name,
+.iota-reference-shell .brand-block h1 {
+  color: #dde1e6;
+  letter-spacing: 0;
+}
+
+.iota-reference-shell .iota-nav-divider {
+  background: #1f2428;
+}
+
+.iota-reference-shell .profile-button,
+.iota-reference-shell .iota-user-chip,
+.iota-reference-shell .iota-nav-icon,
+.iota-reference-shell .theme-toggle {
+  border: 1px solid #1f2428 !important;
+  border-radius: 6px !important;
+  background: #121518 !important;
+  color: #a0aab4 !important;
+}
+
+.iota-reference-shell .profile-button:hover,
+.iota-reference-shell .iota-user-chip:hover,
+.iota-reference-shell .iota-nav-icon:hover,
+.iota-reference-shell .theme-toggle:hover {
+  border-color: rgb(45 212 191 / 30%) !important;
+  color: #2dd4bf !important;
+}
+
+.iota-reference-shell .manager-page.iota-minimal-page {
+  position: relative;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: calc(100dvh - 56px) !important;
+  margin: 0 !important;
+  padding: 32px !important;
+  overflow: auto;
+  background: #0b0d0f !important;
+}
+
+.iota-reference-shell .manager-page.iota-minimal-page::before {
+  content: "";
+  position: fixed;
+  inset: 56px 0 0;
+  pointer-events: none;
+  opacity: .035 !important;
+  background-image:
+    linear-gradient(#2dd4bf 1px, transparent 1px),
+    linear-gradient(90deg, #2dd4bf 1px, transparent 1px) !important;
+  background-size: 48px 48px !important;
+  mask-image: none !important;
+}
+
+.iota-reference-shell .manager-page.iota-minimal-page::after {
+  content: "";
+  position: fixed;
+  inset-inline: 0;
+  top: 56px;
+  height: 200px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0%, rgb(20 184 166 / 16%) 25%, rgb(45 212 191 / 22%) 50%, rgb(20 184 166 / 16%) 75%, transparent 100%) top / 100% 1px no-repeat,
+    radial-gradient(ellipse 100% 100% at 50% 0%, rgb(20 184 166 / 5%) 0%, transparent 100%);
+}
+
+.projects-page-heading,
+.project-detail-heading,
+.admin-page-heading,
+.iota-reference-shell .project-detail-reference-layout,
+.iota-reference-shell .projects-toolbar,
+.iota-reference-shell .project-access-section {
+  position: relative;
+  z-index: 1;
+  width: min(1440px, 100%) !important;
+  margin-inline: auto !important;
+}
+
+.projects-page-heading,
+.project-detail-heading,
+.admin-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.projects-page-heading h2,
+.project-detail-heading h2,
+.admin-page-heading h2 {
+  margin: 0;
+  color: #dde1e6;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.projects-page-heading p,
+.project-detail-heading p,
+.admin-page-heading p {
+  margin: 4px 0 0;
+  color: #6b7682;
+  font-size: 13px;
+}
+
+.iota-reference-shell .projects-toolbar {
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(132px, auto)) auto auto;
+  gap: 10px;
+  margin-bottom: 22px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.iota-reference-shell .project-filter-search,
+.iota-reference-shell .projects-toolbar button[aria-haspopup="listbox"],
+.iota-reference-shell .projects-toolbar > button {
+  min-height: 36px !important;
+  border: 1px solid #1f2428 !important;
+  border-radius: 6px !important;
+  background: #121518 !important;
+  color: #a0aab4 !important;
+}
+
+.iota-reference-shell .project-filter-search {
+  max-width: 340px;
+  padding-inline: 11px;
+}
+
+.iota-reference-shell .project-filter-search svg {
+  color: #6b7682;
+}
+
+.iota-reference-shell .project-filter-search input,
+.iota-reference-shell .projects-toolbar input {
+  background: transparent !important;
+  border: 0 !important;
+  color: #dde1e6 !important;
+}
+
+.iota-reference-shell .project-filter-search:focus-within,
+.iota-reference-shell .projects-toolbar button[aria-expanded="true"],
+.iota-reference-shell .projects-toolbar button[aria-haspopup="listbox"]:hover,
+.iota-reference-shell .projects-toolbar > button:hover {
+  border-color: rgb(45 212 191 / 28%) !important;
+}
+
+.iota-reference-shell .projects-toolbar > button[class*="button_primary"] {
+  background: #2dd4bf !important;
+  border-color: #2dd4bf !important;
+  color: #071a19 !important;
+  box-shadow: 0 0 18px rgb(45 212 191 / 13%);
+}
+
+.iota-reference-shell .project-access-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px !important;
+}
+
+.iota-reference-shell .project-section-heading {
+  align-items: center;
+}
+
+.iota-reference-shell .project-section-heading > span {
+  color: #dde1e6;
+  font-size: 15px;
+}
+
+.iota-reference-shell .project-section-heading svg {
+  color: #2dd4bf;
+}
+
+.iota-reference-shell .project-reference-grid {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.iota-reference-shell .project-reference-card {
+  min-height: 190px;
+  gap: 13px;
+  padding: 20px !important;
+  overflow: hidden;
+  border: 1px solid #1f2428 !important;
+  border-radius: 12px !important;
+  background: #121518 !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 16%);
+  transform: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.iota-reference-shell .project-reference-card:hover {
+  border-color: color-mix(in srgb, var(--project-color, #2dd4bf) 42%, #1f2428) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--project-color, #2dd4bf) 14%, transparent), 0 8px 32px rgb(0 0 0 / 19%);
+  transform: translateY(-1px) !important;
+}
+
+.iota-reference-shell .project-reference-card.is-new-assignment {
+  border-color: color-mix(in srgb, var(--project-color, #2dd4bf) 44%, #1f2428) !important;
+}
+
+.iota-reference-shell .project-color-strip {
+  inset-block: 0 auto;
+  inset-inline: 0;
+  width: auto;
+  height: 2px;
+  opacity: .7;
+}
+
+.iota-reference-shell .project-reference-card:hover .project-color-strip {
+  opacity: 1;
+}
+
+.iota-reference-shell .project-reference-card-head {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.iota-reference-shell .project-card-icon-reference {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 6px !important;
+  color: var(--project-color, #2dd4bf) !important;
+  background: color-mix(in srgb, var(--project-color, #2dd4bf) 10%, transparent) !important;
+  border-color: color-mix(in srgb, var(--project-color, #2dd4bf) 22%, transparent) !important;
+}
+
+.iota-reference-shell .project-reference-card-head b {
+  color: #dde1e6 !important;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+.iota-reference-shell .project-reference-card-head small {
+  color: #6b7682 !important;
+  font-size: 12px;
+}
+
+.iota-reference-shell .project-access-line {
+  gap: 7px;
+}
+
+.iota-reference-shell .access-badge,
+.iota-reference-shell .project-state,
+.iota-reference-shell .project-priority,
+.iota-reference-shell .new-assignment-badge {
+  min-height: 23px !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid #252a2d !important;
+  background: #181c1f !important;
+  color: #a0aab4 !important;
+  font-size: 11px !important;
+  font-weight: 650;
+}
+
+.iota-reference-shell .access-badge.access-owner,
+.iota-reference-shell .access-badge.access-admin,
+.iota-reference-shell .access-badge.access-edit,
+.iota-reference-shell .new-assignment-badge {
+  color: #2dd4bf !important;
+  background: rgb(45 212 191 / 6%) !important;
+  border-color: rgb(45 212 191 / 16%) !important;
+}
+
+.iota-reference-shell .access-badge.access-view {
+  color: #6b7682 !important;
+  background: rgb(107 118 130 / 6%) !important;
+}
+
+.iota-reference-shell .project-people-line {
+  padding-block: 10px;
+  border-block-color: #1a1d1f;
+  color: #6b7682 !important;
+  font-size: 12px !important;
+}
+
+.iota-reference-shell .project-people-line b {
+  color: #a0aab4 !important;
+}
+
+.iota-reference-shell .project-reference-card-meta {
+  gap: 14px;
+  color: #374048 !important;
+  font-size: 11px !important;
+}
+
+.iota-reference-shell .new-assignment-section {
+  padding: 16px;
+  border: 1px solid rgb(45 212 191 / 16%);
+  border-radius: 12px;
+  background: rgb(45 212 191 / 3%);
+}
+
+.project-detail-heading {
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.project-detail-heading > div:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-heading-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.project-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.project-heading-actions button {
+  min-height: 36px !important;
+  border-radius: 6px !important;
+}
+
+.project-heading-actions button[class*="button_primary"] {
+  background: #2dd4bf !important;
+  color: #071a19 !important;
+  box-shadow: 0 0 16px rgb(45 212 191 / 13%);
+}
+
+.iota-reference-shell .project-detail-reference-layout {
+  display: grid !important;
+  grid-template-columns: minmax(330px, .95fr) minmax(0, 1.35fr) !important;
+  gap: 24px !important;
+  align-items: start;
+}
+
+.iota-reference-shell .detail-main-stack-reference {
+  gap: 20px !important;
+}
+
+.iota-reference-shell .project-info-reference,
+.iota-reference-shell .project-data-reference,
+.iota-reference-shell .workflows-reference-card {
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid #1f2428 !important;
+  border-radius: 12px !important;
+  background: #121518 !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 14%);
+}
+
+.iota-reference-shell .project-info-reference {
+  position: sticky !important;
+  top: 80px !important;
+}
+
+.iota-reference-shell .reference-card-head {
+  min-height: 50px;
+  margin: 0 !important;
+  padding: 14px 20px !important;
+  border-bottom: 1px solid #1a1d1f !important;
+}
+
+.iota-reference-shell .reference-card-head b {
+  color: #dde1e6 !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+.iota-reference-shell .project-info-reference .project-form,
+.iota-reference-shell .project-data-reference > :not(.reference-card-head),
+.iota-reference-shell .workflows-reference-card > :not(.reference-card-head) {
+  margin: 20px;
+}
+
+.iota-reference-shell .project-form {
+  gap: 14px !important;
+}
+
+.iota-reference-shell .project-form label {
+  gap: 6px;
+  color: #a0aab4 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+.iota-reference-shell .project-form input,
+.iota-reference-shell .project-form select,
+.iota-reference-shell .project-form textarea,
+.iota-reference-shell .workflow-create-name input,
+.iota-reference-shell .sql-import-field input,
+.iota-reference-shell .sql-import-field select {
+  min-height: 36px !important;
+  border: 1px solid #1f2428 !important;
+  border-radius: 6px !important;
+  background: #0b0d0f !important;
+  color: #dde1e6 !important;
+  font-size: 13px !important;
+}
+
+.iota-reference-shell .project-form textarea {
+  min-height: 86px !important;
+}
+
+.iota-reference-shell .project-form input:focus,
+.iota-reference-shell .project-form select:focus,
+.iota-reference-shell .project-form textarea:focus,
+.iota-reference-shell .workflow-create-name input:focus {
+  border-color: rgb(45 212 191 / 35%) !important;
+  box-shadow: 0 0 0 2px rgb(45 212 191 / 8%);
+}
+
+.iota-reference-shell .project-color-control {
+  min-height: 36px;
+  border-color: #1f2428;
+  border-radius: 6px;
+  background: #0b0d0f;
+}
+
+.iota-reference-shell .project-color-swatches button {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.iota-reference-shell .readonly-project-note,
+.iota-reference-shell .empty-manager {
+  margin: 20px;
+  border: 1px dashed #1f2428;
+  border-radius: 8px;
+  background: #0e1012;
+  color: #6b7682;
+}
+
+.iota-reference-shell .upload-zone {
+  min-height: 82px !important;
+  margin: 0 0 12px !important;
+  border: 1px dashed #1f2428 !important;
+  border-radius: 8px !important;
+  background: rgb(45 212 191 / 4%) !important;
+  color: #2dd4bf !important;
+}
+
+.iota-reference-shell .dataset-mini-row,
+.iota-reference-shell .dataset-row-ai,
+.iota-reference-shell .workflow-manage-card,
+.iota-reference-shell .workflow-card-reference {
+  border: 1px solid #1a1d1f !important;
+  border-radius: 8px !important;
+  background: #0e1012 !important;
+}
+
+.iota-reference-shell .dataset-mini-row:hover,
+.iota-reference-shell .workflow-manage-card:hover,
+.iota-reference-shell .workflow-card-reference:hover {
+  border-color: #252a2d !important;
+  background: #101315 !important;
+  transform: none !important;
+}
+
+.iota-reference-shell .dataset-mini-row b,
+.iota-reference-shell .workflow-card-open b {
+  color: #dde1e6 !important;
+  font-size: 13px !important;
+}
+
+.iota-reference-shell .dataset-mini-row small,
+.iota-reference-shell .workflow-card-meta,
+.iota-reference-shell .workflow-card-open span,
+.iota-reference-shell .artifact-usage-summary small {
+  color: #6b7682 !important;
+}
+
+.iota-reference-shell .sql-import {
+  margin: 18px 20px 20px !important;
+  border-color: #1f2428;
+  border-radius: 8px;
+  background: #0e1012;
+}
+
+.iota-reference-shell .artifact-usage-summary {
+  padding-top: 14px;
+  border-top-color: #1a1d1f;
+}
+
+.iota-reference-shell .workflow-create-name {
+  grid-template-columns: auto minmax(0, 1fr);
+  margin: 20px !important;
+  padding: 12px;
+  border-color: #1f2428;
+  border-radius: 8px;
+  background: #0e1012;
+}
+
+.iota-reference-shell .workflow-create-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.iota-reference-shell .workflow-card-grid-reference {
+  grid-template-columns: 1fr;
+  gap: 8px !important;
+}
+
+.iota-reference-shell .workflow-manage-card {
+  min-height: 72px !important;
+  padding: 12px !important;
+}
+
+.iota-reference-shell .workflow-icon {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 6px !important;
+  color: #6b7682 !important;
+  background: #181c1f !important;
+  border-color: #252a2d !important;
+}
+
+.iota-reference-shell .workflow-row-action {
+  border-radius: 6px;
+  color: #6b7682;
+}
+
+.iota-reference-shell .workflow-row-action:hover:not(:disabled) {
+  background: #1f2428;
+  color: #dde1e6;
+}
+
+.iota-reference-shell .workflow-row-action.danger-action:hover:not(:disabled) {
+  background: rgb(248 113 113 / 8%);
+  color: #f87171;
+}
+
+@media (width <= 1120px) {
+  .iota-reference-shell .projects-toolbar {
+    grid-template-columns: minmax(240px, 1fr) repeat(2, minmax(132px, auto));
+  }
+}
+
+@media (width <= 1050px) {
+  .iota-reference-shell .project-detail-reference-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .iota-reference-shell .project-info-reference {
+    position: static !important;
+  }
+}
+
+@media (width <= 760px) {
+  .iota-reference-shell .manager-page.iota-minimal-page {
+    padding: 22px 16px !important;
+  }
+
+  .projects-page-heading,
+  .project-detail-heading,
+  .admin-page-heading {
+    display: grid;
+  }
+
+  .iota-reference-shell .projects-toolbar,
+  .iota-reference-shell .project-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .iota-reference-shell .project-filter-search {
+    max-width: none;
+  }
+
+  .iota-reference-shell .project-reference-card-head {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .iota-reference-shell .new-assignment-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .iota-reference-shell .project-info-reference .project-form,
+  .iota-reference-shell .project-data-reference > :not(.reference-card-head),
+  .iota-reference-shell .workflows-reference-card > :not(.reference-card-head),
+  .iota-reference-shell .workflow-create-name,
+  .iota-reference-shell .sql-import {
+    margin: 16px !important;
+  }
+}
+
+.iota-reference-shell .projects-reference-page,
+.iota-reference-shell .project-detail-reference-page,
+.iota-reference-shell .profile-reference-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  background-image: none !important;
+}
+
+.iota-reference-shell .projects-toolbar.manager-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell {
+  --theme-primary: #087f73;
+  --theme-primary-hover: #066a61;
+  --theme-primary-active: #087f73;
+  --theme-primary-soft: rgb(8 127 115 / 10%);
+  --theme-secondary: #6568a6;
+  --theme-app-bg: #f2f6f8;
+  --theme-workspace-bg: #edf3f6;
+  --theme-topbar-bg: #ffffff;
+  --theme-panel-bg: #ffffff;
+  --theme-panel-muted: #f7fafb;
+  --theme-panel-raised: #eef4f6;
+  --theme-control-bg: #f8fbfc;
+  --theme-popup-bg: #ffffff;
+  --theme-hover-bg: #edf5f6;
+  --theme-text: #15212b;
+  --theme-text-secondary: #40505d;
+  --theme-text-muted: #627482;
+  --theme-placeholder: #7a8b96;
+  --theme-divider: rgb(34 62 82 / 16%);
+  --theme-control-border: rgb(34 62 82 / 22%);
+  --theme-focus: rgb(8 127 115 / 38%);
+  --theme-button-primary-bg: #087f73;
+  --theme-button-primary-bg-hover: #066a61;
+  --theme-button-primary-text: #ffffff;
+  --theme-button-secondary-bg: #ffffff;
+  --theme-button-secondary-bg-hover: #edf5f6;
+  --theme-button-secondary-text: #40505d;
+  background: #f2f6f8;
+}
+
+:root[data-theme="light"] .iota-reference-shell .app-main-topbar.iota-ai-topbar {
+  background: rgb(255 255 255 / 96%);
+  border-bottom-color: rgb(34 62 82 / 16%);
+  box-shadow: 0 1px 0 rgb(8 127 115 / 6%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .iota-brand-name,
+:root[data-theme="light"] .iota-reference-shell .brand-block h1,
+:root[data-theme="light"] .projects-page-heading h2,
+:root[data-theme="light"] .project-detail-heading h2,
+:root[data-theme="light"] .admin-page-heading h2 {
+  color: #15212b;
+}
+
+:root[data-theme="light"] .iota-reference-shell .iota-nav-divider {
+  background: rgb(34 62 82 / 14%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .profile-button,
+:root[data-theme="light"] .iota-reference-shell .iota-user-chip,
+:root[data-theme="light"] .iota-reference-shell .iota-nav-icon,
+:root[data-theme="light"] .iota-reference-shell .theme-toggle,
+:root[data-theme="light"] .iota-reference-shell .project-filter-search,
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar button[aria-haspopup="listbox"],
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar > button {
+  background: #ffffff !important;
+  border-color: rgb(34 62 82 / 18%) !important;
+  color: #40505d !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .profile-button:hover,
+:root[data-theme="light"] .iota-reference-shell .iota-user-chip:hover,
+:root[data-theme="light"] .iota-reference-shell .iota-nav-icon:hover,
+:root[data-theme="light"] .iota-reference-shell .theme-toggle:hover,
+:root[data-theme="light"] .iota-reference-shell .project-filter-search:focus-within,
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar button[aria-expanded="true"],
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar button[aria-haspopup="listbox"]:hover,
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar > button:hover {
+  border-color: rgb(8 127 115 / 34%) !important;
+  color: #087f73 !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .manager-page.iota-minimal-page {
+  background: #f2f6f8 !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .manager-page.iota-minimal-page::before {
+  opacity: .65 !important;
+  background-image:
+    linear-gradient(rgb(8 127 115 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(8 127 115 / 8%) 1px, transparent 1px) !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .manager-page.iota-minimal-page::after {
+  background:
+    linear-gradient(90deg, transparent 0%, rgb(8 127 115 / 18%) 25%, rgb(8 127 115 / 30%) 50%, rgb(8 127 115 / 18%) 75%, transparent 100%) top / 100% 1px no-repeat,
+    radial-gradient(ellipse 100% 100% at 50% 0%, rgb(8 127 115 / 9%) 0%, transparent 100%);
+}
+
+:root[data-theme="light"] .projects-page-heading p,
+:root[data-theme="light"] .project-detail-heading p,
+:root[data-theme="light"] .admin-page-heading p,
+:root[data-theme="light"] .iota-reference-shell .project-reference-card-head small,
+:root[data-theme="light"] .iota-reference-shell .project-reference-card-meta,
+:root[data-theme="light"] .iota-reference-shell .project-people-line,
+:root[data-theme="light"] .iota-reference-shell .dataset-mini-row small,
+:root[data-theme="light"] .iota-reference-shell .workflow-card-meta,
+:root[data-theme="light"] .iota-reference-shell .workflow-card-open span,
+:root[data-theme="light"] .iota-reference-shell .artifact-usage-summary small {
+  color: #627482 !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-filter-search input,
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar input {
+  color: #15212b !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar > button[class*="button_primary"],
+:root[data-theme="light"] .project-heading-actions button[class*="button_primary"] {
+  background: #087f73 !important;
+  border-color: #087f73 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgb(8 127 115 / 16%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-reference-card,
+:root[data-theme="light"] .iota-reference-shell .project-info-reference,
+:root[data-theme="light"] .iota-reference-shell .project-data-reference,
+:root[data-theme="light"] .iota-reference-shell .workflows-reference-card,
+:root[data-theme="light"] .iota-reference-shell .profile-main-card-reference,
+:root[data-theme="light"] .iota-reference-shell .profile-password-card,
+:root[data-theme="light"] .iota-reference-shell .activity-panel-reference,
+:root[data-theme="light"] .iota-reference-shell .notification-panel-reference {
+  background: #ffffff !important;
+  border-color: rgb(34 62 82 / 16%) !important;
+  box-shadow: 0 12px 30px rgb(21 33 43 / 7%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-reference-card:hover {
+  border-color: color-mix(in srgb, var(--project-color, #087f73) 36%, rgb(34 62 82 / 18%)) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--project-color, #087f73) 12%, transparent), 0 14px 34px rgb(21 33 43 / 10%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-reference-card-head b,
+:root[data-theme="light"] .iota-reference-shell .reference-card-head b,
+:root[data-theme="light"] .iota-reference-shell .dataset-mini-row b,
+:root[data-theme="light"] .iota-reference-shell .workflow-card-open b {
+  color: #15212b !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .access-badge,
+:root[data-theme="light"] .iota-reference-shell .project-state,
+:root[data-theme="light"] .iota-reference-shell .project-priority,
+:root[data-theme="light"] .iota-reference-shell .new-assignment-badge {
+  background: #f3f7f8 !important;
+  border-color: rgb(34 62 82 / 14%) !important;
+  color: #40505d !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .access-badge.access-owner,
+:root[data-theme="light"] .iota-reference-shell .access-badge.access-admin,
+:root[data-theme="light"] .iota-reference-shell .access-badge.access-edit,
+:root[data-theme="light"] .iota-reference-shell .new-assignment-badge {
+  color: #087f73 !important;
+  background: rgb(8 127 115 / 8%) !important;
+  border-color: rgb(8 127 115 / 18%) !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-people-line,
+:root[data-theme="light"] .iota-reference-shell .reference-card-head {
+  border-color: rgb(34 62 82 / 12%) !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-form input,
+:root[data-theme="light"] .iota-reference-shell .project-form select,
+:root[data-theme="light"] .iota-reference-shell .project-form textarea,
+:root[data-theme="light"] .iota-reference-shell .workflow-create-name input,
+:root[data-theme="light"] .iota-reference-shell .sql-import-field input,
+:root[data-theme="light"] .iota-reference-shell .sql-import-field select {
+  background: #f8fbfc !important;
+  border-color: rgb(34 62 82 / 18%) !important;
+  color: #15212b !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-form input:focus,
+:root[data-theme="light"] .iota-reference-shell .project-form select:focus,
+:root[data-theme="light"] .iota-reference-shell .project-form textarea:focus,
+:root[data-theme="light"] .iota-reference-shell .workflow-create-name input:focus {
+  border-color: rgb(8 127 115 / 36%) !important;
+  box-shadow: 0 0 0 2px rgb(8 127 115 / 9%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .project-color-control,
+:root[data-theme="light"] .iota-reference-shell .readonly-project-note,
+:root[data-theme="light"] .iota-reference-shell .empty-manager,
+:root[data-theme="light"] .iota-reference-shell .dataset-mini-row,
+:root[data-theme="light"] .iota-reference-shell .dataset-row-ai,
+:root[data-theme="light"] .iota-reference-shell .workflow-manage-card,
+:root[data-theme="light"] .iota-reference-shell .workflow-card-reference,
+:root[data-theme="light"] .iota-reference-shell .sql-import,
+:root[data-theme="light"] .iota-reference-shell .workflow-create-name {
+  background: #f8fbfc !important;
+  border-color: rgb(34 62 82 / 14%) !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .upload-zone {
+  background: rgb(8 127 115 / 6%) !important;
+  border-color: rgb(8 127 115 / 18%) !important;
+  color: #087f73 !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .workflow-icon {
+  color: #627482 !important;
+  background: #eef4f6 !important;
+  border-color: rgb(34 62 82 / 14%) !important;
+}
+
+.iota-reference-shell .profile-layout-reference {
+  width: min(1440px, 100%) !important;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px) !important;
+  gap: 24px !important;
+}
+
+.iota-reference-shell .profile-main-card-reference,
+.iota-reference-shell .profile-password-card,
+.iota-reference-shell .activity-panel-reference,
+.iota-reference-shell .notification-panel-reference {
+  border: 1px solid #1f2428 !important;
+  border-radius: 12px !important;
+  background: #121518 !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 14%);
+}
+
+.iota-reference-shell .profile-reference-head,
+.iota-reference-shell .profile-password-card .panel-heading,
+.iota-reference-shell .activity-panel-reference .panel-heading,
+.iota-reference-shell .notification-panel-reference .panel-heading {
+  border-color: #1a1d1f !important;
+}
+
+.iota-reference-shell .profile-avatar-reference {
+  border: 1px solid rgb(45 212 191 / 16%);
+  background: rgb(45 212 191 / 8%);
+  color: #2dd4bf;
+  box-shadow: 0 0 24px rgb(45 212 191 / 9%);
+}
+
+.iota-reference-shell .profile-form-grid-reference > .profile-field-reference > input,
+.iota-reference-shell .profile-password-fields-reference input,
+.iota-reference-shell .input-with-icon-reference {
+  min-height: 38px !important;
+  border: 1px solid #1f2428 !important;
+  border-radius: 6px !important;
+  background: #0b0d0f !important;
+  color: #dde1e6 !important;
+}
+
+.iota-reference-shell .profile-form-grid-reference .input-with-icon-reference input {
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.iota-reference-shell .profile-save-reference,
+.iota-reference-shell .profile-password-save-reference {
+  min-height: 36px !important;
+  border-radius: 6px !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .profile-avatar-reference {
+  border-color: rgb(8 127 115 / 18%);
+  background: rgb(8 127 115 / 8%);
+  color: #087f73;
+  box-shadow: 0 10px 28px rgb(8 127 115 / 10%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .profile-form-grid-reference > .profile-field-reference > input,
+:root[data-theme="light"] .iota-reference-shell .profile-password-fields-reference input,
+:root[data-theme="light"] .iota-reference-shell .input-with-icon-reference {
+  background: #f8fbfc !important;
+  border-color: rgb(34 62 82 / 18%) !important;
+  color: #15212b !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .profile-form-grid-reference .input-with-icon-reference input {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Final reference-shell corrections: full-bleed glow, transparent toolbars, admin parity. */
+.iota-reference-shell .manager-page.iota-minimal-page,
+.iota-reference-shell .projects-reference-page,
+.iota-reference-shell .project-detail-reference-page,
+.iota-reference-shell .profile-reference-page,
+.iota-reference-shell .admin-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.iota-reference-shell .manager-page.iota-minimal-page::before,
+.iota-reference-shell .manager-page.iota-minimal-page::after {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+}
+
+.iota-reference-shell .projects-toolbar.manager-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .projects-toolbar.manager-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.iota-reference-shell .icon-button,
+.iota-reference-shell .tiny-icon,
+.iota-reference-shell .theme-toggle,
+.iota-reference-shell .profile-button,
+.iota-reference-shell .iota-user-chip,
+.iota-reference-shell .iota-nav-icon {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.iota-reference-shell .icon-button:hover,
+.iota-reference-shell .tiny-icon:hover,
+.iota-reference-shell .theme-toggle:hover,
+.iota-reference-shell .profile-button:hover,
+.iota-reference-shell .iota-user-chip:hover,
+.iota-reference-shell .iota-nav-icon:hover {
+  background: rgb(45 212 191 / 8%) !important;
+  color: #2dd4bf !important;
+}
+
+.iota-reference-shell .danger,
+.iota-reference-shell .danger-nav {
+  border: 0 !important;
+}
+
+.iota-reference-shell .danger:hover,
+.iota-reference-shell .danger-nav:hover {
+  background: rgb(248 113 113 / 10%) !important;
+  color: #f87171 !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .icon-button:hover,
+:root[data-theme="light"] .iota-reference-shell .tiny-icon:hover,
+:root[data-theme="light"] .iota-reference-shell .theme-toggle:hover,
+:root[data-theme="light"] .iota-reference-shell .profile-button:hover,
+:root[data-theme="light"] .iota-reference-shell .iota-user-chip:hover,
+:root[data-theme="light"] .iota-reference-shell .iota-nav-icon:hover {
+  background: rgb(8 127 115 / 8%) !important;
+  color: #087f73 !important;
+}
+
+.iota-reference-shell .admin-layout {
+  position: relative;
+  z-index: 1;
+  width: min(1440px, 100%) !important;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(330px, .9fr) minmax(0, 1.35fr);
+  gap: 24px;
+}
+
+.iota-reference-shell .admin-users-panel,
+.iota-reference-shell .admin-editor-panel {
+  min-height: min(720px, calc(100dvh - 128px));
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #1f2428 !important;
+  border-radius: 12px !important;
+  background: #121518 !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 14%);
+}
+
+.iota-reference-shell .admin-panel-head,
+.iota-reference-shell .admin-editor-head {
+  min-height: 54px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #1a1d1f;
+}
+
+.iota-reference-shell .admin-users-panel .project-filter-search {
+  width: auto !important;
+  margin: 16px 18px 10px;
+  max-width: none !important;
+  min-width: 0;
+}
+
+.iota-reference-shell .admin-user-list,
+.iota-reference-shell .admin-user-form,
+.iota-reference-shell .admin-editor-actions,
+.iota-reference-shell .admin-project-access,
+.iota-reference-shell .admin-empty {
+  margin: 18px;
+}
+
+.iota-reference-shell .admin-user-row,
+.iota-reference-shell .admin-project-row {
+  border: 1px solid #1a1d1f !important;
+  border-radius: 8px !important;
+  background: #0e1012 !important;
+  color: #dde1e6;
+}
+
+.iota-reference-shell .admin-user-row:hover,
+.iota-reference-shell .admin-user-row.active,
+.iota-reference-shell .admin-project-row:hover {
+  border-color: rgb(45 212 191 / 24%) !important;
+  background: #101315 !important;
+}
+
+.iota-reference-shell .admin-user-avatar {
+  border-radius: 6px;
+  background: rgb(45 212 191 / 9%);
+  color: #2dd4bf;
+}
+
+.iota-reference-shell .role-badge {
+  border: 1px solid #252a2d;
+  border-radius: 999px;
+}
+
+.iota-reference-shell .admin-user-form input,
+.iota-reference-shell .admin-user-form select {
+  min-height: 36px;
+  border: 1px solid #1f2428;
+  border-radius: 6px;
+  background: #0b0d0f;
+  color: #dde1e6;
+}
+
+.iota-reference-shell .admin-user-form input:focus,
+.iota-reference-shell .admin-user-form select:focus {
+  outline: 0;
+  border-color: rgb(45 212 191 / 35%);
+  box-shadow: 0 0 0 2px rgb(45 212 191 / 8%);
+}
+
+.iota-reference-shell .admin-project-access {
+  border-top-color: #1a1d1f;
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-users-panel,
+:root[data-theme="light"] .iota-reference-shell .admin-editor-panel {
+  background: #ffffff !important;
+  border-color: rgb(34 62 82 / 16%) !important;
+  box-shadow: 0 12px 30px rgb(21 33 43 / 7%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-panel-head,
+:root[data-theme="light"] .iota-reference-shell .admin-editor-head,
+:root[data-theme="light"] .iota-reference-shell .admin-project-access {
+  border-color: rgb(34 62 82 / 12%);
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-user-row,
+:root[data-theme="light"] .iota-reference-shell .admin-project-row {
+  background: #f8fbfc !important;
+  border-color: rgb(34 62 82 / 14%) !important;
+  color: #15212b;
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-user-row:hover,
+:root[data-theme="light"] .iota-reference-shell .admin-user-row.active,
+:root[data-theme="light"] .iota-reference-shell .admin-project-row:hover {
+  border-color: rgb(8 127 115 / 24%) !important;
+  background: rgb(8 127 115 / 5%) !important;
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-user-avatar {
+  background: rgb(8 127 115 / 8%);
+  color: #087f73;
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-user-form input,
+:root[data-theme="light"] .iota-reference-shell .admin-user-form select {
+  background: #f8fbfc;
+  border-color: rgb(34 62 82 / 18%);
+  color: #15212b;
+}
+
+:root[data-theme="light"] .iota-reference-shell .admin-user-form input:focus,
+:root[data-theme="light"] .iota-reference-shell .admin-user-form select:focus {
+  border-color: rgb(8 127 115 / 36%);
+  box-shadow: 0 0 0 2px rgb(8 127 115 / 9%);
+}
+
+@media (width <= 1120px) {
+  .iota-reference-shell .admin-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -92,7 +92,14 @@ def _setting_type_valid(kind: str, value: Any) -> bool:
         return isinstance(value, list)
     if normalized in {"json", "object", "mapping"}:
         return isinstance(value, (dict, list, str))
-    if normalized in {"text", "string", "select", "column", "code", "textarea", "file", "dataset"}:
+    if normalized == "dataset":
+        return (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+        )
+
+    if normalized in {"text", "string", "select", "column", "code", "textarea", "file"}:
         return isinstance(value, str)
     return True
 

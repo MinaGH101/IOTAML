@@ -1,0 +1,77 @@
+/* shared styles extracted from 30-workflow-shell.css. */
+.workflow-topbar-pro .primary,
+.workflow-topbar-pro .danger,
+.workflow-topbar-pro .tiny-icon {
+border-radius:var(--theme-radius-panel)
+}
+.workflow-topbar-pro .tiny-icon {
+min-width:32px;
+width:32px;
+height:32px;
+padding:0!important;
+border:var(--theme-border-width) solid var(--theme-transparent)
+}
+.workflow-topbar-pro .tiny-icon:hover {
+border-color:color-mix(in srgb,var(--theme-primary) 34%,var(--theme-divider));
+background:color-mix(in srgb,var(--theme-primary) 8%,var(--theme-panel-bg))
+}
+.workflow-results-body .results-panel > .panel-title.results-title {
+display:none!important
+}
+.workflow-results-body .results-panel .empty-state {
+margin-inline:8px
+}
+.workflow-history-body .panel-title,
+.run-history-panel-compact .panel-title {
+display:none!important
+}
+.workflow-topbar-pro .primary.icon-only,
+.workflow-topbar-pro .danger.icon-only,
+.workflow-topbar-pro .tiny-icon {
+background:var(--theme-transparent);
+border-color:var(--theme-transparent);
+}
+.workflow-topbar-pro .primary.icon-only:hover,
+.workflow-topbar-pro .danger.icon-only:hover,
+.workflow-topbar-pro .tiny-icon:hover {
+background:var(--theme-transparent);
+border-color:var(--theme-transparent);
+color:var(--theme-primary)
+}
+.dynamic-toggle button.active {
+background:var(--theme-primary-soft);
+color:var(--theme-text)
+}
+.collapsed-category.active {
+border-color:var(--theme-primary);
+}
+.node-palette .palette-header .tiny-icon {
+display:none!important
+}
+.node-palette .collapsed-category.active {
+border-color:var(--theme-transparent);
+background:var(--theme-transparent);
+background-image:none;
+color:var(--node-category-color,var(--theme-primary))
+}
+.ml-node.selected::before {
+background:color-mix(in srgb,var(--node-category-color,var(--theme-primary)) 88%,var(--theme-white) 12%)
+}
+.node-modal .empty-state {
+border-color:color-mix(in srgb,var(--node-category-color,var(--theme-primary)) 14%,var(--theme-divider));
+border-radius:var(--theme-radius-panel)
+}
+:root[data-theme="dark"] .node-modal .empty-state,
+:root:not([data-theme="light"]) .node-modal .empty-state {
+background:var(--theme-panel-bg);
+border-color:var(--theme-control-border)
+}
+.workflow-autosave-status.saving {
+color:var(--theme-warning)
+}
+.workflow-autosave-status.saved {
+color:var(--theme-success)
+}
+.workflow-autosave-status.error {
+color:var(--theme-danger)
+}

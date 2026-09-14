@@ -10,7 +10,7 @@ from typing import Any
 from app.nodes.registry import canonical_node_id, get_node_runner
 from app.workflow.graph.operations import node_registry_id
 
-CACHE_FORMAT_VERSION = "iota-node-cache-v3"
+CACHE_FORMAT_VERSION = "iota-node-cache-v4"
 
 
 def _jsonable(value: Any) -> Any:

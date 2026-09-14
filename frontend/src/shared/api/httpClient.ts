@@ -32,7 +32,7 @@ const unauthorizedListeners = new Set<() => void>();
 
 export function onUnauthorized(listener: () => void) {
   unauthorizedListeners.add(listener);
-  return () => unauthorizedListeners.delete(listener);
+  return () => { unauthorizedListeners.delete(listener); };
 }
 
 function notifyUnauthorized() {

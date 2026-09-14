@@ -15,7 +15,7 @@ type CacheEntry<T> = {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 
-function keyOf(key: QueryKey) {
+function keyOf(key: QueryKey): string {
   return JSON.stringify(key);
 }
 
@@ -29,60 +29,106 @@ function entryFor<T>(key: QueryKey): CacheEntry<T> {
   return entry;
 }
 
-function publish(entry: CacheEntry<unknown>) {
+function publish(entry: CacheEntry<unknown>): void {
   entry.subscribers.forEach((subscriber) => subscriber());
 }
 
-async function execute<T>(key: QueryKey, queryFn: (signal: AbortSignal) => Promise<T>, force = false) {
+function sameKeyPart(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function keyHasPrefix(candidate: QueryKey, prefix: QueryKey): boolean {
+  return candidate.length >= prefix.length && prefix.every((part, index) => sameKeyPart(candidate[index], part));
+}
+
+async function execute<T>(
+  key: QueryKey,
+  queryFn: (signal: AbortSignal) => Promise<T>,
+  force = false,
+): Promise<T> {
   const entry = entryFor<T>(key);
   if (entry.promise && !force) return entry.promise;
+
   if (force) entry.controller?.abort(new DOMException('Superseded', 'AbortError'));
+
   const controller = new AbortController();
   entry.controller = controller;
   entry.status = entry.data === undefined ? 'loading' : 'success';
   publish(entry as CacheEntry<unknown>);
-  const promise = queryFn(controller.signal)
+
+  let promise!: Promise<T>;
+  promise = queryFn(controller.signal)
     .then((data) => {
-      entry.data = data;
-      entry.error = undefined;
-      entry.status = 'success';
-      entry.updatedAt = Date.now();
+      if (entry.controller === controller) {
+        entry.data = data;
+        entry.error = undefined;
+        entry.status = 'success';
+        entry.updatedAt = Date.now();
+      }
       return data;
     })
-    .catch((error) => {
-      if (controller.signal.aborted) {
-        entry.status = entry.data === undefined ? 'idle' : 'success';
-        throw error;
+    .catch((error: unknown) => {
+      if (entry.controller === controller) {
+        if (controller.signal.aborted) {
+          entry.status = entry.data === undefined ? 'idle' : 'success';
+        } else {
+          entry.error = error;
+          entry.status = 'error';
+        }
       }
-      entry.error = error;
-      entry.status = 'error';
       throw error;
     })
     .finally(() => {
-      if (entry.controller === controller) entry.controller = undefined;
-      entry.promise = undefined;
-      publish(entry as CacheEntry<unknown>);
+      const isCurrent = entry.controller === controller;
+      if (isCurrent) entry.controller = undefined;
+      if (entry.promise === promise) entry.promise = undefined;
+      if (isCurrent) publish(entry as CacheEntry<unknown>);
     });
+
   entry.promise = promise;
   return promise;
 }
 
-export function invalidateQueries(prefix: QueryKey) {
-  const encodedPrefix = JSON.stringify(prefix).slice(0, -1);
-  cache.forEach((entry, key) => {
-    if (key.startsWith(encodedPrefix)) {
-      entry.updatedAt = 0;
+export function invalidateQueries(prefix: QueryKey): void {
+  cache.forEach((entry, encodedKey) => {
+    let candidate: QueryKey;
+    try {
+      candidate = JSON.parse(encodedKey) as QueryKey;
+    } catch {
+      return;
+    }
+    if (!keyHasPrefix(candidate, prefix)) return;
+    entry.updatedAt = 0;
+    publish(entry);
+  });
+}
+
+export function clearServerQueryCache(): void {
+  cache.forEach((entry, cacheKey) => {
+    entry.controller?.abort(new DOMException('Cache cleared', 'AbortError'));
+    entry.controller = undefined;
+    entry.promise = undefined;
+    entry.data = undefined;
+    entry.error = undefined;
+    entry.status = 'idle';
+    entry.updatedAt = 0;
+
+    if (entry.subscribers.size === 0) {
+      cache.delete(cacheKey);
+    } else {
       publish(entry);
     }
   });
 }
 
-export function clearServerQueryCache() {
-  cache.forEach((entry) => entry.controller?.abort(new DOMException('Cache cleared', 'AbortError')));
-  cache.clear();
-}
-
-export function useServerQuery<T>({ key, queryFn, enabled = true, staleTime = 30_000 }: {
+export function useServerQuery<T>({
+  key,
+  queryFn,
+  enabled = true,
+  staleTime = 30_000,
+}: {
   key: QueryKey;
   queryFn: (signal: AbortSignal) => Promise<T>;
   enabled?: boolean;
@@ -91,6 +137,7 @@ export function useServerQuery<T>({ key, queryFn, enabled = true, staleTime = 30
   const stableKey = keyOf(key);
   const queryFnRef = useRef(queryFn);
   queryFnRef.current = queryFn;
+
   const [, forceRender] = useState(0);
   const entry = entryFor<T>(key);
 
@@ -99,17 +146,25 @@ export function useServerQuery<T>({ key, queryFn, enabled = true, staleTime = 30
     entry.subscribers.add(subscriber);
     return () => {
       entry.subscribers.delete(subscriber);
-      if (entry.subscribers.size === 0) entry.controller?.abort(new DOMException('No active subscribers', 'AbortError'));
+      if (entry.subscribers.size === 0) {
+        entry.controller?.abort(new DOMException('No active subscribers', 'AbortError'));
+      }
     };
   }, [entry, stableKey]);
 
   useEffect(() => {
     if (!enabled) return;
     const stale = Date.now() - entry.updatedAt > staleTime;
-    if (entry.status === 'idle' || stale) void execute(key, (signal) => queryFnRef.current(signal)).catch(() => undefined);
-  }, [enabled, entry, stableKey, staleTime]);
+    if (entry.status === 'idle' || stale) {
+      void execute(key, (signal) => queryFnRef.current(signal)).catch(() => undefined);
+    }
+  }, [enabled, entry, entry.status, entry.updatedAt, stableKey, staleTime]);
 
-  const refetch = useCallback(() => execute(key, (signal) => queryFnRef.current(signal), true), [stableKey]);
+  const refetch = useCallback(
+    () => execute(key, (signal) => queryFnRef.current(signal), true),
+    [stableKey],
+  );
+
   return {
     data: entry.data,
     error: entry.error,

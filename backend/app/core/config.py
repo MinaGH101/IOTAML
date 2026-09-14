@@ -54,7 +54,9 @@ class Settings(BaseSettings):
     admin_first_name: str = 'IOTA'
     admin_last_name: str = 'Admin'
     openai_api_key: str = ''
+    openai_base_url: str = 'https://api.openai.com/v1'
     openai_model: str = 'gpt-4o-mini'
+    assistant_context_message_limit: int = Field(default=5, ge=1, le=50)
 
     upload_preview_max_rows: int = Field(default=100, ge=1, le=5000)
     profile_image_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=100 * 1024 * 1024)
@@ -100,6 +102,8 @@ class Settings(BaseSettings):
     workflow_version_limit: int = Field(default=100, ge=1)
 
     allow_custom_code: bool = False
+    sql_import_sources: dict[str, dict] = Field(default_factory=dict)
+    sql_import_max_rows: int = Field(default=100000, ge=1, le=1000000)
     custom_code_timeout_seconds: int = Field(default=30, ge=1, le=3600)
     custom_code_memory_mb: int = Field(default=512, ge=64)
 
@@ -116,6 +120,8 @@ class Settings(BaseSettings):
     def validate_runtime(self) -> 'Settings':
         if self.job_retry_max_delay_seconds < self.job_retry_base_delay_seconds:
             raise ValueError('JOB_RETRY_MAX_DELAY_SECONDS must be >= JOB_RETRY_BASE_DELAY_SECONDS')
+        if self.allow_custom_code:
+            raise ValueError('Custom Python execution is unavailable until an OS-isolated runner is implemented. Keep ALLOW_CUSTOM_CODE=false.')
         if self.app_environment != 'production':
             return self
         unsafe: list[str] = []

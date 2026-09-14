@@ -477,13 +477,8 @@ def autosave_workflow(
 
     workflow = get_workflow(db, workflow_id, owner_username)
     graph_hash = sha256_json(payload.graph)
-    last_run_id = _validated_last_run_id(
-        db,
-        run_id=payload.last_run_id,
-        owner_username=owner_username,
-        project_id=payload.project_id,
-        workflow_id=workflow.id,
-    )
+    # The latest successful run is execution state owned by the server. Draft
+    # autosave must never clear or roll it back with a stale browser snapshot.
 
     # The client's claimed hash must describe the exact submitted graph.
     if payload.client_graph_hash and payload.client_graph_hash != graph_hash:
@@ -511,7 +506,6 @@ def autosave_workflow(
         graph_hash != workflow.graph_hash
         or payload.name.strip() != workflow.name
         or payload.project_id != workflow.project_id
-        or last_run_id != workflow.last_run_id
     )
     if not changed:
         return workflow
@@ -521,7 +515,6 @@ def autosave_workflow(
     workflow.graph = payload.graph
     workflow.project_id = payload.project_id
     workflow.graph_hash = graph_hash
-    workflow.last_run_id = last_run_id
     workflow.last_autosaved_at = utcnow()
     db.commit()
     db.refresh(workflow)

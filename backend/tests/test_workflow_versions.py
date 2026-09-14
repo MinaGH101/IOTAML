@@ -51,6 +51,48 @@ def test_autosave_is_noop_for_identical_draft_and_revises_changed_graph() -> Non
         assert changed.graph == changed_graph
 
 
+
+def test_autosave_preserves_server_owned_latest_successful_run() -> None:
+    with make_session() as db:
+        db.add(Project(id=1, name="Project", owner_username="admin"))
+        db.commit()
+        graph = {"nodes": [], "edges": [], "meta": {}}
+        workflow = create_workflow(
+            db,
+            WorkflowCreate(name="Draft", graph=graph, project_id=1, last_run_id=None),
+            "admin",
+        )
+        run = Run(
+            status="succeeded",
+            workflow_name=workflow.name,
+            workflow_graph=graph,
+            workflow_id=workflow.id,
+            workflow_revision=workflow.revision,
+            project_id=1,
+            owner_username="admin",
+        )
+        db.add(run)
+        db.commit()
+        workflow.last_run_id = run.id
+        db.commit()
+
+        changed_graph = {"nodes": [], "edges": [], "meta": {"targetColumn": "target"}}
+        saved = autosave_workflow(
+            db,
+            workflow.id,
+            WorkflowAutosaveIn(
+                name="Draft",
+                graph=changed_graph,
+                project_id=1,
+                last_run_id=None,
+                base_revision=workflow.revision,
+            ),
+            "admin",
+        )
+
+        assert saved.graph == changed_graph
+        assert saved.last_run_id == run.id
+
 def test_autosave_accepts_missing_node_settings_but_run_validation_rejects_them() -> None:
     with make_session() as db:
         db.add(Project(id=1, name="Project", owner_username="admin"))

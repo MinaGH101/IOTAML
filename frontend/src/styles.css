@@ -1,19 +1,42 @@
-/*
- * IOTA ML stylesheet cascade.
- * Semantic tokens and document invariants are loaded first; legacy feature
- * sheets remain isolated while individual rules are migrated feature-by-feature.
- */
-@import "./styles/theme.css";
-@import "./styles/tokens/semantic.css";
+/* One deterministic application cascade. Page refreshes and route order must not change it. */
 @import "./styles/base/document.css";
-@import "./styles/00-foundation-workflow.css";
-@import "./styles/10-manager-auth-pages.css";
-@import "./styles/20-projects-ai-reference.css";
-@import "./styles/25-rbac-access.css";
-@import "./styles/30-workflow-shell.css";
-@import "./styles/40-auth-minimal.css";
-@import "./styles/50-workflow-panels-modals.css";
-@import "./styles/60-analysis-board-custom-nodes.css";
-@import "./styles/65-interactive-workflow.css";
+@import "./styles/base/app.css";
 @import "./styles/utilities/scrollbars.css";
 @import "./styles/utilities/accessibility.css";
+@import "./shared/styles/shared.css";
+@import "./admin/styles/admin.css";
+@import "./auth/styles/auth.css";
+@import "./projects/styles/projects.css";
+@import "./workspace/styles/workspace.css";
+@import "./styles/theme.css";
+@import "./styles/tokens/semantic.css";
+
+/* Final interaction polish: icon-only controls should read as quiet tools, not bordered chips. */
+.icon-button,
+.tiny-icon,
+.theme-toggle,
+.workflow-tab-icon-button,
+.icon-action,
+.modal-close {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.icon-button:hover,
+.tiny-icon:hover,
+.theme-toggle:hover,
+.workflow-tab-icon-button:hover,
+.icon-action:hover,
+.modal-close:hover {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--theme-primary) 9%, transparent) !important;
+  color: var(--theme-primary) !important;
+}
+
+.danger.icon-button:hover,
+.danger.tiny-icon:hover,
+.topbar-danger-action:hover,
+.workflow-version-delete:hover {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent) !important;
+  color: var(--theme-danger) !important;
+}

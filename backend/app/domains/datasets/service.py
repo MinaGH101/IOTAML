@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from app.domains.datasets.table_reader import read_table
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -14,10 +15,15 @@ from app.domains.datasets.repository import dataset_repository
 from app.domains.datasets.models import Dataset
 
 
-CSV_EXTENSIONS = {".csv"}
+CSV_EXTENSIONS = {".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls"}
 CSV_CONTENT_TYPES = {
     "text/csv",
+    "text/tab-separated-values",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/csv",
+    "application/json",
+    "text/json",
+    "text/plain",
     "application/vnd.ms-excel",
     "application/octet-stream",
 }
@@ -47,9 +53,9 @@ def materialize_dataset(db: Session, dataset: Dataset) -> Path:
 def read_dataset(db: Session, dataset: Dataset, max_rows: int | None = None) -> pd.DataFrame:
     path = materialize_dataset(db, dataset)
     try:
-        return pd.read_csv(path, nrows=max_rows)
+        return read_table(path, max_rows=max_rows)
     except Exception as exc:
-        raise ValidationAppError("DATASET_READ_FAILED", "Could not read the CSV dataset.", {"dataset_id": dataset.id}) from exc
+        raise ValidationAppError("DATASET_READ_FAILED", "Could not read the dataset (CSV, TSV, TXT, JSON or Excel).", {"dataset_id": dataset.id}) from exc
 
 
 def upload_dataset(db: Session, *, upload: UploadFile, project_id: int | None, owner_username: str) -> Dataset:
@@ -70,13 +76,13 @@ def upload_dataset(db: Session, *, upload: UploadFile, project_id: int | None, o
         raise
 
     try:
-        frame = pd.read_csv(path)
+        frame = read_table(path)
     except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError) as exc:
         delete_artifact(db, artifact.id, owner_username, force=True)
         db.commit()
         raise ValidationAppError(
             "DATASET_READ_FAILED",
-            "Could not read the uploaded CSV dataset.",
+            "Could not read the uploaded dataset (CSV, TSV, TXT, JSON or Excel).",
             {"reason": type(exc).__name__},
         ) from exc
     except OSError as exc:

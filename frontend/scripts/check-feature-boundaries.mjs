@@ -13,7 +13,6 @@ const requiredDirectories = [
   'features/execution',
   'features/results',
   'features/workflow',
-  'entities',
   'auth/pages/login/_components',
   'auth/_service',
   'projects/pages/create-project',

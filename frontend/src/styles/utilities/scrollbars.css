@@ -1,6 +1,6 @@
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--theme-icon) transparent;
+  scrollbar-color: color-mix(in srgb, var(--theme-control-border) 30%, transparent) transparent;
 }
 
 *::-webkit-scrollbar {

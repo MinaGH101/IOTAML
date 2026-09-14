@@ -1,45 +1,21 @@
-# CSS and theme structure
+# IOTA CSS architecture
 
-The application CSS is split by feature, while every visual theme decision is centralized in `theme.css`.
+`styles.css` is the only global entry loaded by `main.tsx`. It contains theme tokens, document defaults, loading/error utilities and accessibility/scrollbar rules only.
 
-## Theme file
+Feature CSS is lazy-loaded with its route:
 
-Edit `src/styles/theme.css` to change the application appearance.
+- `auth/styles/auth.css` — login/profile
+- `projects/styles/projects.css` — project management/create/detail
+- `admin/styles/admin.css` — admin
+- `workspace/styles/workspace.css` — workflow/board/results/node UI
+- `shared/ui/ui.module.css` — reusable UI primitives; loaded only when a shared UI component is imported
 
-The first two blocks are the main controls:
+The `*/styles/stages/` files preserve the old cascade order while separating ownership. `shared/styles/stages/` contains only cross-feature legacy rules and is imported by each route bundle in the same stage order.
 
-- `:root, :root[data-theme="dark"]` — dark-mode colors.
-- `:root[data-theme="light"]` — light-mode colors.
+Rules for maintenance:
 
-The shared `:root` block contains:
-
-- typography
-- radii
-- border widths
-- motion
-- responsive spacing
-- compatibility color tokens
-
-The final section applies the visual hierarchy: major surfaces, modal columns, fields, tables, buttons, and icon controls.
-
-## Design rules
-
-- Use semantic variables from `theme.css`; do not add direct hex, RGB, or HSL values to feature CSS.
-- Define new custom properties in `theme.css`, not in component files.
-- Use radius variables instead of numeric `border-radius` values.
-- Shadows, glows, and backdrop blur are intentionally disabled.
-- Icon-only controls stay transparent and borderless; hover changes only their color.
-- Use borders only for major region boundaries or necessary separators.
-
-## Feature modules
-
-- `00-foundation-workflow.css` — base elements and workflow foundations.
-- `10-manager-auth-pages.css` — manager, project, profile, and shared page rules.
-- `20-projects-ai-reference.css` — project/reference layouts.
-- `30-workflow-shell.css` — workflow shell and node palette.
-- `40-auth-minimal.css` — authentication layouts.
-- `50-workflow-panels-modals.css` — workflow panels and node modal structure.
-- `60-analysis-board-custom-nodes.css` — analysis board, result views, and custom nodes.
-- `theme.css` — all colors, theme radii, visual states, and final theme behavior.
-
-Run `npm run check:theme` after CSS changes. It rejects raw colors, component-level custom-property declarations, raw radii, shadows, and active backdrop blur outside `theme.css`.
+1. New generic control styling belongs in `shared/ui/ui.module.css`, not a feature stylesheet.
+2. New feature-only styles belong in that feature's `styles/` folder.
+3. Do not add feature styles back to `styles.css`.
+4. Keep vendor/runtime selectors such as `.react-flow__*` in workspace styles.
+5. When a legacy rule is replaced by a CSS Module/shared UI primitive, delete the legacy rule rather than overriding it.

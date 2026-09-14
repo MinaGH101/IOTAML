@@ -1,47 +1,36 @@
 import { Check, Download, ExternalLink, GitBranch, RefreshCw, Trash2 } from 'lucide-react';
-import { AppDialog } from '../../shared/_components/AppDialog';
-import type { ComponentVersionAction, ComponentVersionSummary, WorkflowComponent } from '../../shared/_types';
-
+import { Dialog as AppDialog } from '../../shared/ui';
+import type { ComponentVersionAction, ComponentVersionSummary, WorkflowComponent } from '../../shared/types';
 type Props = {
-  open: boolean;
-  component: WorkflowComponent | null;
-  versions: ComponentVersionSummary[];
-  busy: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
-  onOpenVersion: (action: ComponentVersionAction) => void;
-  onMakeCurrent: (action: ComponentVersionAction) => void;
-  onExportVersion: (action: ComponentVersionAction) => void;
-  onDeleteVersion: (action: ComponentVersionAction) => void;
+    open: boolean;
+    component: WorkflowComponent | null;
+    versions: ComponentVersionSummary[];
+    busy: boolean;
+    onClose: () => void;
+    onRefresh: () => void;
+    onOpenVersion: (action: ComponentVersionAction) => void;
+    onMakeCurrent: (action: ComponentVersionAction) => void;
+    onExportVersion: (action: ComponentVersionAction) => void;
+    onDeleteVersion: (action: ComponentVersionAction) => void;
 };
-
 function formatDate(value: string) {
-  try {
-    return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-  } catch {
-    return value;
-  }
+    try {
+        return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    }
+    catch {
+        return value;
+    }
 }
-
 export function ComponentVersionsDialog({ open, component, versions, busy, onClose, onRefresh, onOpenVersion, onMakeCurrent, onExportVersion, onDeleteVersion }: Props) {
-  return (
-    <AppDialog
-      open={open}
-      title={component ? `نسخه‌های ${component.name}` : 'نسخه‌های کامپوننت'}
-      description="هر جریان به نسخه مشخصی متصل می‌ماند. تغییر نسخه جاری، جریان‌های موجود را خودکار ارتقا نمی‌دهد."
-      width={760}
-      onClose={onClose}
-      footer={<>
+    return (<AppDialog open={open} title={component ? `نسخه‌های ${component.name}` : 'نسخه‌های کامپوننت'} description="هر جریان به نسخه مشخصی متصل می‌ماند. تغییر نسخه جاری، جریان‌های موجود را خودکار ارتقا نمی‌دهد." width={760} onClose={onClose} footer={<>
         <button type="button" className="secondary-button" onClick={onClose}>بستن</button>
         <button type="button" className="secondary-button" disabled={busy || !component} onClick={onRefresh}><RefreshCw size={14}/> به‌روزرسانی</button>
-      </>}
-    >
+      </>}>
       <div className="component-version-manager-list">
         {component && versions.map((version) => {
-          const current = component.current_version_id === version.id;
-          const action = { component, version };
-          return (
-            <article className={`component-version-manager-row ${current ? 'current' : ''}`} key={version.id}>
+            const current = component.current_version_id === version.id;
+            const action = { component, version };
+            return (<article className={`component-version-manager-row ${current ? 'current' : ''}`} key={version.id}>
               <div className="component-version-manager-main">
                 <span className="component-version-badge"><GitBranch size={14}/> v{version.semantic_version}</span>
                 <div>
@@ -57,11 +46,9 @@ export function ComponentVersionsDialog({ open, component, versions, busy, onClo
                 <button type="button" className="workflow-tab-icon-button" disabled={busy} onClick={() => onExportVersion(action)} title="خروجی این نسخه" aria-label="خروجی نسخه"><Download size={15}/></button>
                 <button type="button" className="workflow-tab-icon-button workflow-version-delete" disabled={busy || current} onClick={() => onDeleteVersion(action)} title={current ? 'نسخه جاری قابل حذف نیست' : 'حذف نسخه'} aria-label="حذف نسخه"><Trash2 size={15}/></button>
               </div>
-            </article>
-          );
+            </article>);
         })}
         {component && versions.length === 0 && <div className="empty-state small">نسخه‌ای برای این کامپوننت پیدا نشد.</div>}
       </div>
-    </AppDialog>
-  );
+    </AppDialog>);
 }

@@ -1,0 +1,21 @@
+import type { Edge, Node } from '@xyflow/react';
+import type { Dataset, RegistryNode } from '../../../shared/types';
+import type { SelectOption } from '../../../shared/ui';
+export type InspectorProps = {
+    selectedNode: Node | null;
+    selectedEdge: Edge | null;
+    registry: RegistryNode[];
+    aliases: Record<string, string>;
+    datasets: Dataset[];
+    availableColumns: string[];
+    availableIdColumns?: string[];
+    inheritedIdColumn?: string | null;
+    availableRows?: Record<string, unknown>[];
+    inputDataframes?: SelectOption[];
+    onChange: (nodeId: string, params: Record<string, unknown>) => void;
+    onRename: (nodeId: string, label: string) => void;
+    onDelete: () => void;
+    onUngroupComponent?: (node: Node) => void;
+    embedded?: boolean;
+    readOnly?: boolean;
+};

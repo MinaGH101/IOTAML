@@ -1,0 +1,9 @@
+import { Plus, Trash2 } from 'lucide-react';
+import type { PortDefinition } from '../../../shared/types';
+import { emptyPort, PORT_TYPES } from './helpers';
+export function PortEditor({ title, ports, onChange, kind }: {
+    title: string;
+    ports: PortDefinition[];
+    onChange: (ports: PortDefinition[]) => void;
+    kind: 'input' | 'output';
+}) { const update = (i: number, patch: Partial<PortDefinition>) => onChange(ports.map((p, j) => j === i ? { ...p, ...patch } : p)); return <div className="custom-port-editor"><div className="custom-builder-section-head"><b>{title}</b><button className="tiny-action" type="button" onClick={() => onChange([...ports, emptyPort(kind, ports)])}><Plus size={13}/> افزودن پورت</button></div>{!ports.length && <div className="empty-state small">هیچ پورتی تعریف نشده است.</div>}{ports.map((port, i) => <div className="custom-port-row workflow-shell-card" key={`${port.id}-${i}`}><label>شناسه<input value={port.id} onChange={(e) => update(i, { id: e.target.value.replace(/[^A-Za-z0-9_-]/g, '') })}/></label><label>عنوان<input value={port.name} onChange={(e) => update(i, { name: e.target.value })}/></label><label>نوع<select value={port.type} onChange={(e) => update(i, { type: e.target.value })}>{PORT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label><label className="custom-port-check"><input type="checkbox" checked={port.required} onChange={(e) => update(i, { required: e.target.checked })}/> الزامی</label><label className="custom-port-check"><input type="checkbox" checked={port.multiple} onChange={(e) => update(i, { multiple: e.target.checked })}/> چندورودی</label><button className="tiny-action danger custom-port-delete icon-action" type="button" onClick={() => onChange(ports.filter((_, j) => j !== i))}><Trash2 size={13}/></button></div>)}</div>; }

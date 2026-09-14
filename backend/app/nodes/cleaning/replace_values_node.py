@@ -95,7 +95,23 @@ class ReplaceValuesNode(BaseNode):
     outputs = [port('dataframe', 'Cleaned DataFrame', 'dataframe'), port('report', 'Replacement Report', 'json')]
 
     settings_schema = [
-        setting('replacement_blocks', 'Replacement Blocks', 'replacement_blocks', [], required=False, supports_dynamic=False),
+        setting(
+                'replacement_blocks',
+                'Replacement Blocks',
+                'replacement_blocks',
+                [],
+                required=False,
+                supports_dynamic=False,
+                help=(
+                    'Add one or more replacement blocks. Each block has Columns, Search Method, '
+                    'and Replacement. Search Method can be Value or Value Type. '
+                    'For Value search, configure Condition and Search Value. Conditions include '
+                    'match, include, starts_with, ends_with, regex, >, >=, <, <=. '
+                    'For Value Type search, choose string, numeric, int, float, or missing. '
+                    'Replacement can be an entered value or missing/none. '
+                    'When using an entered value, configure Replacement Value.'
+                ),
+            ),
         setting('max_output_rows', 'Max Output Rows', 'integer', 100),
     ]
 

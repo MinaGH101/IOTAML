@@ -1,0 +1,4 @@
+import type { AnalysisBoardTab } from '../../../../_model/board';
+import { serializeAnalysisBoardTabs } from '../../../../_model/graph';
+export const serializedBoards = (boards: AnalysisBoardTab[]) => serializeAnalysisBoardTabs(boards);
+export const boardPersistenceSignature = (boards: AnalysisBoardTab[]) => boards.map((b) => ({ id: b.id, name: b.name, viewport: b.viewport, createdAt: b.createdAt, items: b.items.map((i) => ({ id: i.id, nodeId: i.nodeId, outputKey: i.outputKey, outputIndex: i.outputIndex, outputTitle: i.outputTitle, outputKind: i.outputKind, sourceLabel: i.sourceLabel, x: i.x, y: i.y, w: i.w, h: i.h, runId: i.runId, createdAt: i.createdAt, outputRef: i.outputRef, legacySnapshotKind: i.outputRef ? undefined : i.snapshot?.kind, legacySnapshotTitle: i.outputRef ? undefined : i.snapshot?.title })) }));

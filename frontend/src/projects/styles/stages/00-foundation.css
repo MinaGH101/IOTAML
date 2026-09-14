@@ -1,0 +1,85 @@
+/* projects styles extracted from 00-foundation-workflow.css. */
+.dataset-card {
+background:var(--theme-panel-bg);
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+}
+.dataset-card {
+padding-bottom:9px
+}
+.upload-zone {
+display:flex;
+align-items:center;
+justify-content:center;
+gap:7px;
+margin:9px 12px;
+border:var(--theme-border-width) dashed var(--theme-primary);
+border-radius:var(--theme-radius-panel);
+padding:12px;
+cursor:pointer;
+color:var(--theme-primary);
+background:var(--theme-primary-soft);
+font-weight:800
+}
+.upload-zone input {
+display:none
+}
+.datasets-mini {
+padding:0 12px;
+display:grid;
+gap:7px
+}
+.dataset-mini-row {
+display:flex;
+justify-content:space-between;
+gap:8px;
+font-size:10.5px;
+color:var(--theme-text-muted)
+}
+.dataset-mini-row b {
+color:var(--theme-text);
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+max-width:135px
+}
+.datasets-mini {
+max-height:160px;
+overflow:auto
+}
+.dataset-mini-row {
+align-items:center;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+padding:6px;
+background:color-mix(in srgb,var(--theme-control-bg) 68%,var(--theme-transparent))
+}
+.dataset-card {
+border-radius:var(--theme-radius-panel)
+}
+.upload-zone,
+.dataset-mini-row {
+border-radius:var(--theme-radius-control)
+}
+.dataset-card {
+border-radius:var(--theme-radius-panel)
+}
+.upload-zone,
+.dataset-mini-row {
+border-radius:var(--theme-radius-control)
+}
+.dataset-card {
+background:var(--theme-panel-bg);
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+}
+.dataset-mini-row,
+.upload-zone {
+background:color-mix(in srgb,var(--theme-popup-bg) 92%,var(--theme-control-bg));
+border:0px solid var(--theme-divider);
+}
+.upload-zone:hover {
+border-color:color-mix(in srgb,var(--theme-secondary) 42%,var(--theme-control-border));
+background:color-mix(in srgb,var(--theme-popup-bg) 88%,var(--theme-secondary) 4%);
+transform:translateY(-1px)
+}

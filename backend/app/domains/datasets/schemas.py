@@ -1,6 +1,12 @@
 """Dataset API schemas."""
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+class SqlImportRequest(BaseModel):
+    source: str = Field(min_length=1, max_length=100)
+    table: str = Field(min_length=1, max_length=255)
+    project_id: int
+    limit: int = Field(default=100000, ge=1, le=1000000)
 
 class ColumnInfo(BaseModel):
     name: str

@@ -50,7 +50,21 @@ class NormalizationNode(BaseNode):
     outputs = [port('dataframe', 'Normalized DataFrame', 'dataframe'), port('report', 'Normalization Report', 'json')]
 
     settings_schema = [
-        setting('normalization_blocks', 'Normalization Blocks', 'normalization_blocks', [], required=False, supports_dynamic=False),
+        setting(
+                'normalization_blocks',
+                'Normalization Blocks',
+                'normalization_blocks',
+                [],
+                required=False,
+                supports_dynamic=False,
+                help=(
+                    'Add one or more normalization blocks. Each block has Columns and Method. '
+                    'Methods: ln, log10, sqrt, boxcox, yeo_johnson, quantile_normal, l1, l2, max. '
+                    'ln, log10, sqrt, and boxcox add Offset. '
+                    'boxcox and yeo_johnson add Standardize. '
+                    'quantile_normal adds Number of Quantiles and Random State.'
+                ),
+            ),
         setting('max_output_rows', 'Max Output Rows', 'integer', 100),
     ]
 

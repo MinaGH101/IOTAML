@@ -1,0 +1,13 @@
+import { useCallback, useLayoutEffect, useRef } from 'react';
+import type { BoardViewport } from '../../../../_model/board';
+import { saveCanvasViewport } from '../../../../_model/viewportStorage';
+import { setBoardInteractionActive } from '../../_utils/boardInteraction';
+import { restoreViewport } from './model';
+export function useViewportRenderer(activeBoardId: string, initialViewport: BoardViewport, storageScope: string) { const initial = restoreViewport(`${storageScope}:board:${activeBoardId}`, initialViewport); const canvasRef = useRef<HTMLDivElement | null>(null); const worldRef = useRef<HTMLDivElement | null>(null); const viewportRef = useRef(initial); const activeBoardIdRef = useRef(activeBoardId); const initialViewportRef = useRef(initialViewport); const storageScopeRef = useRef(storageScope); const frameRef = useRef(0); const timerRef = useRef(0); initialViewportRef.current = initialViewport; storageScopeRef.current = storageScope; const render = useCallback(() => { frameRef.current = 0; const world = worldRef.current; if (!world)
+    return; const v = viewportRef.current; world.style.transform = `translate3d(${v.x}px, ${v.y}px, 0) scale(${v.scale})`; }, []); const scheduleRender = useCallback(() => { if (!frameRef.current)
+    frameRef.current = window.requestAnimationFrame(render); }, [render]); const commit = useCallback((id: string, v: BoardViewport) => saveCanvasViewport(`${storageScopeRef.current}:board:${id}`, { x: v.x, y: v.y, zoom: v.scale }), []); const cancel = useCallback(() => { if (timerRef.current) {
+    window.clearTimeout(timerRef.current);
+    timerRef.current = 0;
+} }, []); const scheduleCommit = useCallback(() => { cancel(); timerRef.current = window.setTimeout(() => { timerRef.current = 0; commit(activeBoardIdRef.current, viewportRef.current); }, 300); }, [cancel, commit]); const apply = useCallback((next: BoardViewport) => { viewportRef.current = next; scheduleRender(); scheduleCommit(); }, [scheduleCommit, scheduleRender]); useLayoutEffect(() => { render(); return () => { cancel(); if (frameRef.current)
+    window.cancelAnimationFrame(frameRef.current); commit(activeBoardIdRef.current, viewportRef.current); setBoardInteractionActive(false); }; }, [cancel, commit, render]); useLayoutEffect(() => { if (activeBoardIdRef.current === activeBoardId)
+    return; cancel(); commit(activeBoardIdRef.current, viewportRef.current); activeBoardIdRef.current = activeBoardId; viewportRef.current = restoreViewport(`${storageScope}:board:${activeBoardId}`, initialViewportRef.current); render(); }, [activeBoardId, cancel, commit, render, storageScope]); return { canvasRef, worldRef, viewportRef, activeBoardIdRef, apply, cancel, commit }; }

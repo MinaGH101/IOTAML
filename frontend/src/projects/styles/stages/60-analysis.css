@@ -1,0 +1,44 @@
+/* projects styles extracted from 60-analysis-board-custom-nodes.css. */
+.projects-reference-page .projects-list-reference {
+padding-inline:20px 0!important
+}
+.projects-reference-page .project-card.project-card-reference {
+border: 1px solid var(--theme-divider) !important;
+outline:0;
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 7%,var(--theme-transparent));
+background-image:none;
+transition:background .16s ease,color .16s ease!important
+}
+.projects-reference-page .project-card.project-card-reference:hover {
+border:0;
+outline:0;
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 16%,var(--theme-transparent));
+background-image:none;
+color:var(--theme-text);
+transform:none!important
+}
+.projects-reference-page .project-card.project-card-reference:hover h3 {
+color:var(--project-color,var(--theme-primary))
+}
+.projects-reference-page .project-card.project-card-reference::before,
+.projects-reference-page .project-card.project-card-reference::after {
+display:none!important
+}
+.projects-reference-page .project-card-icon-reference,
+.projects-reference-page .project-stats-reference span {
+border:0;
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 10%,var(--theme-transparent))
+}
+@media (width <= 1180px) {
+.projects-reference-page .project-filter-panel-reference,
+.projects-reference-page .projects-list-reference {
+padding-inline:0!important
+}
+}
+.workflow-create-actions {
+display:flex;
+align-items:center;
+justify-content:flex-end;
+gap:8px;
+flex-wrap:wrap
+}

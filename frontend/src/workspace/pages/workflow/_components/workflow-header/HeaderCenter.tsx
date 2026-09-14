@@ -1,0 +1,5 @@
+import { KanbanSquare, LayoutGrid, Play, RefreshCw, Square } from 'lucide-react';
+import type { WorkflowHeaderProps } from './types';
+export function HeaderCenter({ p }: {
+    p: WorkflowHeaderProps;
+}) { return <div className="workflow-topbar-center" style={p.topbarCenterStyle}><button className={`icon-button icon-only topbar-primary-action ${p.runActive ? 'topbar-danger-action' : ''}`} title={p.runActive ? 'توقف اجرای جاری' : p.runSelectedNode ? 'اجرای نود انتخاب‌شده و ورودی‌های آن' : 'اجرای کل جریان'} disabled={!p.runActive && p.runDisabled} onClick={p.runActive ? p.onCancelRun : p.onRun}>{p.runActive ? <Square size={14}/> : p.runBusy ? <RefreshCw size={17} className="spin"/> : <Play size={17}/>}</button><button className={`icon-button icon-only ${p.boardOpen ? 'active' : ''}`} type="button" onClick={p.onToggleBoard} title={p.boardOpen ? 'بازگشت به Workflow' : 'Analysis Board'}><KanbanSquare size={17}/></button><button className="icon-button icon-only" type="button" disabled={p.readOnly} onClick={p.onLayout} title="چیدمان خودکار"><LayoutGrid size={17}/></button></div>; }

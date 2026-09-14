@@ -1,5 +1,7 @@
 # IOTA ML
 
+New: [training-only preprocessing, four additional nodes, Excel/SQL imports and Persian values](docs/IMPORTS_AND_PREPROCESSING.md). See [frontend testing](frontend/TESTING.md) for the real Playwright upload/train/save/reopen regression.
+
 Workflow execution, structured errors, anomaly output contracts, and dataframe
 utility-node behavior are documented in:
 

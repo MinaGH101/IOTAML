@@ -1,0 +1,4 @@
+import type { WorkflowHeaderProps } from './types';
+export function HeaderRight({ p }: {
+    p: WorkflowHeaderProps;
+}) { return <div className="workflow-topbar-right" style={p.topbarRightStyle}><span className={`workflow-autosave-status ${p.autosaveState} ${p.readOnly ? 'preview' : ''}`} title={p.autosaveUpdatedAt ? `آخرین ذخیره: ${new Date(p.autosaveUpdatedAt).toLocaleString('fa-IR')}` : p.autosaveLabel}>{p.autosaveLabel}</span><div className="workflow-breadcrumb workflow-logo-breadcrumb" dir="rtl"><div className="workflow-logo-title"><img src="/iota.png" alt="IOTA"/><h2>IOTA ML</h2></div><h1>›</h1><button type="button" className="workflow-project-link" onClick={p.onProject} title="بازگشت به صفحه پروژه">{p.projectName}</button><h1>›</h1><span className="workflow-current-name" title={p.workflowName}>{p.workflowName}</span></div></div>; }

@@ -1,0 +1,235 @@
+/* projects styles extracted from 10-manager-auth-pages.css. */
+.project-form label {
+display:grid;
+gap:6px;
+color:var(--theme-text-secondary);
+font-size:11px;
+font-weight:800
+}
+.project-form input,
+.project-form select,
+.project-form textarea {
+width:100%;
+min-width:0;
+color:var(--theme-text);
+background:color-mix(in srgb,var(--theme-control-bg) 92%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-control-border) 72%,var(--theme-transparent));
+border-radius:var(--theme-radius-control);
+padding:8px 10px;
+outline:none;
+font-size:11.5px
+}
+.project-form textarea {
+resize:vertical;
+min-height:82px;
+line-height:1.65
+}
+.project-form input:focus,
+.project-form select:focus,
+.project-form textarea:focus {
+border-color:color-mix(in srgb,var(--theme-primary) 42%,var(--theme-transparent));
+background:color-mix(in srgb,var(--theme-popup-bg) 80%,var(--theme-transparent))
+}
+.full-width {
+width:100%;
+min-height:34px
+}
+.workflow-card {
+display:flex;
+align-items:center;
+gap:9px
+}
+.project-form {
+display:grid;
+gap:10px
+}
+.workflow-card {
+text-align:right;
+color:var(--theme-text);
+border-radius:var(--theme-radius-panel);
+padding:13px;
+}
+.project-state {
+border-radius:var(--theme-radius-pill);
+padding:4px 8px;
+font-size:10px;
+color:var(--theme-primary);
+background:color-mix(in srgb,var(--theme-primary) 12%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 24%,var(--theme-transparent))
+}
+.project-info-panel {
+align-self:start
+}
+.detail-main-stack {
+display:grid;
+gap:12px;
+min-width:0
+}
+.workflow-card-grid {
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+gap:10px
+}
+.workflow-card {
+min-height:76px;
+justify-content:flex-start
+}
+.workflow-card b {
+display:block;
+direction:ltr;
+text-align:left;
+font-size:12.5px
+}
+.workflow-card span {
+display:block;
+color:var(--theme-text-muted);
+font-size:10px;
+margin-top:3px
+}
+.workflow-icon {
+width:34px;
+height:34px;
+display:grid;
+place-items:center;
+border-radius:var(--theme-radius-panel);
+color:var(--theme-primary);
+background:color-mix(in srgb,var(--theme-primary) 10%,var(--theme-transparent));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 18%,var(--theme-transparent))
+}
+.project-data-card .dataset-card {
+background:var(--theme-transparent);
+border:0;
+padding:0
+}
+.project-data-card .datasets-mini {
+padding:0
+}
+.project-data-card .upload-zone {
+margin:0 0 12px
+}
+.project-data-card .dataset-mini-main {
+min-width:0
+}
+.project-data-card .dataset-mini-row {
+align-items:center;
+padding:9px;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-popup-bg) 78%,var(--theme-transparent))
+}
+.create-project-panel .full-width {
+margin-top:8px
+}
+.project-state-color-row {
+align-items:end
+}
+.workflow-card:hover {
+transform:translateY(-1px)
+}
+.project-data-card {
+order:-1
+}
+.project-data-card .upload-zone {
+min-height:48px;
+border-radius:var(--theme-radius-panel);
+background:color-mix(in srgb,var(--theme-primary) 6%,var(--theme-transparent))
+}
+.workflow-card,
+.project-data-card .dataset-mini-row,
+.upload-zone,
+.project-color-control {
+border-radius:var(--theme-radius-none);
+}
+.detail-main-stack {
+gap:10px!important
+}
+.workflow-card {
+background:var(--theme-transparent);
+border:var(--theme-border-width) solid color-mix(in srgb,var(--project-color,var(--theme-primary)) 42%,var(--theme-divider));
+transform:none!important
+}
+.workflow-card:hover {
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 5%,var(--theme-transparent));
+transform:none!important
+}
+.workflow-icon,
+.project-state,
+.project-data-card .dataset-mini-row {
+border-radius:var(--theme-radius-none);
+}
+.workflow-card-grid {
+gap:10px!important
+}
+.create-project-panel .full-width,
+.project-info-panel .full-width,
+.profile-card-main .full-width {
+margin-top:18px!important
+}
+.dataset-card,
+.workflow-card,
+.project-data-card .dataset-mini-row {
+background:var(--theme-transparent);
+background-image:none;
+border:var(--theme-border-width) solid var(--theme-divider);
+border-radius:var(--theme-radius-panel);
+backdrop-filter:none;
+padding:auto
+}
+.upload-zone,
+.dataset-mini-row,
+.project-state,
+.workflow-icon,
+.project-color-control {
+border-radius:var(--theme-radius-compact);
+}
+.upload-zone {
+background:var(--theme-transparent);
+background-image:none;
+transition:color .14s ease,border-color .14s ease!important
+}
+.upload-zone {
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text-secondary)
+}
+.upload-zone:hover,
+.workflow-card:hover,
+.dataset-mini-row:hover {
+background:var(--theme-transparent);
+background-image:none;
+border-color:color-mix(in srgb,var(--theme-primary) 64%,var(--theme-control-border));
+color:var(--theme-primary);
+transform:none!important
+}
+.project-form input,
+.project-form select,
+.project-form textarea {
+background:var(--theme-transparent);
+background-image:none;
+border-color:var(--theme-divider);
+color:var(--theme-text);
+}
+.project-form input:hover,
+.project-form input:focus,
+.project-form select:hover,
+.project-form select:focus,
+.project-form textarea:hover,
+.project-form textarea:focus {
+background:var(--theme-transparent);
+border-color:color-mix(in srgb,var(--theme-primary) 64%,var(--theme-control-border));
+color:var(--theme-text)
+}
+.workflow-card {
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 52%,var(--theme-divider))
+}
+.workflow-card:hover {
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 82%,var(--theme-control-border));
+color:var(--project-color,var(--theme-primary))
+}
+.workflow-card:hover b {
+color:var(--project-color,var(--theme-primary))
+}
+.workflow-icon,
+.project-state {
+background:var(--theme-transparent);
+background-image:none
+}

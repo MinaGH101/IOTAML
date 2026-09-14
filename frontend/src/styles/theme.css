@@ -1,170 +1,173 @@
-/*
- * IOTA ML theme
- * =============
- * Edit this file to restyle the whole application.
- *
- * The first two blocks contain the actual dark/light color palettes.
- * Everything below maps those colors to components by purpose:
- * surfaces, text, buttons, icons, fields, tables, modals and node categories.
- */
-
+/* IOTA global theme tokens and cross-feature visual roles. */
 :root,
 :root[data-theme="dark"] {
-  color-scheme: dark;
+color-scheme: dark;
+  --theme-login-grid-base: #627C88;
+  --theme-login-grid-active: #79C4B3;
+  --theme-login-radius-card: 22px;
+  --theme-login-radius-brand: 16px;
+  --theme-login-radius-icon: 12px;
+  --theme-login-radius-button: 10px;
+  --theme-login-radius-mobile: 18px;
+  --theme-absolute-black: #000;
 
-  /* Brand colors */
-  --theme-primary: #2fa99a;
-  --theme-primary-hover: #3ab9aa;
-  --theme-primary-active: #24877c;
-  --theme-primary-soft: color-mix(in srgb, var(--theme-primary) 13%, transparent);
-  --theme-secondary: #7184ad;
-  --theme-secondary-hover: #8295bd;
-  --theme-secondary-soft: color-mix(in srgb, var(--theme-secondary) 13%, transparent);
+  
+  --theme-primary: #42D7BC;
+  --theme-primary-hover: #64E4CC;
+  --theme-primary-active: #30BFA7;
+  --theme-primary-soft: color-mix(in srgb, var(--theme-primary) 16%, transparent);
+  --theme-secondary: #9387F4;
+  --theme-secondary-hover: #ADA4FF;
+  --theme-secondary-soft: color-mix(in srgb, var(--theme-secondary) 16%, transparent);
 
-  /* Status colors */
-  --theme-success: #4ca77b;
+  
+  --theme-success: #5FD18A;
   --theme-success-soft: color-mix(in srgb, var(--theme-success) 13%, transparent);
-  --theme-warning: #c3944a;
+  --theme-warning: #F2BE62;
   --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 13%, transparent);
-  --theme-danger: #cf686d;
+  --theme-danger: #FF7D8A;
   --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 13%, transparent);
-  --theme-info: #6388bd;
+  --theme-info: #6CB7F5;
   --theme-info-soft: color-mix(in srgb, var(--theme-info) 13%, transparent);
 
-  /* Page and component surfaces */
-  --theme-app-bg: #07080a;
-  --theme-workspace-bg: #090b0e;
-  --theme-board-bg: #292e2f;
-  --theme-topbar-bg: #0c0e12;
-  --theme-panel-bg: #0f1217;
-  --theme-panel-muted: #12161c;
-  --theme-panel-raised: #161b22;
-  --theme-control-bg: #0c0b11;
-  --theme-popup-bg: #101319;
-  --theme-hover-bg: #151a21;
-  --theme-selected-bg: #121d2a;
+  
+  --theme-app-bg: #0E1012;
+  --theme-workspace-bg: #131518;
+  --theme-board-bg: #0D0F11;
+  --theme-topbar-bg: #181A1E;
+  
+  --theme-panel-bg: #1D2024;
+  --theme-panel-glass: linear-gradient(
+  135deg,
+  rgba(35, 42, 49, 1.0) 0%,
+  rgba(8, 10, 12, 1.0) 20%,
+  rgb(7, 10, 12) 100%
+);
+  --theme-panel-blur: blur(16px);
+  --theme-panel-muted: #24282D;
+  --theme-panel-raised: #2C3137;
+  --theme-control-bg: #171A1E;
+  --theme-popup-bg: #22262B;
+  --theme-hover-bg: #2D3238;
+  --theme-selected-bg: #223A35;
   --theme-overlay-bg: rgb(1 3 6 / 82%);
 
-  /* Text and quiet separators */
-  --theme-text: #e6edf1;
-  --theme-text-secondary: #bac6cd;
-  --theme-text-muted: #82909a;
-  --theme-text-inverse: #061411;
-  --theme-placeholder: #687680;
-  --theme-divider: rgb(153 169 181 / 10%);
-  --theme-control-border: rgb(153 169 181 / 18%);
+  
+  --theme-text: #F3F7FA;
+  --theme-text-secondary: #C5D0DB;
+  --theme-text-muted: #8D9CAC;
+  --theme-text-inverse: #071210;
+  --theme-placeholder: #738496;
+  --theme-divider: rgb(198 204 210 / 11%);
+  --theme-control-border: rgb(198 204 210 / 24%);
   --theme-focus: color-mix(in srgb, var(--theme-primary) 68%, transparent);
-  --theme-icon: #85939d;
+  --theme-icon: #9CABB9;
   --theme-icon-hover: var(--theme-primary);
 
-  /* Functional colors consumed by React controls */
-  --theme-plot-default: #2fa99a;
-  --theme-login-cube-face: #172128;
-  --theme-login-cube-ripple: #7184ad;
-  --theme-project-color-1: #2fa99a;
-  --theme-project-color-2: #7184ad;
-  --theme-project-color-3: #4ca77b;
-  --theme-project-color-4: #c3944a;
-  --theme-project-color-5: #cf686d;
-  --theme-project-color-6: #6388bd;
-  --theme-project-color-7: #916ba0;
+  
+  --theme-plot-default: #79C4B3;
+  --theme-login-cube-face: #33373C;
+  --theme-login-cube-ripple: #AAA6C8;
+  --theme-project-color-1: #79C4B3;
+  --theme-project-color-2: #AAA6C8;
+  --theme-project-color-3: #8CBE9B;
+  --theme-project-color-4: #CEB185;
+  --theme-project-color-5: #D9989D;
+  --theme-project-color-6: #91AFC9;
+  --theme-project-color-7: #B388FF;
 
-  /* Data presentation */
-  --theme-table-header: #1b252d;
-  --theme-table-footer: #172128;
+  
+  --theme-table-header: #292D32;
+  --theme-table-footer: #202328;
   --theme-table-row: transparent;
-  --theme-table-row-alt: #19232b;
-  --theme-table-row-hover: #1b302e;
+  --theme-table-row-alt: #202328;
+  --theme-table-row-hover: #26342F;
   --theme-chart-grid: var(--theme-divider);
 
-  /* Workflow palette items */
-  --theme-node-menu-item-bg: #1e2228;
-  --theme-node-menu-item-hover-bg: #23313a;
+  
+  --theme-node-menu-item-bg: #202328;
+  --theme-node-menu-item-hover-bg: #2A2F34;
 }
-
-
 :root[data-theme="light"] {
-  color-scheme: light;
+color-scheme: light;
 
-  /* Brand colors */
-  --theme-primary: #168d81;
-  --theme-primary-hover: #10796f;
-  --theme-primary-active: #0d685f;
+  
+  --theme-primary: #087F73;
+  --theme-primary-hover: #066A61;
+  --theme-primary-active: #087F73;
   --theme-primary-soft: color-mix(in srgb, var(--theme-primary) 11%, transparent);
-  --theme-secondary: #6178a3;
-  --theme-secondary-hover: #526b98;
+  --theme-secondary: #6568A6;
+  --theme-secondary-hover: #51558F;
   --theme-secondary-soft: color-mix(in srgb, var(--theme-secondary) 10%, transparent);
 
-  /* Status colors */
-  --theme-success: #318f66;
+  
+  --theme-success: #24784F;
   --theme-success-soft: color-mix(in srgb, var(--theme-success) 11%, transparent);
-  --theme-warning: #a87825;
+  --theme-warning: #956015;
   --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 11%, transparent);
-  --theme-danger: #b9575e;
+  --theme-danger: #B00020;
   --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 10%, transparent);
-  --theme-info: #5577ad;
+  --theme-info: #396FA5;
   --theme-info-soft: color-mix(in srgb, var(--theme-info) 10%, transparent);
 
-  /* Page and component surfaces */
-  --theme-app-bg: #eaf0f2;
-  --theme-workspace-bg: #f2f5f6;
-  --theme-board-bg: #e4eff3;
-  --theme-topbar-bg: #f8fafb;
+  
+  --theme-app-bg: #E8EFF5;
+  --theme-workspace-bg: #F0F5F8;
+  --theme-board-bg: #E4EDF3;
+  --theme-topbar-bg: #FFFFFF;
   --theme-panel-bg: #ffffff;
-  --theme-panel-muted: #f4f7f8;
-  --theme-panel-raised: #ebf1f3;
-  --theme-control-bg: #f1f5f6;
-  --theme-popup-bg: #fbfcfc;
-  --theme-hover-bg: #edf4f2;
-  --theme-selected-bg: #dff0ec;
+  --theme-panel-muted: #F1F5F8;
+  --theme-panel-raised: #E2EBF1;
+  --theme-control-bg: #F7FAFC;
+  --theme-popup-bg: #FFFFFF;
+  --theme-hover-bg: #E2EDF2;
+  --theme-selected-bg: #D7F1EE;
   --theme-overlay-bg: rgb(25 37 45 / 42%);
 
-  /* Text and quiet separators */
-  --theme-text: #1e2a31;
-  --theme-text-secondary: #46555f;
-  --theme-text-muted: #74818a;
-  --theme-text-inverse: #f7fffd;
-  --theme-placeholder: #89959d;
-  --theme-divider: rgb(43 64 77 / 9%);
-  --theme-control-border: rgb(43 64 77 / 17%);
+  
+  --theme-text: #15212B;
+  --theme-text-secondary: #40505D;
+  --theme-text-muted: #627482;
+  --theme-text-inverse: #FFFFFF;
+  --theme-placeholder: #677986;
+  --theme-divider: rgb(34 62 82 / 18%);
+  --theme-control-border: rgb(34 62 82 / 32%);
   --theme-focus: color-mix(in srgb, var(--theme-primary) 58%, transparent);
-  --theme-icon: #697780;
+  --theme-icon: #68747A;
   --theme-icon-hover: var(--theme-primary);
 
-  /* Functional colors consumed by React controls */
-  --theme-plot-default: #168d81;
-  --theme-login-cube-face: #e9eff2;
-  --theme-login-cube-ripple: #6178a3;
-  --theme-project-color-1: #168d81;
-  --theme-project-color-2: #6178a3;
-  --theme-project-color-3: #318f66;
-  --theme-project-color-4: #a87825;
-  --theme-project-color-5: #b9575e;
-  --theme-project-color-6: #5577ad;
-  --theme-project-color-7: #7b5d91;
+  
+  --theme-plot-default: #03AFA1;
+  --theme-login-cube-face: #E7EBED;
+  --theme-login-cube-ripple: #6568A6;
+  --theme-project-color-1: #03AFA1;
+  --theme-project-color-2: #6568A6;
+  --theme-project-color-3: #24784F;
+  --theme-project-color-4: #956015;
+  --theme-project-color-5: #B00020;
+  --theme-project-color-6: #396FA5;
+  --theme-project-color-7: #8E5CC7;
 
-  /* Data presentation */
-  --theme-table-header: #e9eff2;
-  --theme-table-footer: #edf2f4;
+  
+  --theme-table-header: #E7EBED;
+  --theme-table-footer: #EDF0F1;
   --theme-table-row: #ffffff;
-  --theme-table-row-alt: #f5f8f9;
-  --theme-table-row-hover: #e8f2ef;
+  --theme-table-row-alt: #F5F7F7;
+  --theme-table-row-hover: #E1F1EF;
   --theme-chart-grid: var(--theme-divider);
 
-  /* Workflow palette items */
-  --theme-node-menu-item-bg: #edf2f4;
-  --theme-node-menu-item-hover-bg: #e5efed;
+  
+  --theme-node-menu-item-bg: #f6f8f9;
+  --theme-node-menu-item-hover-bg: #fafcfc;
 }
-
 :root {
-  /* Typography and geometry */
-  --theme-font-family: Vazirmatn, IRANSans, Tahoma, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --theme-font-size: 11.5px;
-  --theme-line-height: 1.55;
+--theme-font-family: Vazirmatn, IRANSans, Tahoma, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+--theme-font-size: 14px;
+  --theme-line-height: 1.65;
   --theme-radius-none: 0;
   --theme-radius-compact: 4px;
-  --theme-radius-control: 6px;
-  --theme-radius-panel: 9px;
+  --theme-radius-control: 8px;
+  --theme-radius-panel: 12px;
   --theme-radius-modal: 12px;
   --theme-radius-pill: 999px;
   --theme-radius-round: 50%;
@@ -172,41 +175,43 @@
   --workflow-left-panel-offset: 76px;
   --theme-border-width: 1px;
   --theme-border-width-strong: 2px;
-  --theme-control-height: 32px;
-  --theme-panel-gap: 10px;
-  --theme-panel-padding: 12px;
+  --theme-control-height: 36px;
+  --theme-panel-gap: 12px;
+  --theme-panel-padding: 16px;
   --theme-modal-gap: 8px;
   --theme-transition-fast: 120ms ease;
   --theme-transition: 170ms ease;
 
-  /* Global visual behavior */
-  --theme-shadow: none;
+  
+  --theme-shadow: 0 14px 34px rgb(0 0 0 / 18%);
+  --theme-shadow-hover: 0 12px 28px rgb(0 0 0 / 24%);
+  --theme-shadow-accent: 0 12px 26px color-mix(in srgb, var(--theme-primary) 14%, transparent);
   --theme-blur: 0px;
   --theme-transparent: transparent;
   --theme-white: #ffffff;
   --theme-black: #000000;
 
-  /* Primary button role */
+  
   --theme-button-primary-bg: var(--theme-primary-active);
-  --theme-button-primary-bg-hover: var(--theme-primary);
+  --theme-button-primary-bg-hover: var(--theme-primary-hover);
   --theme-button-primary-bg-active: var(--theme-primary-active);
   --theme-button-primary-border: var(--theme-transparent);
   --theme-button-primary-text: var(--theme-text-inverse);
 
-  /* Secondary button role */
+  
   --theme-button-secondary-bg: var(--theme-panel-muted);
   --theme-button-secondary-bg-hover: var(--theme-panel-raised);
   --theme-button-secondary-border: var(--theme-transparent);
   --theme-button-secondary-border-hover: var(--theme-transparent);
   --theme-button-secondary-text: var(--theme-text-secondary);
 
-  /* Danger button role */
+  
   --theme-button-danger-bg: var(--theme-transparent);
   --theme-button-danger-bg-hover: var(--theme-danger-soft);
   --theme-button-danger-border: var(--theme-transparent);
   --theme-button-danger-text: var(--theme-danger);
 
-  /* Neutral button role */
+  
   --theme-button-neutral-bg: var(--theme-panel-muted);
   --theme-button-neutral-bg-hover: var(--theme-panel-raised);
   --theme-button-neutral-border: var(--theme-transparent);
@@ -214,158 +219,156 @@
   --theme-button-neutral-text: var(--theme-text-secondary);
   --theme-button-neutral-text-hover: var(--theme-primary);
 
-  /* Workflow and data presentation roles */
+  
   --theme-results-panel-width: 380px;
   --theme-page-max-width: 1500px;
-  --theme-canvas-dot: color-mix(in srgb, var(--theme-text-secondary) 15%, transparent);
+  --theme-canvas-dot: color-mix(in srgb, var(--theme-text-secondary) 10%, transparent);
   --theme-node-bg: var(--theme-panel-muted);
   --theme-node-bg-hover: var(--theme-hover-bg);
   --theme-node-text: var(--theme-text);
   --theme-node-border: var(--theme-control-border);
   --theme-node-border-active: var(--theme-primary);
 
-  /* Login illustration roles */
+  
   --theme-cube-face-border: var(--theme-border-width) solid var(--theme-divider);
   --theme-cube-face-bg: var(--theme-panel-muted);
   --theme-cube-column-gap: 5%;
   --theme-cube-row-gap: 5%;
   --theme-cube-perspective: 99999999px;
 
-  /* Category colors. Change these to recolor nodes and palette items. */
-  --category-data-input: #3b9fbd;
-  --category-data-inspection: #36a7aa;
-  --category-data-cleaning: #499a75;
-  --category-anomaly: #b78843;
-  --category-transformation: #7c72aa;
-  --category-visualization: #ad6888;
-  --category-ml-processing: #5f7fa9;
-  --category-model-training: #716aa2;
-  --category-model-analysis: #3b9187;
-  --category-export: #ad6b70;
-  --category-user-nodes: #916ba0;
+  
+  --category-data-input: var(--theme-primary);
+  --category-data-inspection: var(--theme-info);
+  --category-data-cleaning: var(--theme-success);
+  --category-anomaly: var(--theme-warning);
+  --category-transformation: var(--theme-secondary);
+  --category-visualization: var(--theme-project-color-7);
+  --category-ml-processing: var(--theme-info);
+  --category-model-training: var(--theme-secondary);
+  --category-model-analysis: var(--theme-success);
+  --category-export: var(--theme-warning);
+  --category-user-nodes: var(--theme-secondary);
 }
-
-/* Node category mapping */
 .cat-data-entry,
-.cat-data-input { --node-category-color: var(--category-data-input); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-.cat-data-inspection { --node-category-color: var(--category-data-inspection); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-.cat-data-cleaning { --node-category-color: var(--category-data-cleaning); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-.cat-anomaly-detection { --node-category-color: var(--category-anomaly); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-data-input {
+--node-category-color: var(--category-data-input); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-data-inspection {
+--node-category-color: var(--category-data-inspection); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-data-cleaning {
+--node-category-color: var(--category-data-cleaning); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-anomaly-detection {
+--node-category-color: var(--category-anomaly); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
 .cat-data-transformation,
-.cat-transformation { --node-category-color: var(--category-transformation); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-transformation {
+--node-category-color: var(--category-transformation); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
 .cat-data-analysis-visualization,
-.cat-visualizations { --node-category-color: var(--category-visualization); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-.cat-ml-data-processing { --node-category-color: var(--category-ml-processing); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-visualizations {
+--node-category-color: var(--category-visualization); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-ml-data-processing {
+--node-category-color: var(--category-ml-processing); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
 .cat-model-design-train,
-.cat-ml-model-design-and-training { --node-category-color: var(--category-model-training); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-ml-model-design-and-training {
+--node-category-color: var(--category-model-training); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
 .cat-model-analysis,
-.cat-ml-model-analysis { --node-category-color: var(--category-model-analysis); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-.cat-export-or-report { --node-category-color: var(--category-export); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
+.cat-ml-model-analysis {
+--node-category-color: var(--category-model-analysis); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-export-or-report {
+--node-category-color: var(--category-export); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
 .cat-utilities-advanced,
 .cat-control-flow,
-.cat-user-nodes { --node-category-color: var(--category-user-nodes); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent); }
-
-.n8n-node-modal {
-  --node-accent: var(--node-category-color, var(--theme-primary));
+.cat-user-nodes {
+--node-category-color: var(--category-user-nodes); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
 }
-
-/* Responsive theme values. Layout remains in its component stylesheet. */
+.n8n-node-modal {
+--node-accent: var(--node-category-color, var(--theme-primary));
+}
 @media (width <= 1180px) {
-  :root {
-    --theme-panel-gap: 8px;
+:root {
+--theme-panel-gap: 8px;
     --theme-panel-padding: 10px;
     --theme-modal-gap: 6px;
-  }
 }
-
+}
 @media (width <= 760px) {
-  :root {
-    --theme-panel-gap: 6px;
+:root {
+--theme-panel-gap: 6px;
     --theme-panel-padding: 8px;
     --theme-control-height: 34px;
     --theme-radius-panel: 7px;
     --theme-radius-modal: 9px;
-  }
 }
-
-/* Global behavior: no shadows, glow or glass effects. */
+}
 html,
 body,
 #root {
-  background: var(--theme-app-bg) !important;
+background: var(--theme-app-bg) !important;
   color: var(--theme-text) !important;
   font-family: var(--theme-font-family);
 }
-
-* {
-  box-shadow: none !important;
-  text-shadow: none !important;
-  scrollbar-color: var(--theme-control-border) transparent;
-}
-
+* { text-shadow: none !important; }
 *::-webkit-scrollbar-track,
 *::-webkit-scrollbar-corner {
-  background: transparent !important;
+background: transparent !important;
 }
-
 *::-webkit-scrollbar-thumb {
-  background: var(--theme-control-border) !important;
-  border: var(--theme-border-width-strong) solid transparent !important;
+background: var(--theme-control-border) !important;
+  border: var(--theme-border-width-strong) solid var(--theme-control-border) !important;
   background-clip: content-box !important;
 }
-
-/* Page-level surfaces */
 .app-shell,
 .auth-page,
-.auth-page-ai,
 .manager-shell,
 .manager-page,
 .workspace {
-  background: var(--theme-workspace-bg) !important;
-  background-image: none !important;
+background: var(--theme-workspace-bg) !important;
 }
-
+.manager-page,
+.auth-page {
+  background-image:
+    radial-gradient(circle at 86% -12%, color-mix(in srgb, var(--theme-primary) 12%, transparent), transparent 35%),
+    radial-gradient(circle at 8% 108%, color-mix(in srgb, var(--theme-secondary) 8%, transparent), transparent 31%) !important;
+}
 .board {
-  background: var(--theme-board-bg) !important;
+background: var(--theme-board-bg) !important;
 }
-
 .analysis-board {
-  background: var(--theme-board-bg) !important;
+background: var(--theme-board-bg) !important;
   background-image: none !important;
 }
-
-/* React Flow canvas dots stay visible in both themes. */
 .react-flow__background {
-  opacity: 1 !important;
+opacity: 1 !important;
 }
-
 .react-flow__background pattern circle {
-  fill: var(--theme-canvas-dot) !important;
+fill: var(--theme-canvas-dot) !important;
 }
-
 .topbar,
 .app-main-topbar,
 .workflow-topbar,
 .workflow-topbar-pro {
-  background: var(--theme-topbar-bg) !important;
-  background-image: none !important;
+background: var(--theme-topbar-bg) !important;
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 4%, transparent), transparent 32%) !important;
   border: 0 !important;
   border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
   backdrop-filter: none !important;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 14%) !important;
 }
-
-/* Major regions use surface contrast, not enclosing borders. */
 .left-stack,
 .right-stack-wrap,
-.auth-card,
 .manager-panel,
-.project-card,
 .workflow-card,
 .profile-main-card-reference,
 .activity-panel-reference,
 .notification-panel-reference,
-.projects-list-reference,
-.project-filter-panel-reference,
 .project-info-reference,
 .project-create-info-reference,
 .project-data-reference,
@@ -374,25 +377,20 @@ body,
 .analysis-board-card,
 .workflow-shell-card,
 .plot-group-window {
-  background: var(--theme-panel-bg) !important;
+background: var(--theme-panel-bg) !important;
   background-image: none !important;
-  border: 0 !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
   border-radius: var(--theme-radius-panel) !important;
   backdrop-filter: none !important;
+  box-shadow: var(--theme-shadow) !important;
 }
-
 .palette,
 .inspector,
 .results-panel,
-.flow-chip,
 .run-history-panel,
-.workflow-section-card,
-.workflow-section-body,
-.workflow-quick-settings-body,
 .output-card,
 .modal-output-card,
 .metric-card,
-.checkbox-grid,
 .pill-picker,
 .pinned-data-box,
 .notification-row,
@@ -402,97 +400,87 @@ body,
 .plot-group-item,
 .output-table,
 .amchart-wrap {
-  background: var(--theme-panel-muted) !important;
+background: var(--theme-panel-muted) !important;
   background-image: none !important;
-  border: 0 !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
   border-radius: var(--theme-radius-panel) !important;
 }
-
-/* Node menu items use a real surface so each draggable item is easy to scan. */
 .node-palette .palette-node-card,
 .node-palette .flyout-node-card,
 .palette-flyout .palette-node-card,
 .node-palette-item.palette-node-card,
 .left-stack .palette-node-card,
 .left-stack .flyout-node-card {
-  background: var(--theme-node-menu-item-bg) !important;
+background: var(--theme-node-menu-item-bg) !important;
   background-image: none !important;
-  border: 0 !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
   color: var(--node-category-color, var(--theme-text-secondary)) !important;
   border-radius: var(--theme-radius-control) !important;
 }
-
 .node-palette .palette-node-card:hover,
 .node-palette .flyout-node-card:hover,
 .palette-flyout .palette-node-card:hover,
 .node-palette-item.palette-node-card:hover,
 .left-stack .palette-node-card:hover,
 .left-stack .flyout-node-card:hover {
-  background: color-mix(
+background: color-mix(
     in srgb,
     var(--node-category-color, var(--theme-primary)) 10%,
     var(--theme-node-menu-item-hover-bg)
   ) !important;
-  border: 0 !important;
+  border-color: color-mix(in srgb, var(--node-category-color, var(--theme-primary)) 42%, var(--theme-divider)) !important;
   color: var(--node-category-color, var(--theme-primary)) !important;
-  transform: none !important;
+  transform: translateY(-1px) !important;
 }
-
-/* Modal: only the outer frame and column dividers remain. */
 .modal-backdrop,
 .node-modal-backdrop,
 .n8n-node-backdrop.node-modal-backdrop {
-  background: var(--theme-overlay-bg) !important;
+background: var(--theme-overlay-bg) !important;
   backdrop-filter: none !important;
 }
-
 .modal-card,
 .node-modal,
 .n8n-node-modal.node-modal {
-  background: var(--theme-popup-bg) !important;
+background: var(--theme-popup-bg) !important;
   background-image: none !important;
   border: var(--theme-border-width) solid var(--theme-divider) !important;
   border-radius: var(--theme-radius-modal) !important;
   backdrop-filter: none !important;
 }
-
 .node-modal-header,
 .n8n-node-modal-header.node-modal-header {
-  background: var(--theme-panel-muted) !important;
+background: var(--theme-panel-muted) !important;
   border: 0 !important;
   border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
 }
-
 .node-modal-grid,
 .n8n-node-grid.node-modal-grid {
-  background: var(--theme-popup-bg) !important;
-  gap: var(--theme-modal-gap) !important;
+background: var(--theme-popup-bg) !important;
+  gap: 0 !important;
 }
-
 .node-modal-section,
-.n8n-node-panel.node-modal-section,
-.n8n-params-panel.node-modal-section,
 :root[data-theme="dark"] .node-modal-section,
 :root[data-theme="light"] .node-modal-section {
-  background: var(--theme-panel-bg) !important;
+background: var(--theme-panel-bg) !important;
   border: 0 !important;
   border-radius: var(--theme-radius-panel) !important;
 }
-
-.node-modal-section + .node-modal-section {
-  border-inline-start: var(--theme-border-width) solid var(--theme-divider) !important;
+.n8n-node-modal .n8n-node-panel.node-modal-section,
+.n8n-node-modal .n8n-params-panel.node-modal-section {
+background: var(--theme-panel-bg) !important;
+  border-radius: var(--theme-radius-none) !important;
 }
-
+.node-modal-section + .node-modal-section {
+border-inline-start: var(--theme-border-width) solid var(--theme-divider) !important;
+}
 .section-title,
 .n8n-panel-title.section-title,
 .node-modal-section .section-title {
-  background: var(--theme-panel-muted) !important;
+background: var(--theme-panel-muted) !important;
   color: var(--theme-text-secondary) !important;
   border: 0 !important;
   border-bottom: var(--theme-border-width) solid var(--theme-divider) !important;
 }
-
-/* Form controls have quiet fills and only show a line on focus. */
 input,
 select,
 textarea,
@@ -500,84 +488,75 @@ textarea,
 .field select,
 .field textarea,
 .run-controls input,
-.searchbox,
-.iota-select-trigger,
 .node-title-input,
 .node-modal-name,
 .pinned-data-box textarea,
 .project-filter-search {
-  background: var(--theme-control-bg) !important;
+background: var(--theme-control-bg) !important;
   background-image: none !important;
   color: var(--theme-text) !important;
-  border: var(--theme-border-width) solid transparent !important;
+  border: var(--theme-border-width) solid var(--theme-control-border) !important;
   border-radius: var(--theme-radius-control) !important;
-  outline: 0 !important;
+  outline: none;
+  transition: border-color var(--theme-transition-fast), background var(--theme-transition-fast), box-shadow var(--theme-transition-fast);
 }
-
 input::placeholder,
 textarea::placeholder {
-  color: var(--theme-placeholder) !important;
+color: var(--theme-placeholder) !important;
 }
-
-input:hover,
 select:hover,
 textarea:hover,
 .field input:hover,
 .field select:hover,
-.field textarea:hover,
-.iota-select-trigger:hover {
-  background: var(--theme-hover-bg) !important;
-  border-color: transparent !important;
+.field textarea:hover {
+background: var(--theme-hover-bg) !important;
+  border-color: var(--theme-divider) !important;
 }
-
-
 select:focus,
 textarea:focus,
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
-.searchbox:focus-within,
 .iota-select.open .iota-select-trigger {
-  background: var(--theme-control-bg) !important;
-  border-color: var(--theme-focus) !important;
-  outline: 0 !important;
+background: var(--theme-control-bg) !important;
+  border-color: var(--theme-primary) !important;
+  box-shadow: 0 0 0 3px var(--theme-primary-soft) !important;
+  outline: none;
 }
-
-/* Primary buttons */
 .primary,
 button.primary,
 .auth-submit,
 .n8n-execute-button.primary {
-  background: var(--theme-button-primary-bg) !important;
+background: var(--theme-button-primary-bg) !important;
   background-image: none !important;
-  border: 0 !important;
+  border: var(--theme-border-width) solid color-mix(in srgb, var(--theme-primary) 72%, white) !important;
   color: var(--theme-button-primary-text) !important;
   border-radius: var(--theme-radius-control) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--theme-primary) 20%, transparent) !important;
 }
-
 .primary:hover,
 button.primary:hover,
 .auth-submit:hover,
 .n8n-execute-button.primary:hover {
-  background: var(--theme-button-primary-bg-hover) !important;
+background: var(--theme-button-primary-bg-hover) !important;
   color: var(--theme-button-primary-text) !important;
-  transform: none !important;
+  transform: translateY(-1px) !important;
 }
-
-/* Secondary/text buttons share one role throughout the application. */
 .icon-button:not(.icon-only, .theme-toggle, .iota-nav-icon, .profile-icon-only),
 .tiny-action:not(.icon-only, .icon-action),
 .choice-pill,
 .group-toggle,
 .secondary,
 button.secondary {
-  background: var(--theme-panel-bg) !important;
+background: var(--theme-panel-bg) !important;
   background-image: none !important;
-  border: 0 !important;
+  border: var(--theme-border-width) solid var(--theme-divider) !important;
   color: var(--theme-button-secondary-text) !important;
   border-radius: var(--theme-radius-control) !important;
 }
-
+.node-palette .group-toggle {
+  border: 0 !important;
+}
 .icon-button:not(.icon-only, .theme-toggle, .iota-nav-icon, .profile-icon-only):hover,
 .tiny-action:not(.icon-only, .icon-action):hover,
 .choice-pill:hover,
@@ -585,38 +564,31 @@ button.secondary {
 .group-toggle:hover,
 .secondary:hover,
 button.secondary:hover {
-  background: var(--theme-button-secondary-bg-hover) !important;
-  border: 0 !important;
+background: var(--theme-button-secondary-bg-hover) !important;
+  border-color: var(--theme-control-border) !important;
   color: var(--theme-primary) !important;
-  transform: none !important;
+  transform: translateY(-1px) !important;
 }
-
 .danger,
 button.danger {
-  background: var(--theme-button-danger-bg) !important;
-  border: 0 !important;
+background: var(--theme-button-danger-bg) !important;
+  border: var(--theme-border-width) solid color-mix(in srgb, var(--theme-danger) 42%, var(--theme-divider)) !important;
   color: var(--theme-button-danger-text) !important;
 }
-
 .danger:hover,
 button.danger:hover {
-  background: var(--theme-button-danger-bg-hover) !important;
-  border: 0 !important;
+background: var(--theme-button-danger-bg-hover) !important;
+  border-color: var(--theme-danger) !important;
   color: var(--theme-danger) !important;
 }
-
-/* Icon buttons: always transparent and borderless, including all top bars. */
 .icon-only,
 .icon-action,
 .tiny-icon,
 .modal-close,
 .theme-toggle,
-.panel-toggle,
-.sidebar-toggle,
 .workflow-float-toggle,
 .workflow-tab-icon-button,
 .workflow-right-collapse-button,
-.analysis-board-control-toggle,
 .auth-eye-button,
 .iota-nav-icon,
 .profile-icon-only,
@@ -625,25 +597,21 @@ button.danger:hover {
 .MuiIconButton-root,
 .workflow-topbar-pro .icon-button,
 .workflow-topbar .icon-button {
-  background: transparent !important;
+background: transparent !important;
   background-image: none !important;
   border: 0 !important;
-  outline: 0 !important;
+  outline: revert;
   color: var(--button-icon-color, var(--theme-icon)) !important;
   border-radius: var(--theme-radius-control) !important;
 }
-
 .icon-only:hover,
 .icon-action:hover,
 .tiny-icon:hover,
 .modal-close:hover,
 .theme-toggle:hover,
-.panel-toggle:hover,
-.sidebar-toggle:hover,
 .workflow-float-toggle:hover,
 .workflow-tab-icon-button:hover,
 .workflow-right-collapse-button:hover,
-.analysis-board-control-toggle:hover,
 .auth-eye-button:hover,
 .iota-nav-icon:hover,
 .profile-icon-only:hover,
@@ -652,93 +620,242 @@ button.danger:hover {
 .MuiIconButton-root:hover,
 .workflow-topbar-pro .icon-button:hover,
 .workflow-topbar .icon-button:hover {
-  background: transparent !important;
+background: var(--theme-hover-bg) !important;
   border: 0 !important;
   color: var(--theme-icon-hover) !important;
-  transform: none !important;
+  transform: translateY(-1px) !important;
 }
-
-/* Workflow topbar action colors use the shared icon variable. */
 .workflow-topbar-center-mini .topbar-primary-action,
 .workflow-topbar-center-mini .icon-button.active {
-  --button-icon-color: var(--theme-primary);
+--button-icon-color: var(--theme-primary);
 }
-
 .workflow-topbar-left-menu .topbar-danger-action {
-  --button-icon-color: var(--theme-danger);
+--button-icon-color: var(--theme-danger);
 }
-
-/* Status roles */
 .status.succeeded,
 .run-dot.succeeded,
 .manager-toast.success {
-  color: var(--theme-success) !important;
+color: var(--theme-success) !important;
 }
-
 .status.failed,
 .run-dot.failed,
 .manager-toast.error,
 .error-box,
 .auth-error {
-  color: var(--theme-danger) !important;
+color: var(--theme-danger) !important;
 }
-
 .status.running,
 .status.queued,
 .run-dot.running,
 .run-dot.queued,
 .manager-toast.info {
-  color: var(--theme-info) !important;
+color: var(--theme-info) !important;
 }
-
-.status.succeeded { background: var(--theme-success-soft) !important; }
+.status.succeeded {
+background: var(--theme-success-soft) !important;
+}
 .status.failed,
 .error-box,
-.auth-error { background: var(--theme-danger-soft) !important; }
+.auth-error {
+background: var(--theme-danger-soft) !important;
+}
 .status.running,
-.status.queued { background: var(--theme-info-soft) !important; }
-.node-warning { background: var(--theme-warning-soft) !important; border: 0 !important; }
-
-/* Tables: alternating surfaces replace dense grid lines. */
+.status.queued {
+background: var(--theme-info-soft) !important;
+}
+.node-warning {
+background: var(--theme-warning-soft) !important; border: 0 !important;
+}
 table,
 .output-table {
-  background: var(--theme-panel-bg) !important;
+background: var(--theme-panel-bg) !important;
   border: 0 !important;
   color: var(--theme-text) !important;
 }
-
 th {
-  background: var(--theme-table-header) !important;
+background: var(--theme-table-header) !important;
   color: var(--theme-text-secondary) !important;
   border: 0 !important;
 }
-
 td {
-  border-color: transparent !important;
+border-color: var(--theme-divider) !important;
 }
-
 tbody tr:nth-child(even) {
-  background: var(--theme-table-row-alt) !important;
+background: var(--theme-table-row-alt) !important;
 }
-
 tbody tr:hover {
-  background: var(--theme-table-row-hover) !important;
+background: var(--theme-table-row-hover) !important;
 }
-
-
-/* Decorative layers from earlier themes are disabled. */
 .app-shell::before,
 .manager-page::before,
 .auth-page::before,
-.auth-page-ai::before,
-.auth-page-ai::after,
-.auth-visual-panel::before,
-.auth-visual-panel::after,
 .manager-panel::before,
-.project-card::before,
 .brand-block h1::before {
-  background: none !important;
+background: none !important;
   background-image: none !important;
   filter: none !important;
   opacity: 0 !important;
+}
+
+/* Form chrome is owned here so lazy-loaded pages cannot add nested borders. */
+:root select:not([multiple]):not([size]),
+:root select[size="1"] {
+  appearance: none;
+  min-height: 36px;
+  padding-block: 8px !important;
+  padding-inline: 12px 38px !important;
+  line-height: 1.5;
+  background-color: var(--theme-control-bg) !important;
+  background-image: linear-gradient(45deg, transparent 50%, var(--theme-icon) 50%), linear-gradient(135deg, var(--theme-icon) 50%, transparent 50%) !important;
+  background-position: right 18px center, right 13px center !important;
+  background-size: 5px 5px !important;
+  background-repeat: no-repeat !important;
+  border-color: var(--theme-control-border) !important;
+  cursor: pointer;
+}
+:root select:not([multiple]):not([size]):dir(rtl),
+:root select[size="1"]:dir(rtl) {
+  background-position: left 13px center, left 18px center !important;
+}
+:root select:disabled { cursor: not-allowed; opacity: .55; }
+:root select option { background: var(--theme-popup-bg); color: var(--theme-text); }
+:root :is(.project-filter-search, .assignment-picker-search, .node-palette .palette-search) {
+  display: flex;
+  align-items: center;
+  gap: 10px !important;
+  min-width: 0;
+  min-height: 38px !important;
+  padding: 0 12px !important;
+  background: var(--theme-control-bg) !important;
+  border: var(--theme-border-width) solid var(--theme-control-border) !important;
+  border-radius: var(--theme-radius-control) !important;
+  transition: border-color var(--theme-transition-fast);
+}
+:root :is(.project-filter-search, .assignment-picker-search, .node-palette .palette-search) > svg {
+  flex-shrink: 0;
+  color: var(--theme-icon);
+}
+:root :is(.project-filter-search, .assignment-picker-search, .node-palette .palette-search) input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: auto !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 8px 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  font-size: 13px !important;
+  line-height: 1.5;
+}
+:root :is(.project-filter-search, .assignment-picker-search, .node-palette .palette-search):focus-within {
+  border-color: var(--theme-primary) !important;
+  outline: 1px solid var(--theme-primary-soft);
+  outline-offset: 1px;
+}
+:root .icon-only:hover,
+:root .icon-action:hover,
+:root .theme-toggle:hover { background: var(--theme-hover-bg) !important; }
+
+/* Final visual hierarchy. This block intentionally owns cross-page polish. */
+body {
+  font-size: var(--theme-font-size);
+  line-height: var(--theme-line-height);
+}
+.manager-page,
+.profile-reference-page,
+.project-detail-reference-page,
+.projects-reference-page {
+  color: var(--theme-text);
+}
+.manager-panel,
+.workflow-card,
+.project-card-reference,
+.dataset-mini-row,
+.notification-row {
+  transition: border-color var(--theme-transition), background var(--theme-transition), box-shadow var(--theme-transition), transform var(--theme-transition);
+}
+.reference-card-head,
+.panel-heading,
+.manager-list-head {
+  color: var(--theme-text);
+}
+.reference-card-head {
+  border-bottom-color: var(--theme-divider) !important;
+}
+.reference-card-head b,
+.panel-heading b,
+.manager-list-head b {
+  color: var(--theme-text) !important;
+  font-weight: 760 !important;
+  letter-spacing: -0.01em;
+}
+.reference-step-title > svg,
+.panel-heading > svg {
+  color: var(--theme-primary) !important;
+}
+.dataset-mini-row:hover,
+.notification-row:hover {
+  border-color: color-mix(in srgb, var(--theme-primary) 38%, var(--theme-divider)) !important;
+  background: color-mix(in srgb, var(--theme-primary) 7%, var(--theme-panel-muted)) !important;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 12%) !important;
+}
+.iota-select-trigger,
+button[aria-haspopup="listbox"] {
+  border-color: var(--theme-control-border) !important;
+  background: var(--theme-control-bg) !important;
+}
+.iota-select-menu,
+[role="listbox"] {
+  border: var(--theme-border-width) solid var(--theme-control-border) !important;
+  background: var(--theme-popup-bg) !important;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 32%) !important;
+}
+.manager-toast {
+  box-shadow: 0 12px 30px rgb(0 0 0 / 20%) !important;
+}
+@media (width <= 760px) {
+  :root { --theme-font-size: 13px; }
+  .manager-page { background-image: none !important; }
+}
+:root[data-theme="light"] {
+  --theme-shadow: 0 12px 30px rgb(31 54 70 / 10%);
+  --theme-shadow-hover: 0 12px 28px rgb(31 54 70 / 14%);
+}
+
+/* Dark mode relies on surface contrast and spacing, not outlines around everything. */
+:root[data-theme="dark"] .manager-page,
+:root[data-theme="dark"] .auth-page {
+  background-image: radial-gradient(circle at 88% -10%, color-mix(in srgb, var(--theme-primary) 5%, transparent), transparent 31%) !important;
+}
+:root[data-theme="dark"] :is(
+  .manager-panel,
+  .project-card-reference,
+  .workflow-card,
+  .dataset-mini-row,
+  .notification-row,
+  .activity-panel-reference,
+  .profile-main-card-reference,
+  .project-info-reference,
+  .project-data-reference,
+  .workflows-reference-card,
+  .palette,
+  .inspector,
+  .results-panel,
+  .run-history-panel,
+  .output-card
+) {
+  border-color: transparent !important;
+}
+:root[data-theme="dark"] .iota-minimal-page :is(
+  .reference-card-head,
+  .projects-toolbar-reference,
+  .profile-reference-head
+) {
+  border-bottom-color: transparent !important;
+}
+:root[data-theme="dark"] td { border-color: color-mix(in srgb, var(--theme-text) 7%, transparent) !important; }
+.manager-page.iota-minimal-page.projects-reference-page {
+  padding-inline: 0 !important;
 }

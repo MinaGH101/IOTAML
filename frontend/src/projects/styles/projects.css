@@ -1,0 +1,7 @@
+/* Project-only additions; shared styles are loaded once by the global entry. */
+@import "./stages/00-foundation.css";
+@import "./stages/10-manager.css";
+@import "./stages/20-projects.css";
+@import "./stages/25-rbac.css";
+@import "./stages/60-analysis.css";
+@import "./polish.css";

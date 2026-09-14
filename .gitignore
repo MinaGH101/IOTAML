@@ -1,0 +1,18 @@
+
+# Local browser test output and temporary credentials
+frontend/test-results/
+frontend/playwright-report/
+frontend/.e2e-credentials.json
+
+backend/.cache/
+
+# Generated Python and frontend build output
+__pycache__/
+*.py[cod]
+frontend/dist/
+.pnpm-store/
+.pnpm-store
+.vscode
+
+.env
+iota_assistant_model_benchmark.ipynb

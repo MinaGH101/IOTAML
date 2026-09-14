@@ -21,6 +21,9 @@ from sklearn.ensemble import (
 from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, LogisticRegression, Ridge
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
 from sklearn.svm import LinearSVC, SVC
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
@@ -38,17 +41,21 @@ def _clean_x(x: pd.DataFrame) -> pd.DataFrame:
     return x.copy().replace([np.inf, -np.inf], np.nan)
 
 
-def _encode_fit(x: pd.DataFrame):
+def _encode_fit(x: pd.DataFrame, preserve_missing: bool = False):
     raw = _clean_x(x)
     encoded = pd.get_dummies(raw, dummy_na=True)
-    encoded = encoded.apply(pd.to_numeric, errors='coerce').fillna(0)
+    encoded = encoded.apply(pd.to_numeric, errors='coerce')
+    if not preserve_missing:
+        encoded = encoded.fillna(0)
     return encoded, [str(c) for c in encoded.columns]
 
 
-def encode_predict(x: pd.DataFrame, encoded_columns: list[str]) -> pd.DataFrame:
+def encode_predict(x: pd.DataFrame, encoded_columns: list[str], preserve_missing: bool = False) -> pd.DataFrame:
     raw = _clean_x(x)
     encoded = pd.get_dummies(raw, dummy_na=True)
-    encoded = encoded.apply(pd.to_numeric, errors='coerce').fillna(0)
+    encoded = encoded.apply(pd.to_numeric, errors='coerce')
+    if not preserve_missing:
+        encoded = encoded.fillna(0)
     return encoded.reindex(columns=encoded_columns, fill_value=0)
 
 
@@ -68,6 +75,7 @@ def _extract_training_source(inputs: dict[str, Any], settings: dict[str, Any], c
             if train_mode in {'auto', 'train_test_split'}:
                 return {
                     'mode': 'train_test_split',
+                    'preprocessing': split.get('preprocessing'),
                     'target_column': split['target_column'],
                     'feature_columns': split['feature_columns'],
                     'X_train': split['X_train'],
@@ -79,6 +87,7 @@ def _extract_training_source(inputs: dict[str, Any], settings: dict[str, Any], c
             if train_mode in {'auto', 'k_fold'}:
                 return {
                     'mode': 'k_fold',
+                    'preprocessing': kfold.get('preprocessing'),
                     'target_column': kfold['target_column'],
                     'feature_columns': kfold['feature_columns'],
                     'folds': kfold['folds'],
@@ -106,12 +115,18 @@ def _extract_training_source(inputs: dict[str, Any], settings: dict[str, Any], c
     }
 
 
-def _fit_one(model: Any, x_train: pd.DataFrame, y_train: pd.Series, task_type: str):
+def _fit_one(model: Any, x_train: pd.DataFrame, y_train: pd.Series, task_type: str, preprocessing=None):
     y = _coerce_y_for_regression(y_train) if task_type == 'regression' else y_train
     data = pd.concat([x_train, y.rename('__target__')], axis=1).dropna(subset=['__target__'])
     x_train = data.drop(columns=['__target__'])
     y = data['__target__']
-    x_encoded, encoded_columns = _encode_fit(x_train)
+    x_encoded, encoded_columns = _encode_fit(x_train, preserve_missing=bool(preprocessing))
+    if preprocessing:
+        scalers = {'standard': StandardScaler, 'minmax': MinMaxScaler, 'robust': RobustScaler, 'maxabs': MaxAbsScaler}
+        steps = [('imputer', SimpleImputer(strategy=preprocessing['imputation'], fill_value=0, keep_empty_features=True))]
+        if preprocessing['scaling'] != 'none':
+            steps.append(('scaler', scalers[preprocessing['scaling']]()))
+        model = Pipeline([*steps, ('estimator', model)])
     model.fit(x_encoded, y)
     return model, encoded_columns, len(x_encoded)
 
@@ -128,7 +143,7 @@ def predict_with_payload(payload: ModelPayload, x: pd.DataFrame, fold: int | Non
         encoded_sets = meta['fold_encoded_columns']
         if 1 <= fold <= len(encoded_sets):
             encoded_columns = encoded_sets[fold - 1]
-    x_encoded = encode_predict(x, encoded_columns)
+    x_encoded = encode_predict(x, encoded_columns, preserve_missing=isinstance(model, Pipeline))
     return model.predict(x_encoded)
 
 
@@ -139,6 +154,7 @@ COMMON_SETTINGS = [
 
 
 class _BaseSklearnModelNode(BaseNode, ABC):
+    cache_version = '2'
     inputs = [port('training', 'Training Data / Split / Folds', 'any')]
     outputs = [port('model', 'Model', 'model'), port('metrics', 'Training Report', 'metrics')]
     settings_schema = COMMON_SETTINGS
@@ -161,7 +177,7 @@ class _BaseSklearnModelNode(BaseNode, ABC):
             fold_rows = []
             for fold in source['folds']:
                 model = self.build_model(settings)
-                fitted, encoded_for_fold, train_rows = _fit_one(model, fold['X_train'], fold['y_train'], self.task_type)
+                fitted, encoded_for_fold, train_rows = _fit_one(model, fold['X_train'], fold['y_train'], self.task_type, source.get('preprocessing'))
                 fold_models.append(fitted)
                 fold_encoded_columns.append(encoded_for_fold)
                 encoded_columns = encoded_columns or encoded_for_fold
@@ -187,7 +203,7 @@ class _BaseSklearnModelNode(BaseNode, ABC):
                     'target_column': target,
                     'feature_columns': features,
                     'feature_count': len(features),
-                    'encoded_columns': encoded_columns or [],
+                    'encoded_columns': fold_encoded_columns[-1],
                     'fold_models': fold_models,
                     'fold_encoded_columns': fold_encoded_columns,
                     'data_pairs': source.get('data_pairs') or {},
@@ -197,7 +213,7 @@ class _BaseSklearnModelNode(BaseNode, ABC):
             return {'model': payload, 'metrics': metrics, 'output': metrics_output(str(node['id']), node_label(node), metrics)}
 
         model = self.build_model(settings)
-        fitted, encoded_columns, train_rows = _fit_one(model, source['X_train'], source['y_train'], self.task_type)
+        fitted, encoded_columns, train_rows = _fit_one(model, source['X_train'], source['y_train'], self.task_type, source.get('preprocessing'))
         metrics = {
             'model': self.name,
             'model_task': self.task_type,

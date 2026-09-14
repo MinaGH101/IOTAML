@@ -1,0 +1,6 @@
+/* auth styles extracted from 25-rbac-access.css. */
+.profile-password-card {
+display: grid;
+  gap: 12px;
+  padding: 16px;
+}

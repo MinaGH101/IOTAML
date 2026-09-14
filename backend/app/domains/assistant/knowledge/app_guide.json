@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "product": "IOTA ML",
+  "purpose": "IOTA ML is a project-based visual machine-learning application. Users create projects, upload CSV datasets, create workflows, connect scientific nodes, configure nodes, execute workflows, inspect outputs, and pin selected outputs to analysis boards.",
+  "topics": [
+    {
+      "id": "projects",
+      "title": "Projects",
+      "keywords": [
+        "project",
+        "projects",
+        "پروژه",
+        "پروژه‌ها"
+      ],
+      "summary": "Projects are the top-level containers for datasets and saved workflows.",
+      "details": [
+        "The Projects page separates projects owned by the user from projects the user can access.",
+        "Project cards show access level, state, priority, owner/assignment information, workflow count, dataset count, and last update.",
+        "Users with permission can create a new project from the Projects page."
+      ]
+    },
+    {
+      "id": "project_creation",
+      "title": "Creating a project",
+      "keywords": [
+        "create project",
+        "new project",
+        "ایجاد پروژه",
+        "پروژه جدید"
+      ],
+      "summary": "Project creation is organized around project information, project data, and workflows.",
+      "details": [
+        "First create the project and save its basic information.",
+        "Then upload project datasets.",
+        "Then create at least one workflow and open it in the workspace."
+      ]
+    },
+    {
+      "id": "datasets",
+      "title": "Project datasets",
+      "keywords": [
+        "dataset",
+        "data",
+        "csv",
+        "upload",
+        "دیتاست",
+        "داده",
+        "آپلود"
+      ],
+      "summary": "Project datasets are CSV files stored inside a project and made available to workflows in that project.",
+      "details": [
+        "The current project uploader accepts CSV files.",
+        "Dataset information includes row count, column count, storage size, creation date, and column metadata.",
+        "Column metadata includes column name, data type, missing count, and unique count."
+      ]
+    },
+    {
+      "id": "workflows",
+      "title": "Workflows",
+      "keywords": [
+        "workflow",
+        "graph",
+        "flow",
+        "جریان",
+        "ورک‌فلو",
+        "گردش کار"
+      ],
+      "summary": "A workflow is a saved visual graph of connected nodes inside a project.",
+      "details": [
+        "Each workflow belongs to a project and keeps its own graph and execution history.",
+        "Users build workflows by adding nodes and connecting compatible ports.",
+        "A workflow can be executed as a whole, or the selected node can be run together with the upstream nodes required for it."
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workflow workspace",
+      "keywords": [
+        "workspace",
+        "editor",
+        "canvas",
+        "برد کاری",
+        "فضای کاری",
+        "ویرایشگر"
+      ],
+      "summary": "The workspace is the visual editor used to build, configure, run, inspect, and version workflows.",
+      "details": [
+        "The workspace contains the node palette, workflow canvas, top toolbar, and right-side panel.",
+        "The top toolbar includes workflow execution, Analysis Board access, named version saving, auto-layout, workflow export, and project navigation.",
+        "The right-side panel contains node outputs, node settings, run history, the AI assistant, workflow versions, and reusable components."
+      ]
+    },
+    {
+      "id": "node_palette",
+      "title": "Node palette",
+      "keywords": [
+        "node palette",
+        "nodes",
+        "add node",
+        "جعبه نود",
+        "نود",
+        "افزودن نود"
+      ],
+      "summary": "The node palette is the searchable catalog used to add available scientific nodes to a workflow.",
+      "details": [
+        "Nodes are grouped by category.",
+        "The palette can be searched by node name, category, or description.",
+        "Node definitions used by the AI assistant come from the live backend node registry, not from this guide."
+      ]
+    },
+    {
+      "id": "node_settings",
+      "title": "Node settings",
+      "keywords": [
+        "node settings",
+        "parameters",
+        "settings",
+        "تنظیمات نود",
+        "پارامتر"
+      ],
+      "summary": "Selecting a node exposes its configurable parameters and available inputs/outputs.",
+      "details": [
+        "Node configuration is edited in the node settings area or node dialog.",
+        "The exact settings, defaults, ports, and validation rules differ by node.",
+        "For exact node settings, the AI assistant must query the live node registry before answering."
+      ]
+    },
+    {
+      "id": "execution",
+      "title": "Workflow execution",
+      "keywords": [
+        "run",
+        "execute",
+        "execution",
+        "اجرا",
+        "ران"
+      ],
+      "summary": "Workflows and selected nodes can be executed from the workspace.",
+      "details": [
+        "Running the whole workflow executes the workflow graph according to its dependencies.",
+        "When a node is selected, the run control can execute that node together with the upstream nodes required for it.",
+        "Run history is available in the right-side panel and supports inspecting previous runs."
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Node results",
+      "keywords": [
+        "result",
+        "output",
+        "chart",
+        "table",
+        "خروجی",
+        "نتیجه",
+        "نمودار",
+        "جدول"
+      ],
+      "summary": "Execution outputs are inspected from the Results area in the workspace.",
+      "details": [
+        "Results can include tables, charts, and other node-specific output types.",
+        "The Results panel is tied to workflow execution results.",
+        "Supported outputs can be pinned from the Results panel to an Analysis Board."
+      ]
+    },
+    {
+      "id": "analysis_board",
+      "title": "Analysis Board",
+      "keywords": [
+        "analysis board",
+        "board",
+        "pin",
+        "برد",
+        "برد تحلیل"
+      ],
+      "summary": "Analysis Boards are used to collect and arrange selected workflow outputs for analysis and presentation.",
+      "details": [
+        "Outputs are added to a board from the Results panel.",
+        "The main board is always available and additional board tabs can be used when supported by the workflow.",
+        "Board items represent persisted workflow outputs rather than new executions."
+      ]
+    },
+    {
+      "id": "workflow_versions",
+      "title": "Workflow versions",
+      "keywords": [
+        "version",
+        "versions",
+        "restore",
+        "نسخه",
+        "بازیابی نسخه"
+      ],
+      "summary": "Named workflow versions preserve workflow states that can later be inspected or restored.",
+      "details": [
+        "A named version can be saved from the workflow toolbar.",
+        "Versions are managed from the Workflow Versions tab in the right-side panel.",
+        "Version preview is read-only until the user returns to the current version or restores a selected version."
+      ]
+    },
+    {
+      "id": "components",
+      "title": "Reusable workflow components",
+      "keywords": [
+        "component",
+        "components",
+        "reusable",
+        "کامپوننت"
+      ],
+      "summary": "Selected workflow nodes can be grouped into reusable components.",
+      "details": [
+        "The workspace can convert selected nodes into a component when the selection is valid.",
+        "Components are managed from the Components tab in the right-side panel.",
+        "Component management includes versioning, export/import, archive, edit, and delete operations where permitted."
+      ]
+    },
+    {
+      "id": "assistant",
+      "title": "IOTA AI assistant",
+      "keywords": [
+        "assistant",
+        "ai",
+        "guide",
+        "دستیار",
+        "هوش مصنوعی",
+        "راهنما"
+      ],
+      "summary": "The IOTA AI assistant is a read-only guide for app usage, node knowledge, workflow design, and current-workflow inspection.",
+      "details": [
+        "The assistant should answer app-usage questions using the app guide.",
+        "It should answer exact node questions using the live node registry.",
+        "It may inspect the current workflow when the user asks about that workflow.",
+        "In the current phase it must not create, modify, save, or execute workflows."
+      ]
+    }
+  ]
+}

@@ -184,7 +184,7 @@ def test_new_nodes_are_available_in_registry() -> None:
         assert get_node_runner(node_id) is not None
 
 
-def test_workflow_id_is_preserved_outside_calculation_columns_and_can_change_from_source_columns() -> None:
+def test_workflow_id_is_preserved_and_removed_columns_cannot_be_restored() -> None:
     from app.nodes.cleaning.select_columns_node import SelectColumnsNode
     from app.nodes.io import apply_dataframe_contract, dataframe_payload, selected_columns
 
@@ -210,26 +210,19 @@ def test_workflow_id_is_preserved_outside_calculation_columns_and_can_change_fro
     assert first_payload.source_columns == ['sample_id', 'batch_id', 'Au', 'Cu']
     assert selected_columns({'columns': ['sample_id', 'Au']}, first_payload.df) == ['Au']
 
-    second = SelectColumnsNode().run(
-        {'id': 'select-2', 'data': {'label': 'Select'}},
-        {'input': first},
-        {'mode': 'select', 'columns': ['Au'], 'id_column': 'batch_id'},
-        None,
-    )
-    second_payload = dataframe_payload({'input': second})
-    assert second_payload is not None
-    assert second_payload.id_column == 'batch_id'
-    assert second_payload.df.columns.tolist() == ['batch_id', 'Au']
-    assert second_payload.df['batch_id'].tolist() == ['X1', 'X2', 'X3']
-    assert second_payload.active_columns == ['Au']
-
-    legacy_node_result = {'_df': second_payload.df.assign(Au=second_payload.df['Au'] * 2)}
-    normalized = apply_dataframe_contract(legacy_node_result, {'input': second})
+    import pytest
+    with pytest.raises(ValueError, match='ID column not found'):
+        SelectColumnsNode().run(
+            {'id': 'select-2', 'data': {'label': 'Select'}},
+            {'input': first},
+            {'mode': 'select', 'columns': ['Au'], 'id_column': 'batch_id'},
+            None,
+        )
+    legacy_node_result = {'_df': first_payload.df.assign(Au=first_payload.df['Au'] * 2)}
+    normalized = apply_dataframe_contract(legacy_node_result, {'input': first})
     normalized_payload = dataframe_payload({'input': normalized})
-    assert normalized_payload is not None
-    assert normalized_payload.id_column == 'batch_id'
-    assert normalized_payload.df.columns.tolist() == ['batch_id', 'Au']
-    assert normalized_payload.source_columns == ['sample_id', 'batch_id', 'Au', 'Cu']
+    assert normalized_payload.id_column == 'sample_id'
+    assert normalized_payload.df.columns.tolist() == ['sample_id', 'Au']
 
 
 def test_duplicate_error_defaults_to_inherited_workflow_id() -> None:

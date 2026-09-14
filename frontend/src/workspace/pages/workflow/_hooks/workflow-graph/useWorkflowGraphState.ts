@@ -1,0 +1,30 @@
+import { useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
+import type { Edge, Node } from '@xyflow/react';
+import { useAtomicStore } from '../../../../../shared/state/atomicStore';
+import type { createWorkflowGraphStore } from '../../../../../features/workflow/model/workflowGraphStore';
+import { connectedGraph } from '../../../../_model/graph';
+type Store = ReturnType<typeof createWorkflowGraphStore>;
+export function useWorkflowGraphState(store: Store) {
+    const nodes = useAtomicStore(store, (state) => state.liveNodes);
+    const documentNodes = useAtomicStore(store, (state) => state.documentNodes);
+    const edges = useAtomicStore(store, (state) => state.edges);
+    const selectedId = useAtomicStore(store, (state) => state.selectedId);
+    const selectedIds = useAtomicStore(store, (state) => state.selectedIds);
+    const selectedEdgeId = useAtomicStore(store, (state) => state.selectedEdgeId);
+    const selectedEdgeIds = useAtomicStore(store, (state) => state.selectedEdgeIds);
+    const modalNodeId = useAtomicStore(store, (state) => state.modalNodeId);
+    const ctrlSelectionActive = useAtomicStore(store, (state) => state.ctrlSelectionActive);
+    const setNodes = useCallback<Dispatch<SetStateAction<Node[]>>>((value) => store.getState().setNodes(value), [store]);
+    const setEdges = useCallback<Dispatch<SetStateAction<Edge[]>>>((value) => store.getState().setEdges(value), [store]);
+    const setSelectedId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setSelectedId(value), [store]);
+    const setSelectedIds = useCallback<Dispatch<SetStateAction<string[]>>>((value) => store.getState().setSelectedIds(value), [store]);
+    const setSelectedEdgeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setSelectedEdgeId(value), [store]);
+    const setSelectedEdgeIds = useCallback<Dispatch<SetStateAction<string[]>>>((value) => store.getState().setSelectedEdgeIds(value), [store]);
+    const setModalNodeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setModalNodeId(value), [store]);
+    const nodesById = useMemo(() => new Map(documentNodes.map((node) => [node.id, node])), [documentNodes]);
+    const selectedNode = useMemo(() => nodesById.get(selectedId || '') || null, [nodesById, selectedId]);
+    const selectedEdge = useMemo(() => edges.find((edge) => edge.id === selectedEdgeId) || null, [edges, selectedEdgeId]);
+    const selectedFlow = useMemo(() => connectedGraph(documentNodes, edges, selectedId), [documentNodes, edges, selectedId]);
+    const modalNode = useMemo(() => nodesById.get(modalNodeId || '') || null, [modalNodeId, nodesById]);
+    return { nodes, documentNodes, setNodes, edges, setEdges, nodesById, selectedNode, selectedEdge, selectedFlow, modalNode, selectedId, setSelectedId, selectedIds, setSelectedIds, selectedEdgeId, setSelectedEdgeId, selectedEdgeIds, setSelectedEdgeIds, modalNodeId, setModalNodeId, ctrlSelectionActive };
+}

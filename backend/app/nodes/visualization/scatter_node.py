@@ -31,10 +31,22 @@ class ScatterPlotNode(BaseNode):
     inputs = [port('data', 'DataFrame', 'dataframe')]
     outputs = [port('plot', 'Scatter Plot', 'plot')]
     settings_schema = [
-        setting('scatter_blocks', 'Scatter Plot Blocks', 'scatter_blocks', [], help='Add multiple X/Y scatter plot blocks in one node.'),
-        setting('x_column', 'X Column', 'column', ''),
-        setting('y_column', 'Y Column', 'column', ''),
-        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
+        setting(
+                'scatter_blocks',
+                'Scatter Plot Blocks',
+                'scatter_blocks',
+                [],
+                help=(
+                    'Add one or more scatter plot blocks. Each block creates an independent plot. '
+                    'Each block has Plot Title, X Column, Y Column, Color, Point Size, '
+                    'X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. '
+                    'Point Size supports values from 2 to 30. '
+                    'Max Points supports values from 10 to 10000 and defaults to 1000.'
+                ),
+            ),
+        # setting('x_column', 'X Column', 'column', ''),
+        # setting('y_column', 'Y Column', 'column', ''),
+        # setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
 
     def run(self, node, inputs, settings, context):

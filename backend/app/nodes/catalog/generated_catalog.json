@@ -1008,6 +1008,204 @@
       "cacheable": true,
       "category": "Data Cleaning",
       "comingSoon": false,
+      "description": "Convert explicitly selected Persian/Arabic numbers or Jalali dates; leaves other columns unchanged.",
+      "executionMode": "instant",
+      "id": "CL-011",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "data",
+          "multiple": false,
+          "name": "DataFrame",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "label": "Persian Numbers / Dates",
+      "name": "Persian Numbers / Dates",
+      "outputs": [
+        {
+          "id": "dataframe",
+          "multiple": false,
+          "name": "Converted DataFrame",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "params": [
+        {
+          "default": [],
+          "help": "",
+          "label": "Columns",
+          "name": "columns",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "number",
+          "help": "",
+          "label": "Conversion",
+          "name": "kind",
+          "options": [
+            "number",
+            "jalali",
+            "gregorian"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        },
+        {
+          "default": "raise",
+          "help": "",
+          "label": "Invalid Values",
+          "name": "errors",
+          "options": [
+            "raise",
+            "coerce"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": [],
+          "help": "",
+          "label": "Columns",
+          "name": "columns",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "number",
+          "help": "",
+          "label": "Conversion",
+          "name": "kind",
+          "options": [
+            "number",
+            "jalali",
+            "gregorian"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        },
+        {
+          "default": "raise",
+          "help": "",
+          "label": "Invalid Values",
+          "name": "errors",
+          "options": [
+            "raise",
+            "coerce"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "CL-011",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": true,
+      "category": "Data Cleaning",
+      "comingSoon": false,
+      "description": "Remove repeated rows using selected input columns, preserving original row order.",
+      "executionMode": "instant",
+      "id": "CL-012",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "data",
+          "multiple": false,
+          "name": "DataFrame",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "label": "Remove Duplicate Rows",
+      "name": "Remove Duplicate Rows",
+      "outputs": [
+        {
+          "id": "dataframe",
+          "multiple": false,
+          "name": "Unique Rows",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "params": [
+        {
+          "default": [],
+          "help": "",
+          "label": "Compare Columns",
+          "name": "columns",
+          "options": [],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "first",
+          "help": "",
+          "label": "Keep",
+          "name": "keep",
+          "options": [
+            "first",
+            "last",
+            "none"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": [],
+          "help": "",
+          "label": "Compare Columns",
+          "name": "columns",
+          "options": [],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "first",
+          "help": "",
+          "label": "Keep",
+          "name": "keep",
+          "options": [
+            "first",
+            "last",
+            "none"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "CL-012",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": true,
+      "category": "Data Cleaning",
+      "comingSoon": false,
       "description": "Converts selected columns to numeric, text, boolean, or datetime.",
       "executionMode": "instant",
       "id": "CL-004",
@@ -1256,7 +1454,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Data Cleaning",
       "comingSoon": false,
@@ -1346,7 +1544,7 @@
         },
         {
           "default": "",
-          "help": "Optional pandas query. If set, it is applied before the simple condition.",
+          "help": "Optional safe row filter (comparisons and and/or). If set, it is applied before the simple condition.",
           "label": "Row Query",
           "name": "row_query",
           "options": [],
@@ -1446,7 +1644,7 @@
         },
         {
           "default": "",
-          "help": "Optional pandas query. If set, it is applied before the simple condition.",
+          "help": "Optional safe row filter (comparisons and and/or). If set, it is applied before the simple condition.",
           "label": "Row Query",
           "name": "row_query",
           "options": [],
@@ -1533,7 +1731,7 @@
       "params": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more replacement blocks. Each block has Columns, Search Method, and Replacement. Search Method can be Value or Value Type. For Value search, configure Condition and Search Value. Conditions include match, include, starts_with, ends_with, regex, >, >=, <, <=. For Value Type search, choose string, numeric, int, float, or missing. Replacement can be an entered value or missing/none. When using an entered value, configure Replacement Value.",
           "label": "Replacement Blocks",
           "name": "replacement_blocks",
           "options": [],
@@ -1556,7 +1754,7 @@
       "settingsSchema": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more replacement blocks. Each block has Columns, Search Method, and Replacement. Search Method can be Value or Value Type. For Value search, configure Condition and Search Value. Conditions include match, include, starts_with, ends_with, regex, >, >=, <, <=. For Value Type search, choose string, numeric, int, float, or missing. Replacement can be an entered value or missing/none. When using an entered value, configure Replacement Value.",
           "label": "Replacement Blocks",
           "name": "replacement_blocks",
           "options": [],
@@ -1580,7 +1778,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Data Cleaning",
       "comingSoon": false,
@@ -1618,7 +1816,7 @@
       "params": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more imputation blocks. Each block has Columns and Method. Methods: mean, median, constant, interpolate, knn. constant adds Constant Value. interpolate adds Interpolation Method (linear, nearest, zero, slinear) and Limit Direction (both, forward, backward). knn adds Number of Neighbors and Weights (uniform, distance).",
           "label": "Imputation Blocks",
           "name": "imputation_blocks",
           "options": [],
@@ -1641,7 +1839,7 @@
       "settingsSchema": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more imputation blocks. Each block has Columns and Method. Methods: mean, median, constant, interpolate, knn. constant adds Constant Value. interpolate adds Interpolation Method (linear, nearest, zero, slinear) and Limit Direction (both, forward, backward). knn adds Number of Neighbors and Weights (uniform, distance).",
           "label": "Imputation Blocks",
           "name": "imputation_blocks",
           "options": [],
@@ -2580,6 +2778,118 @@
       "cacheable": true,
       "category": "Transformation",
       "comingSoon": false,
+      "description": "Summarize numeric columns by category, batch, supplier or another connected column.",
+      "executionMode": "instant",
+      "id": "TR-022",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "data",
+          "multiple": false,
+          "name": "DataFrame",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "label": "Group Summary",
+      "name": "Group Summary",
+      "outputs": [
+        {
+          "id": "dataframe",
+          "multiple": false,
+          "name": "Grouped Data",
+          "required": true,
+          "type": "dataframe"
+        }
+      ],
+      "params": [
+        {
+          "default": "",
+          "help": "",
+          "label": "Group By",
+          "name": "group_by",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "column"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "Value Columns",
+          "name": "columns",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "mean",
+          "help": "",
+          "label": "Aggregation",
+          "name": "operation",
+          "options": [
+            "mean",
+            "sum",
+            "min",
+            "max",
+            "count",
+            "median"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "",
+          "help": "",
+          "label": "Group By",
+          "name": "group_by",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "column"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "Value Columns",
+          "name": "columns",
+          "options": [],
+          "required": true,
+          "supportsDynamic": true,
+          "type": "columns"
+        },
+        {
+          "default": "mean",
+          "help": "",
+          "label": "Aggregation",
+          "name": "operation",
+          "options": [
+            "mean",
+            "sum",
+            "min",
+            "max",
+            "count",
+            "median"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "TR-022",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "2",
+      "cacheable": true,
+      "category": "Transformation",
+      "comingSoon": false,
       "description": "Scales selected numeric columns using the selected scaler method.",
       "executionMode": "instant",
       "id": "TR-020",
@@ -2869,7 +3179,7 @@
       "params": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more normalization blocks. Each block has Columns and Method. Methods: ln, log10, sqrt, boxcox, yeo_johnson, quantile_normal, l1, l2, max. ln, log10, sqrt, and boxcox add Offset. boxcox and yeo_johnson add Standardize. quantile_normal adds Number of Quantiles and Random State.",
           "label": "Normalization Blocks",
           "name": "normalization_blocks",
           "options": [],
@@ -2892,7 +3202,7 @@
       "settingsSchema": [
         {
           "default": [],
-          "help": "",
+          "help": "Add one or more normalization blocks. Each block has Columns and Method. Methods: ln, log10, sqrt, boxcox, yeo_johnson, quantile_normal, l1, l2, max. ln, log10, sqrt, and boxcox add Offset. boxcox and yeo_johnson add Standardize. quantile_normal adds Number of Quantiles and Random State.",
           "label": "Normalization Blocks",
           "name": "normalization_blocks",
           "options": [],
@@ -3221,86 +3531,26 @@
       "params": [
         {
           "default": [],
-          "help": "Add multiple X/Y scatter plot blocks in one node.",
+          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Color, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
           "label": "Scatter Plot Blocks",
           "name": "scatter_blocks",
           "options": [],
           "required": false,
           "supportsDynamic": true,
           "type": "scatter_blocks"
-        },
-        {
-          "default": "",
-          "help": "",
-          "label": "X Column",
-          "name": "x_column",
-          "options": [],
-          "required": false,
-          "supportsDynamic": true,
-          "type": "column"
-        },
-        {
-          "default": "",
-          "help": "",
-          "label": "Y Column",
-          "name": "y_column",
-          "options": [],
-          "required": false,
-          "supportsDynamic": true,
-          "type": "column"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "priority": "MVP",
       "settingsSchema": [
         {
           "default": [],
-          "help": "Add multiple X/Y scatter plot blocks in one node.",
+          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Color, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
           "label": "Scatter Plot Blocks",
           "name": "scatter_blocks",
           "options": [],
           "required": false,
           "supportsDynamic": true,
           "type": "scatter_blocks"
-        },
-        {
-          "default": "",
-          "help": "",
-          "label": "X Column",
-          "name": "x_column",
-          "options": [],
-          "required": false,
-          "supportsDynamic": true,
-          "type": "column"
-        },
-        {
-          "default": "",
-          "help": "",
-          "label": "Y Column",
-          "name": "y_column",
-          "options": [],
-          "required": false,
-          "supportsDynamic": true,
-          "type": "column"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "supportsDynamicParameters": true,
@@ -3848,6 +4098,106 @@
       "cacheable": true,
       "category": "ML Data Processing",
       "comingSoon": false,
+      "description": "Imputation and scaling fitted only on training rows, separately in every fold; reused for prediction.",
+      "executionMode": "instant",
+      "id": "MP-005",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "training",
+          "multiple": false,
+          "name": "Split / Folds",
+          "required": true,
+          "type": "any"
+        }
+      ],
+      "label": "Training Preprocessor",
+      "name": "Training Preprocessor",
+      "outputs": [
+        {
+          "id": "training",
+          "multiple": false,
+          "name": "Training Data",
+          "required": true,
+          "type": "any"
+        }
+      ],
+      "params": [
+        {
+          "default": "median",
+          "help": "",
+          "label": "Missing Numeric Values",
+          "name": "imputation",
+          "options": [
+            "mean",
+            "median",
+            "most_frequent",
+            "constant"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        },
+        {
+          "default": "standard",
+          "help": "",
+          "label": "Scaling",
+          "name": "scaling",
+          "options": [
+            "none",
+            "standard",
+            "minmax",
+            "robust",
+            "maxabs"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "median",
+          "help": "",
+          "label": "Missing Numeric Values",
+          "name": "imputation",
+          "options": [
+            "mean",
+            "median",
+            "most_frequent",
+            "constant"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        },
+        {
+          "default": "standard",
+          "help": "",
+          "label": "Scaling",
+          "name": "scaling",
+          "options": [
+            "none",
+            "standard",
+            "minmax",
+            "robust",
+            "maxabs"
+          ],
+          "required": false,
+          "supportsDynamic": true,
+          "type": "select"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "MP-005",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "2",
+      "cacheable": true,
+      "category": "ML Data Processing",
+      "comingSoon": false,
       "description": "Selects one target column and multiple feature columns for model training.",
       "executionMode": "instant",
       "id": "MP-002",
@@ -3936,7 +4286,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Data Processing",
       "comingSoon": false,
@@ -4061,7 +4411,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Data Processing",
       "comingSoon": false,
@@ -4621,7 +4971,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -4716,7 +5066,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -4831,7 +5181,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -4966,7 +5316,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5121,7 +5471,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5256,7 +5606,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5411,7 +5761,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5546,7 +5896,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5701,7 +6051,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5856,7 +6206,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Regression Models",
       "comingSoon": false,
@@ -5997,7 +6347,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6132,7 +6482,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6267,7 +6617,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6422,7 +6772,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6557,7 +6907,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6712,7 +7062,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -6867,7 +7217,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -7008,7 +7358,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -7153,7 +7503,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,
@@ -7288,7 +7638,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Classification Models",
       "comingSoon": false,

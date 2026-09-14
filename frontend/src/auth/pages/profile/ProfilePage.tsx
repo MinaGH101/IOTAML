@@ -83,7 +83,7 @@ export function ProfilePage({
   };
 
   return (
-    <div className="app-shell manager-shell">
+    <div className="app-shell manager-shell iota-reference-shell">
       <AppTopNav
         user={user}
         title="پروفایل کاربر"
@@ -99,6 +99,7 @@ export function ProfilePage({
         {message && <div className={`manager-toast ${message.tone}`}>{message.text}</div>}
 
         <section className="profile-layout-reference">
+          <div className="profile-primary-stack-reference">
           <article className="manager-panel profile-main-card-reference">
             <p className="section-label-reference">اطلاعات حساب کاربری</p>
 
@@ -149,19 +150,25 @@ export function ProfilePage({
               </label>
             </div>
 
-            <button className="primary profile-save-reference" type="button" onClick={save} disabled={busy}>
-              {busy ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
-              ذخیره پروفایل
-            </button>
+            <div className="profile-actions-reference">
+              <button className="primary profile-save-reference" type="button" onClick={save} disabled={busy}>
+                {busy ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
+                ذخیره پروفایل
+              </button>
+            </div>
           </article>
 
+          <section className="manager-panel profile-password-card">
+            <div className="panel-heading"><ShieldCheck size={16} /><div><b>تغییر رمز عبور</b><span>رمز جدید باید حداقل ۱۰ کاراکتر باشد.</span></div></div>
+            <div className="profile-password-fields-reference">
+              <label><span>رمز فعلی</span><input type="password" placeholder="رمز فعلی" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></label>
+              <label><span>رمز جدید</span><input type="password" placeholder="حداقل ۱۰ کاراکتر" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></label>
+              <button className="secondary profile-password-save-reference" type="button" disabled={busy} onClick={() => void savePassword()}>ذخیره رمز جدید</button>
+            </div>
+          </section>
+          </div>
+
           <aside className="profile-side-stack-reference">
-            <section className="manager-panel profile-password-card">
-              <div className="panel-heading"><ShieldCheck size={16} /><div><b>تغییر رمز عبور</b><span>پس از تغییر، نشست‌های قبلی بسته می‌شوند.</span></div></div>
-              <label>رمز فعلی<input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></label>
-              <label>رمز جدید<input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></label>
-              <button className="icon-button full-width" type="button" disabled={busy} onClick={() => void savePassword()}>ذخیره رمز جدید</button>
-            </section>
             <section className="manager-panel activity-panel activity-panel-reference">
               <div className="panel-heading"><Clock3 size={16} /><div><b>نمودار فعالیت</b><span>فعالیت هفتگی کاربر</span></div></div>
               <div className="activity-bars activity-bars-ai activity-bars-reference">

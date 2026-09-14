@@ -53,10 +53,16 @@ export function AdminPage({ user, onBack, onProjects, onProfile, onLogout }: { u
   };
   const setField = <K extends keyof AdminUserPayload>(key: K, value: AdminUserPayload[K]) => setDraft((current) => ({ ...current, [key]: value }));
 
-  return <div className="app-shell manager-shell">
+  return <div className="app-shell manager-shell iota-reference-shell">
     <AppTopNav user={user} title="پنل مدیریت" onBack={onBack} onProjects={onProjects} onProfile={onProfile} onLogout={onLogout} />
     <main className="manager-page admin-page iota-minimal-page">
       {message && <div className={`manager-toast ${message.tone}`}>{message.text}</div>}
+      <header className="admin-page-heading">
+        <div>
+          <h2>مدیریت کاربران</h2>
+          <p>{users.length.toLocaleString('fa-IR')} حساب کاربری · نقش‌ها و دسترسی پروژه‌ها</p>
+        </div>
+      </header>
       <section className="admin-layout">
         <aside className="manager-panel admin-users-panel">
           <div className="admin-panel-head"><div><ShieldCheck size={18} /><span><b>کاربران</b><small>{users.length.toLocaleString('fa-IR')} حساب</small></span></div><button className="primary" type="button" onClick={beginCreate}><Plus size={15} /> کاربر جدید</button></div>

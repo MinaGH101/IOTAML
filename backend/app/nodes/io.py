@@ -92,7 +92,7 @@ def input_by_port(inputs: dict[str, Any], port_id: str) -> list[dict[str, Any]]:
 def _candidate_inputs(inputs: dict[str, Any], port_id: str | None = None) -> list[Any]:
     if port_id:
         by_port = input_by_port(inputs, port_id)
-        if by_port:
+        if '_by_port' in inputs:
             return by_port
     return [value for key, value in inputs.items() if not str(key).startswith('_')]
 
@@ -420,6 +420,14 @@ def selected_columns(settings: dict[str, Any], df: pd.DataFrame) -> list[str]:
     allowed = set(calculation_columns(df))
 
     def valid(values: list[Any]) -> list[str]:
+        missing = [str(c) for c in values if str(c) not in df.columns]
+        if missing:
+            raise NodeContractError(
+                'NODE_COLUMN_UNAVAILABLE',
+                f'Selected columns are not in the connected input: {", ".join(missing)}',
+                category='setting', setting='columns',
+                suggested_fix='Choose columns from the current upstream output and rerun.',
+            )
         return [str(c) for c in values if str(c) in allowed]
 
     for key in ('columns', 'selected_columns', 'feature_columns', 'column_names'):
@@ -429,13 +437,13 @@ def selected_columns(settings: dict[str, Any], df: pd.DataFrame) -> list[str]:
         if isinstance(value, str) and value.strip():
             try:
                 parsed = json.loads(value)
-                if isinstance(parsed, list):
-                    return valid(parsed)
-            except Exception:
-                pass
-            return [c.strip() for c in value.split(',') if c.strip() in allowed]
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return valid(parsed)
+            return valid([c.strip() for c in value.split(',') if c.strip()])
     single = settings.get('column')
-    return [str(single)] if single and str(single) in allowed else []
+    return valid([single]) if single else []
 
 
 
@@ -464,12 +472,8 @@ def read_dataset_path(dataset_path: str | Path) -> pd.DataFrame:
     path = Path(dataset_path)
     if not path.exists():
         raise ValueError(f'Dataset file not found: {path}')
-    suffix = path.suffix.lower()
-    if suffix in {'.xlsx', '.xls'}:
-        return pd.read_excel(path)
-    if suffix == '.tsv':
-        return pd.read_csv(path, sep='\t')
-    return pd.read_csv(path)
+    from app.domains.datasets.table_reader import read_table
+    return read_table(path)
 
 
 def read_dataset(dataset_id: Any) -> pd.DataFrame:

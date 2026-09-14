@@ -10,24 +10,24 @@ type InputGroup = {
   sourcePorts: PortDefinition[];
   targetPort?: PortDefinition;
   selectedHandle: string;
+  sourceHasRun: boolean;
   visibleOutputs: Output[];
 };
 
 type Props = {
   groups: InputGroup[];
-  hasRun: boolean;
   portCompatibility: Record<string, string[]>;
   onInputSourceHandleChange: (edgeId: string, sourceHandle: string) => void;
   onAddOutputToBoard?: (output: Output, index: number) => void;
 };
 
-export function NodeInputsPanel({ groups, hasRun, portCompatibility, onInputSourceHandleChange, onAddOutputToBoard }: Props) {
+export function NodeInputsPanel({ groups, portCompatibility, onInputSourceHandleChange, onAddOutputToBoard }: Props) {
   return (
     <section className="node-modal-section workflow-shell-card n8n-node-panel n8n-io-panel n8n-input-panel">
       <div className="section-title n8n-panel-title">ورودی</div>
       <div className="n8n-panel-body">
         {groups.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود را به یک خروجی قبلی وصل کنید.</small></div>}
-        {groups.map(({ edge, sourceNode, sourceDefinition, sourcePorts, targetPort, selectedHandle, visibleOutputs }) => (
+        {groups.map(({ edge, sourceNode, sourceDefinition, sourcePorts, targetPort, selectedHandle, sourceHasRun, visibleOutputs }) => (
           <div className="node-input-source workflow-shell-card" key={edge.id}>
             <div className="node-input-source-head">
               <span><b>{String(sourceNode?.data?.label || sourceDefinition?.label || edge.source)}</b><small>{String(edge.targetHandle || 'input')}</small></span>
@@ -46,8 +46,8 @@ export function NodeInputsPanel({ groups, hasRun, portCompatibility, onInputSour
                 })}
               </div>
             )}
-            {!hasRun && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود قبلی را اجرا کنید.</small></div>}
-            {hasRun && visibleOutputs.length === 0 && <div className="empty-state n8n-empty-state">برای خروجی انتخاب‌شده داده قابل نمایش پیدا نشد.</div>}
+            {!sourceHasRun && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود قبلی را اجرا کنید.</small></div>}
+            {sourceHasRun && visibleOutputs.length === 0 && <div className="empty-state n8n-empty-state">برای خروجی انتخاب‌شده داده قابل نمایش پیدا نشد.</div>}
             <OutputCards outputs={visibleOutputs} variant="modal" onAddToBoard={onAddOutputToBoard} />
           </div>
         ))}

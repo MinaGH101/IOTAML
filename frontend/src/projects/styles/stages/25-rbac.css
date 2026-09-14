@@ -1,0 +1,365 @@
+/* projects styles extracted from 25-rbac-access.css. */
+.projects-reference-page {
+width: min(1480px, 100%);
+  margin-inline: auto;
+}
+.projects-toolbar {
+display: grid;
+  grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(130px, auto)) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+}
+.projects-toolbar select,
+.project-assignment-editor select {
+width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-control-bg);
+  color: var(--theme-text);
+  font: inherit;
+}
+.project-access-section {
+display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.project-section-heading {
+display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: 2px;
+}
+.project-section-heading > span {
+display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--theme-text);
+}
+.project-section-heading small {
+color: var(--theme-text-muted);
+}
+.project-reference-grid {
+display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  gap: 12px;
+}
+.project-reference-card {
+position: relative;
+  min-width: 0;
+  min-height: 192px;
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  overflow: hidden;
+  padding: 16px 16px 14px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-bg);
+  color: var(--theme-text);
+  text-align: right;
+  transition: transform var(--theme-transition), border-color var(--theme-transition), box-shadow var(--theme-transition);
+}
+.project-reference-card:hover {
+transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--theme-primary) 48%, var(--theme-control-border));
+}
+.project-reference-card.is-new-assignment {
+border-color: color-mix(in srgb, var(--theme-primary) 58%, var(--theme-control-border));
+}
+.project-color-strip {
+position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+}
+.project-reference-card-head {
+min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.project-reference-card-head > div {
+min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.project-reference-card-head b,
+.project-reference-card-head small {
+overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.project-reference-card-head small,
+.project-people-line,
+.project-reference-card-meta {
+color: var(--theme-text-muted);
+}
+.project-card-icon-reference {
+width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+.new-assignment-badge {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: fit-content;
+  min-height: 25px;
+  padding: 3px 8px;
+  border-radius: var(--theme-radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.new-assignment-badge {
+background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+.project-access-line,
+.project-people-line,
+.project-reference-card-meta {
+display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.project-people-line {
+display: grid;
+  gap: 4px;
+  padding-block: 9px;
+  border-block: var(--theme-border-width) solid var(--theme-divider);
+  font-size: 11px;
+}
+.project-reference-card-meta {
+margin-top: auto;
+  font-size: 11px;
+}
+.project-reference-card-meta span {
+display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.new-assignment-section {
+padding: 14px;
+  border: var(--theme-border-width) solid color-mix(in srgb, var(--theme-primary) 28%, var(--theme-control-border));
+  border-radius: var(--theme-radius-panel);
+  background: color-mix(in srgb, var(--theme-primary) 5%, var(--theme-panel-bg));
+}
+.project-assignment-editor {
+display: grid;
+  gap: 13px;
+  margin-top: 8px;
+  padding: 14px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-muted);
+}
+.assignment-editor-title {
+display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.assignment-editor-title > div {
+display: grid;
+  gap: 3px;
+}
+.assignment-editor-title span {
+color: var(--theme-text-muted);
+  font-size: 11px;
+}
+.project-form.is-readonly input,
+.project-form.is-readonly textarea,
+.project-form.is-readonly select {
+opacity: .78;
+  cursor: not-allowed;
+}
+@media (width <= 1120px) {
+.projects-toolbar {
+grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(130px, auto));
+}
+}
+@media (width <= 720px) {
+.projects-toolbar {
+grid-template-columns: 1fr;
+}
+.project-reference-grid {
+grid-template-columns: 1fr;
+}
+.project-reference-card-head {
+grid-template-columns: 38px minmax(0, 1fr);
+}
+.new-assignment-badge {
+grid-column: 1 / -1;
+}
+.project-section-heading {
+align-items: stretch;
+    flex-direction: column;
+}
+}
+.project-form-primary-grid {
+display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.project-assignment-editor {
+gap: 10px;
+  padding: 12px;
+}
+.assignment-mode-switch {
+display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: var(--theme-border-width) solid var(--theme-divider);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-control-bg);
+}
+.assignment-mode-switch button {
+min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--theme-radius-control);
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+.assignment-picker {
+position: relative;
+  display: grid;
+  gap: 7px;
+}
+.assignment-picker-trigger {
+width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 11px;
+  border: var(--theme-border-width) solid var(--theme-divider);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-control-bg);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+.assignment-picker-trigger .is-placeholder {
+color: var(--theme-text-muted);
+}
+.assignment-picker.is-open .assignment-picker-trigger {
+border-color: var(--theme-primary);
+}
+.assignment-selected-chips {
+display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.assignment-selected-chips button {
+min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: var(--theme-border-width) solid color-mix(in srgb, var(--theme-primary) 30%, var(--theme-divider));
+  border-radius: var(--theme-radius-pill);
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+  font-size: 11px;
+}
+.assignment-picker-menu {
+position: absolute;
+  z-index: 40;
+  inset-inline: 0;
+  top: calc(100% + 5px);
+  padding: 7px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-bg);
+}
+.assignment-picker-search {
+min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: var(--theme-border-width) solid var(--theme-divider);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-control-bg);
+}
+.assignment-picker-search input {
+min-height: 32px !important;
+  width: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  outline: 0;
+}
+.assignment-picker-options {
+max-height: 210px;
+  margin-top: 6px;
+  overflow: auto;
+  display: grid;
+  gap: 3px;
+}
+.assignment-picker-option {
+width: 100%;
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--theme-radius-control);
+  background: transparent;
+  color: var(--theme-text);
+  text-align: start;
+  cursor: pointer;
+}
+.assignment-picker-option:hover {
+background: var(--theme-primary-soft);
+}
+.assignment-picker-check {
+width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-compact);
+  color: var(--theme-white);
+}
+.assignment-picker-person {
+min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.assignment-picker-person b,
+.assignment-picker-person small {
+overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.assignment-picker-person small,
+.assignment-picker-empty {
+color: var(--theme-text-muted); font-size: 11px;
+}
+.assignment-picker-empty {
+padding: 14px; text-align: center;
+}
+@media (max-width: 760px) {
+.project-form-primary-grid {
+grid-template-columns: 1fr;
+}
+}

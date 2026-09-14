@@ -1,0 +1,375 @@
+{
+  "version": 1,
+  "purpose": "Curated workflow-intent patterns for the read-only IOTA AI guide. Patterns define logical steps only. Exact node names are resolved from the live backend node registry at request time.",
+  "patterns": [
+    {
+      "id": "classification",
+      "title": "Train a classification model",
+      "keywords": [
+        "classification",
+        "classifier",
+        "classify",
+        "predict class",
+        "train model",
+        "طبقه بندی",
+        "طبقه‌بندی",
+        "کلاس بندی",
+        "مدل طبقه بندی",
+        "مدل طبقه‌بندی",
+        "آموزش مدل"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the project dataset into the workflow.",
+          "required": true
+        },
+        {
+          "id": "inspect_data",
+          "catalog_query": "data description inspection",
+          "purpose": "Inspect columns, types, ranges, and basic data quality before modeling.",
+          "required": false
+        },
+        {
+          "id": "missing_values",
+          "catalog_query": "missing values report",
+          "purpose": "Check whether important columns contain missing values.",
+          "required": false
+        },
+        {
+          "id": "imputation",
+          "catalog_query": "imputation missing values cleaning",
+          "purpose": "Fill missing values when they cannot simply be left as-is.",
+          "required": false,
+          "condition": "Use only when the selected modeling columns contain missing values that need treatment."
+        },
+        {
+          "id": "select_features_target",
+          "catalog_query": "select features target ml data processing",
+          "purpose": "Choose the input features and the classification target.",
+          "required": true
+        },
+        {
+          "id": "split",
+          "catalog_query": "train test split",
+          "purpose": "Separate training data from unseen test data.",
+          "required": true
+        },
+        {
+          "id": "scaling",
+          "catalog_query": "scaler transformation",
+          "purpose": "Scale numeric features for models that are sensitive to feature magnitude.",
+          "required": false,
+          "condition": "Usually useful for KNN, SVC, Linear SVC, and Logistic Regression; often unnecessary for tree-based models."
+        },
+        {
+          "id": "model",
+          "catalog_query": "classification models",
+          "category": "ML Classification Models",
+          "purpose": "Train a classification model.",
+          "required": true,
+          "selection": "Choose one implemented classifier based on the data and modeling goal."
+        },
+        {
+          "id": "validate",
+          "catalog_query": "model validation analysis",
+          "purpose": "Evaluate model performance on validation/test predictions.",
+          "required": true
+        },
+        {
+          "id": "feature_importance",
+          "catalog_query": "feature importance model analysis",
+          "purpose": "Inspect which features contribute most when the selected model supports importance values.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "regression",
+      "title": "Train a regression model",
+      "keywords": [
+        "regression",
+        "regressor",
+        "predict number",
+        "predict value",
+        "continuous target",
+        "رگرسیون",
+        "پیش بینی مقدار",
+        "پیش‌بینی مقدار",
+        "مدل رگرسیون"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the project dataset into the workflow.",
+          "required": true
+        },
+        {
+          "id": "inspect_data",
+          "catalog_query": "data description inspection",
+          "purpose": "Inspect data types, distributions, and ranges before modeling.",
+          "required": false
+        },
+        {
+          "id": "missing_values",
+          "catalog_query": "missing values report",
+          "purpose": "Check modeling columns for missing values.",
+          "required": false
+        },
+        {
+          "id": "imputation",
+          "catalog_query": "imputation missing values cleaning",
+          "purpose": "Fill missing values when necessary.",
+          "required": false,
+          "condition": "Use only when relevant modeling columns contain missing values."
+        },
+        {
+          "id": "select_features_target",
+          "catalog_query": "select features target ml data processing",
+          "purpose": "Choose the input features and continuous target.",
+          "required": true
+        },
+        {
+          "id": "split",
+          "catalog_query": "train test split",
+          "purpose": "Separate training and test data.",
+          "required": true
+        },
+        {
+          "id": "scaling",
+          "catalog_query": "scaler transformation",
+          "purpose": "Scale features for magnitude-sensitive regression models.",
+          "required": false,
+          "condition": "Useful for models such as KNN, Ridge, Lasso, and ElasticNet; typically unnecessary for tree ensembles."
+        },
+        {
+          "id": "model",
+          "catalog_query": "regression models",
+          "category": "ML Regression Models",
+          "purpose": "Train a regression model.",
+          "required": true,
+          "selection": "Choose one implemented regressor based on the data and modeling goal."
+        },
+        {
+          "id": "validate",
+          "catalog_query": "model validation analysis",
+          "purpose": "Evaluate predictive performance.",
+          "required": true
+        },
+        {
+          "id": "prediction_plot",
+          "catalog_query": "prediction plot model analysis",
+          "purpose": "Visualize predicted values against observed values.",
+          "required": false
+        },
+        {
+          "id": "feature_importance",
+          "catalog_query": "feature importance model analysis",
+          "purpose": "Inspect feature influence when supported by the selected model.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "visualize_data",
+      "title": "Visualize a dataset",
+      "keywords": [
+        "visualize",
+        "visualise",
+        "plot",
+        "chart",
+        "graph",
+        "نمودار",
+        "مصور",
+        "مصورسازی",
+        "مصور سازی",
+        "نمایش داده",
+        "ویژوال",
+        "ویژوالایز"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the dataset into the workflow.",
+          "required": true
+        },
+        {
+          "id": "inspect_data",
+          "catalog_query": "data description inspection",
+          "purpose": "Understand available columns and their types before choosing a chart.",
+          "required": false
+        },
+        {
+          "id": "visualization",
+          "catalog_query": "visualizations plot chart",
+          "category": "Visualizations",
+          "purpose": "Create the visualization that matches the question.",
+          "required": true,
+          "selection": "Choose among the implemented visualization nodes according to the user's analytical goal."
+        }
+      ]
+    },
+    {
+      "id": "missing_data",
+      "title": "Inspect and handle missing values",
+      "keywords": [
+        "missing",
+        "missing value",
+        "null",
+        "nan",
+        "empty values",
+        "داده گمشده",
+        "مقادیر گمشده",
+        "مقدار گمشده",
+        "خالی",
+        "داده ندارم",
+        "بعضی داده ها رو ندارم",
+        "بعضی داده‌ها را ندارم"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the dataset if it is not already available upstream.",
+          "required": false
+        },
+        {
+          "id": "report",
+          "catalog_query": "missing values report",
+          "purpose": "Measure which columns contain missing values and how much data is missing.",
+          "required": true
+        },
+        {
+          "id": "imputation",
+          "catalog_query": "imputation missing values",
+          "purpose": "Fill missing values using one of the node's supported strategies.",
+          "required": false,
+          "condition": "Use when missing values should be filled rather than left untouched."
+        }
+      ]
+    },
+    {
+      "id": "correlation_analysis",
+      "title": "Analyze correlations",
+      "keywords": [
+        "correlation",
+        "relationship",
+        "correlate",
+        "همبستگی",
+        "ارتباط متغیر",
+        "رابطه متغیر"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the dataset.",
+          "required": true
+        },
+        {
+          "id": "select_or_clean",
+          "catalog_query": "select rows columns cleaning",
+          "purpose": "Keep the numeric columns relevant to the analysis when needed.",
+          "required": false
+        },
+        {
+          "id": "correlation",
+          "catalog_query": "correlation matrix inspection",
+          "purpose": "Calculate pairwise correlations between numeric variables.",
+          "required": true
+        },
+        {
+          "id": "scatter",
+          "catalog_query": "scatter plot visualization",
+          "purpose": "Inspect an important pair of variables visually when needed.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "outlier_analysis",
+      "title": "Detect outliers or anomalies",
+      "keywords": [
+        "outlier",
+        "anomaly",
+        "abnormal",
+        "extreme value",
+        "پرت",
+        "داده پرت",
+        "ناهنجاری",
+        "مقدار غیرعادی"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the dataset.",
+          "required": true
+        },
+        {
+          "id": "inspect",
+          "catalog_query": "data description inspection",
+          "purpose": "Inspect distributions and ranges.",
+          "required": false
+        },
+        {
+          "id": "box_plot",
+          "catalog_query": "box plot visualization",
+          "purpose": "Visually inspect potential extreme values.",
+          "required": false
+        },
+        {
+          "id": "detector",
+          "catalog_query": "outlier anomaly detector",
+          "category": "Anomaly Detection",
+          "purpose": "Run an implemented outlier/anomaly detection method.",
+          "required": true,
+          "selection": "Choose the detector according to whether the user wants statistical, IQR, threshold, or gap-based detection."
+        }
+      ]
+    },
+    {
+      "id": "feature_selection",
+      "title": "Evaluate and select useful features",
+      "keywords": [
+        "feature selection",
+        "important features",
+        "select features",
+        "ویژگی مهم",
+        "انتخاب ویژگی",
+        "فیچر سلکشن",
+        "اهمیت ویژگی"
+      ],
+      "steps": [
+        {
+          "id": "select_features_target",
+          "catalog_query": "select features target ml data processing",
+          "purpose": "Define candidate input features and the target.",
+          "required": true
+        },
+        {
+          "id": "mutual_information",
+          "catalog_query": "mutual information scores",
+          "purpose": "Measure nonlinear dependency between features and target when appropriate.",
+          "required": false
+        },
+        {
+          "id": "f_regression",
+          "catalog_query": "f regression scores",
+          "purpose": "Score features for a continuous regression target using the implemented F-regression analysis.",
+          "required": false,
+          "condition": "Use for regression targets, not as the default for classification."
+        },
+        {
+          "id": "feature_importance",
+          "catalog_query": "feature importance model analysis",
+          "purpose": "Inspect model-based importance after training a compatible model.",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

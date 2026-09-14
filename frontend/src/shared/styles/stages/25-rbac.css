@@ -1,0 +1,87 @@
+/* shared styles extracted from 25-rbac-access.css. */
+.project-filter-search {
+min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 11px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-control-bg);
+  color: var(--theme-text-muted);
+}
+.project-filter-search:focus-within {
+border-color: var(--theme-primary);
+}
+.project-filter-search input {
+width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+}
+.access-badge {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: fit-content;
+  min-height: 25px;
+  padding: 3px 8px;
+  border-radius: var(--theme-radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.access-badge {
+background: var(--theme-panel-muted);
+  color: var(--theme-text-muted);
+}
+.access-badge.access-owner,
+.access-badge.access-admin {
+background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+.access-badge.access-edit {
+background: color-mix(in srgb, var(--theme-success) 12%, transparent);
+  color: var(--theme-success);
+}
+.access-badge.access-view {
+background: color-mix(in srgb, var(--theme-info) 12%, transparent);
+  color: var(--theme-info);
+}
+.admin-user-row.active {
+border-color: var(--theme-control-border);
+  background: var(--theme-panel-muted);
+}
+.admin-user-row.active {
+border-color: color-mix(in srgb, var(--theme-primary) 42%, var(--theme-control-border));
+}
+.profile-password-card .form-grid-2 {
+align-items: end;
+}
+@media (width <= 1120px) {
+.projects-toolbar .primary,
+.projects-toolbar .icon-button {
+width: 100%;
+}
+}
+@media (width <= 720px) {
+.form-grid-2 {
+grid-template-columns: 1fr;
+}
+}
+.assignment-mode-switch button.active {
+background: var(--theme-panel-bg);
+  color: var(--theme-primary);
+}
+.assignment-picker-option.is-selected {
+background: var(--theme-primary-soft);
+}
+.assignment-picker-option.is-selected .assignment-picker-check {
+border-color: var(--theme-primary);
+  background: var(--theme-primary);
+}

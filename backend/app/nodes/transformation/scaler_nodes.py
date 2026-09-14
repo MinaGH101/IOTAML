@@ -20,6 +20,7 @@ def _bool(value, default: bool = True) -> bool:
 
 
 class ScalerNode(BaseNode):
+    cache_version = '2'
     id = 'TR-020'
     name = 'Scaler'
     category = 'Transformation'
@@ -119,7 +120,7 @@ class ScalerNode(BaseNode):
         return dataframe_result(
             df,
             id_column=id_column if id_column and id_column in df.columns else None,
-            meta={**(payload.meta if payload else {}), 'scaled_columns': columns, 'scaler_method': method},
+            meta={**(payload.meta if payload else {}), 'scaled_columns': columns, 'scaler_method': method, 'fitted_preprocessing': True},
             report=report,
             json=report,
             output=table_output(str(node['id']), f'{node_label(node)} · Scaled Table', preview_df, max_rows),

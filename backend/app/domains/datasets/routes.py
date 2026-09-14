@@ -10,11 +10,25 @@ from app.core.rate_limit import rate_limit
 from app.domains.auth.models import User
 from app.domains.auth.service import get_current_user_model
 from app.domains.datasets.repository import dataset_repository
-from app.domains.datasets.schemas import DatasetOut
+from app.domains.datasets.schemas import DatasetOut, SqlImportRequest
+from app.domains.datasets.sql_import import available_sources, import_sql_table
 from app.domains.datasets.service import delete_dataset, get_dataset, read_dataset, upload_dataset
 from app.domains.projects.access import require_project_edit, require_project_view
 
 router = APIRouter(prefix='/datasets', tags=['datasets'])
+
+
+@router.get('/sql-sources')
+def sql_sources(current_user: User = Depends(get_current_user_model)):
+    return [{'name': name, 'tables': spec.get('tables', [])} for name, spec in available_sources(current_user).items()]
+
+
+@router.post('/sql-import', response_model=DatasetOut)
+def sql_import_route(payload: SqlImportRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model),
+                     _: None = Depends(rate_limit('sql_import', limit=5))):
+    project, _ = require_project_edit(db, payload.project_id, current_user)
+    return import_sql_table(db, user=current_user, source=payload.source, table_name=payload.table,
+                            project_id=project.id, owner_username=project.owner_username, limit=payload.limit)
 
 
 def _dataset_and_owner(db: Session, dataset_id: int, user: User, *, write: bool = False):

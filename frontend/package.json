@@ -15,9 +15,10 @@
     "check:architecture": "node scripts/check-feature-boundaries.mjs",
     "check:css-debt": "node scripts/check-css-debt.mjs",
     "check:theme": "node scripts/check-theme-contract.mjs",
-    "test:e2e": "node --test tests/e2e/*.test.mjs",
+    "test:e2e": "playwright test",
     "test:contracts": "node --test tests/unit/*.test.mjs tests/component/*.test.mjs tests/integration/*.test.mjs tests/performance/*.test.mjs",
-    "lint": "node scripts/lint-source.mjs"
+    "lint": "node scripts/lint-source.mjs",
+    "test:deployment": "node --test tests/e2e/*.test.mjs"
   },
   "dependencies": {
     "@amcharts/amcharts5": "5.13.6",
@@ -28,6 +29,7 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.3",

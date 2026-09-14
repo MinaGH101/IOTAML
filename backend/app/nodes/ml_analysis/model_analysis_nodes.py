@@ -226,6 +226,8 @@ class FeatureImportanceNode(BaseNode):
         if payload is None:
             raise ValueError('Feature Importance requires a trained model input.')
         model = payload.model
+        if hasattr(model, "named_steps"):
+            model = model.named_steps.get("estimator", model)
         names = list((payload.meta or {}).get('encoded_columns') or getattr(model, 'feature_names_in_', []))
         values = getattr(model, 'feature_importances_', None)
         if values is None and hasattr(model, 'coef_'):

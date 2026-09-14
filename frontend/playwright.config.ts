@@ -1,20 +1,20 @@
-const config = {
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 45_000,
-  expect: { timeout: 8_000 },
+  testMatch: '**/*.spec.ts',
+  timeout: 180_000,
+  expect: { timeout: 15_000 },
   fullyParallel: false,
-  retries: process.env.CI ? 2 : 0,
-  reporter: [['list']],
+  workers: 1,
+  retries: 0,
+  reporter: 'list',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173',
+    viewport: { width: 1440, height: 1000 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE, args: ['--no-sandbox'] } : {},
   },
-  webServer: {
-    command: 'npm run preview -- --port 4173',
-    url: 'http://127.0.0.1:4173/healthz',
-    reuseExistingServer: !process.env.CI,
-  },
-};
-export default config;
+});

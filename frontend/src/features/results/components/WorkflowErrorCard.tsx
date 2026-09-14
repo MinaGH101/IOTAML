@@ -8,15 +8,15 @@ export function WorkflowErrorCard({ problem }: { problem: Record<string, unknown
       </div>
       <p>{String(problem.message || 'خطای ناشناخته')}</p>
       <dl>
-        {problem.node_name && <><dt>نود</dt><dd>{String(problem.node_name)} <small dir="ltr">{String(problem.node_id || '')}</small></dd></>}
-        {problem.execution_id && <><dt>اجرای workflow</dt><dd dir="ltr">{String(problem.execution_id)}</dd></>}
-        {problem.port && <><dt>پورت ورودی</dt><dd dir="ltr">{String(problem.port)}</dd></>}
-        {problem.setting && <><dt>تنظیم</dt><dd dir="ltr">{String(problem.setting)}</dd></>}
-        {problem.column && <><dt>ستون</dt><dd dir="ltr">{String(problem.column)}</dd></>}
+        {Boolean(problem.node_name) && <><dt>نود</dt><dd>{String(problem.node_name)} <small dir="ltr">{String(problem.node_id || '')}</small></dd></>}
+        {Boolean(problem.execution_id) && <><dt>اجرای workflow</dt><dd dir="ltr">{String(problem.execution_id)}</dd></>}
+        {Boolean(problem.port) && <><dt>پورت ورودی</dt><dd dir="ltr">{String(problem.port)}</dd></>}
+        {Boolean(problem.setting) && <><dt>تنظیم</dt><dd dir="ltr">{String(problem.setting)}</dd></>}
+        {Boolean(problem.column) && <><dt>ستون</dt><dd dir="ltr">{String(problem.column)}</dd></>}
         {problem.expected !== undefined && <><dt>انتظار</dt><dd><code>{JSON.stringify(problem.expected)}</code></dd></>}
         {problem.actual !== undefined && <><dt>دریافت‌شده</dt><dd><code>{JSON.stringify(problem.actual)}</code></dd></>}
       </dl>
-      {problem.suggested_fix && <div className="workflow-problem-fix">راه‌حل: {String(problem.suggested_fix)}</div>}
+      {Boolean(problem.suggested_fix) && <div className="workflow-problem-fix">راه‌حل: {String(problem.suggested_fix)}</div>}
     </div>
   );
 }

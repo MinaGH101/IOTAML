@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import type { Project } from '../shared/_types';
-import { LoginPage } from '../auth/pages/login/LoginPage';
 import { projectsApi } from '../projects/_service/projectsApi';
 import { useServerQuery } from '../shared/state/serverQuery';
 import { queryKeys } from '../shared/state/queryKeys';
@@ -9,6 +8,7 @@ import { AppProviders } from './providers/AppProviders';
 import { useAuth } from './providers/AuthProvider';
 import { useAppRouter } from './router';
 
+const LoginPage = lazy(() => import('../auth/pages/login/LoginPage').then((module) => ({ default: module.LoginPage })));
 const AdminPage = lazy(() => import('../admin/pages/AdminPage').then((module) => ({ default: module.AdminPage })));
 const ProfilePage = lazy(() => import('../auth/pages/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })));
 const CreateProjectPage = lazy(() => import('../projects/pages/create-project/CreateProjectPage').then((module) => ({ default: module.CreateProjectPage })));
@@ -45,7 +45,11 @@ function RoutedApplication() {
 
   if (authLoading) return <LoadingPage />;
   if (!user || route.name === 'login') {
-    return <LoginPage onLogin={(profile) => { setUser(profile); navigate({ name: 'projects' }, { replace: true }); }} />;
+    return (
+      <Suspense fallback={<LoadingPage />}>
+        <LoginPage onLogin={(profile) => { setUser(profile); navigate({ name: 'projects' }, { replace: true }); }} />
+      </Suspense>
+    );
   }
   if (route.name === 'not-found') return <LoadingPage />;
   if (routeProjectId && projectQuery.error) return <LoadingPage message="پروژه پیدا نشد" />;

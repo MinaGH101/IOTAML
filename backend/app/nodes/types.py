@@ -41,13 +41,8 @@ class DataFrameLineage:
             path = Path(self.source_ref)
             if not path.is_file():
                 raise ValueError(f"Dataframe source artifact is unavailable: {path}")
-            suffix = path.suffix.lower()
-            if suffix in {".xlsx", ".xls"}:
-                frame = pd.read_excel(path)
-            elif suffix == ".tsv":
-                frame = pd.read_csv(path, sep="\t")
-            else:
-                frame = pd.read_csv(path)
+            from app.domains.datasets.table_reader import read_table
+            frame = read_table(path)
             object.__setattr__(self, "_source_df", frame)
         return frame
 
@@ -122,8 +117,7 @@ class DataFramePayload:
 
     @property
     def id_options(self) -> list[str]:
-        available = set(self.lineage.source_columns)
-        return [c for c in self.source_columns or [] if c in available]
+        return [str(column) for column in self.df.columns]
 
     @property
     def calculation_columns(self) -> list[str]:
@@ -183,7 +177,7 @@ class DataFramePayload:
 
     def with_id_column(self, id_column: str | None) -> 'DataFramePayload':
         next_id = str(id_column).strip() if id_column not in [None, ''] else None
-        if next_id and next_id not in self.lineage.source_columns:
+        if next_id and next_id not in self.df.columns:
             raise ValueError(f'ID column not found: {next_id}')
         active = [c for c in self.active_columns or [] if c != next_id]
         return DataFramePayload(

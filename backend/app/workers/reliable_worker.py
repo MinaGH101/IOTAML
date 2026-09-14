@@ -28,9 +28,11 @@ from app.core.database import SessionLocal
 from app.domains.nodes.models import CustomNode
 from app.domains.datasets.models import Dataset
 from app.domains.runs.models import Run, RunAttempt
+from app.domains.runs.repository import run_repository
 from app.domains.workflows.models import Workflow
 from app.domains.datasets.service import materialize_dataset
 from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths
+from app.workflow.execution.run_state import merge_successful_run_state
 from app.workflow.caching.service import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
 from app.infrastructure.queue.notifications import QUEUE_NAME
 from app.infrastructure.queue.repository import claim_next_run, classify_failure, fail_or_requeue, recover_stale_runs
@@ -474,6 +476,32 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
             error = f'Required artifact publication failed: {artifact_exc}'
             run.logs = append_log(run.logs, 'error', 'Required run artifacts could not be persisted.', error=str(artifact_exc))
         run.metrics = {**(result.get('metrics') or {}), 'cache': cache_stats}
+        successful_workflow = None
+        if status == 'succeeded' and run.workflow_id is not None:
+            workflow = db.get(Workflow, run.workflow_id)
+            if workflow and workflow.owner_username == run.owner_username:
+                successful_workflow = workflow
+                previous_run = run_repository.latest_successful_for_workflow(
+                    db,
+                    workflow_id=run.workflow_id,
+                    owner_username=run.owner_username,
+                    exclude_run_id=run.id,
+                )
+                if previous_run:
+                    artifacts, merged_statuses, execution_state = merge_successful_run_state(
+                        current_graph=run.workflow_graph or workflow.graph or {},
+                        current_artifacts=artifacts,
+                        current_statuses=run.node_statuses,
+                        previous_graph=previous_run.workflow_graph or {},
+                        previous_artifacts=previous_run.artifacts,
+                        previous_statuses=previous_run.node_statuses,
+                        previous_run_id=previous_run.id,
+                    )
+                    run.node_statuses = merged_statuses
+                    run.metrics = {**(run.metrics or {}), 'execution_state': {
+                        'retained_nodes': len(execution_state['retained_node_ids']),
+                        'invalidated_nodes': len(execution_state['invalidated_node_ids']),
+                    }}
         run.artifacts = artifacts
         if status in {'cancelled', 'timed_out'}:
             updated_statuses = dict(run.node_statuses or {})
@@ -489,10 +517,8 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
 
         if status == 'succeeded':
             run.status = 'succeeded'
-            if run.workflow_id is not None:
-                workflow = db.get(Workflow, run.workflow_id)
-                if workflow and workflow.owner_username == run.owner_username:
-                    workflow.last_run_id = run.id
+            if successful_workflow is not None:
+                successful_workflow.last_run_id = run.id
             run.error = None
             run.finished_at = utcnow()
             run.progress = {**(run.progress or {}), 'percent': 100.0}

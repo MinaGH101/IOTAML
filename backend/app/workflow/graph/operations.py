@@ -42,6 +42,13 @@ def output_for_handle(value: Any, source_handle: str | None) -> Any:
             return by_port[handle]
         if handle in value and handle not in {'output', 'outputs'}:
             return value[handle]
+        # Legacy split nodes expose bundles under these internal names.
+        if handle == 'split' and 'split_data' in value:
+            return {'split_data': value['split_data'], 'data_pairs': value.get('data_pairs', {})}
+        if handle == 'folds' and 'kfold_data' in value:
+            return {'kfold_data': value['kfold_data'], 'data_pairs': value.get('data_pairs', {})}
+        if handle not in {'output', 'input', ''}:
+            raise ValueError(f'Connected output port is unavailable: {handle}')
     return value
 
 
@@ -56,7 +63,8 @@ def upstream_outputs(node_id: str, edges: list[dict[str, Any]], outputs: dict[st
             continue
         source_handle = str(edge.get('sourceHandle') or 'output')
         value = output_for_handle(outputs[source], source_handle)
-        result[source] = value
+        key = source if source not in result else f'{source}:{source_handle}:{len(result)}'
+        result[key] = value
         target_handle = str(edge.get('targetHandle') or 'input')
         by_port.setdefault(target_handle, []).append(value)
         result['_edges'].append({'source': source, 'sourceHandle': source_handle, 'targetHandle': target_handle})

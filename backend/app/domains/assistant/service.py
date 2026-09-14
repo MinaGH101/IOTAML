@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -11,11 +13,21 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 
-from .tools import CATALOG_TOOLS, execute_catalog_tool
+from .tools import (
+    APP_GUIDE_TOOLS,
+    CATALOG_TOOLS,
+    WORKFLOW_ADVISOR_TOOLS,
+    execute_app_guide_tool,
+    execute_catalog_tool,
+    execute_workflow_advisor_tool,
+)
 from .workflow_tools import (
     get_workflow_context,
     validate_workflow_context,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 CURRENT_WORKFLOW_TOOL: dict[str, Any] = {
@@ -63,17 +75,22 @@ class AssistantProviderError(RuntimeError):
 
 
 class AssistantService:
-    MAX_TOOL_ROUNDS = 5
+    MAX_TOOL_ROUNDS = 6
+    _INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 
     def __init__(
         self,
         *,
         api_key: str | None = None,
+        base_url: str | None = None,
         model: str | None = None,
         client: "AsyncOpenAI | Any | None" = None,
     ) -> None:
         settings = get_settings()
         self.model = (model or settings.openai_model).strip() or "gpt-4o-mini"
+        self.base_url = (
+            base_url or settings.openai_base_url
+        ).strip() or "https://api.openai.com/v1"
         self._api_key = (
             settings.openai_api_key if api_key is None else api_key
         ).strip()
@@ -82,6 +99,25 @@ class AssistantService:
     @property
     def is_configured(self) -> bool:
         return self._client is not None or bool(self._api_key)
+
+    @classmethod
+    def _invalid_node_pills(
+        cls,
+        text: str,
+        allowed_node_names: set[str],
+    ) -> list[str]:
+        """Return inline-code labels that are not grounded catalog node names.
+
+        Assistant formatting reserves inline code exclusively for exact node
+        names. This gives us a deterministic final-response guard instead of
+        relying on prompt compliance alone.
+        """
+        invalid: list[str] = []
+        for raw_value in cls._INLINE_CODE_RE.findall(text or ""):
+            value = raw_value.strip()
+            if value and value not in allowed_node_names and value not in invalid:
+                invalid.append(value)
+        return invalid
 
     def _require_client(self) -> Any:
         if self._client is not None:
@@ -93,6 +129,7 @@ class AssistantService:
         from openai import AsyncOpenAI
         self._client = AsyncOpenAI(
             api_key=self._api_key,
+            base_url=self.base_url,
             timeout=60.0,
             max_retries=2,
         )
@@ -102,56 +139,127 @@ class AssistantService:
         self,
         *,
         message: str,
+        history: list[dict[str, str]] | None,
         db: Session,
         workflow_id: int | None,
         owner_username: str,
     ) -> str:
         client = self._require_client()
+        context_limit = get_settings().assistant_context_message_limit
+        previous_limit = max(context_limit - 1, 0)
+        recent_history = list(history or [])[-previous_limit:] if previous_limit else []
+
         conversation_input: list[Any] = [
+            {
+                "role": item["role"],
+                "content": item["content"],
+            }
+            for item in recent_history
+            if item.get("role") in {"user", "assistant"} and item.get("content")
+        ]
+        conversation_input.append(
             {
                 "role": "user",
                 "content": message,
             }
-        ]
+        )
 
         tools = [
+            *APP_GUIDE_TOOLS,
+            *WORKFLOW_ADVISOR_TOOLS,
             *CATALOG_TOOLS,
             CURRENT_WORKFLOW_TOOL,
             VALIDATE_CURRENT_WORKFLOW_TOOL,
         ]
-        for _ in range(self.MAX_TOOL_ROUNDS):
+        allowed_node_names: set[str] = set()
+
+        for tool_round in range(self.MAX_TOOL_ROUNDS):
             try:
                 response = await client.responses.create(
                     model=self.model,
                     instructions=(
-                    "You are the AI assistant inside IOTA ML. "
-                    "Help users inspect and design valid machine-learning workflows. "
+                    "You are the read-only AI guide inside IOTA ML. "
+                    "Your job is to teach users how the application works, explain its "
+                    "implemented nodes, and guide users toward valid machine-learning "
+                    "workflow designs. Always answer the user in Persian (Farsi), while "
+                    "preserving exact IOTA node names, setting names, and technical terms "
+                    "when translating them would make the guidance ambiguous. "
+
+                    "For questions about the application itself, first use search_app_guide. "
+                    "Do not invent pages, controls, features, or behavior that are not "
+                    "supported by the guide or another available read-only tool. "
+
+                    "NODE NAMING IS STRICT AND MUST BE GROUNDED. For every question about "
+                    "data preparation, analysis, visualization, machine learning, or workflow "
+                    "design, use list_nodes before naming or recommending any node. Only node "
+                    "names returned by list_nodes or get_node_details in THIS TURN may appear "
+                    "in the answer. The catalog `name` is the exact user-visible label in the "
+                    "Node Palette: copy it verbatim. Never invent, translate, shorten, "
+                    "paraphrase, or substitute a node name. If the catalog does not return a "
+                    "suitable node, explicitly say that IOTA currently has no matching "
+                    "implemented node instead of suggesting a generic ML operation as a node. "
+                    "Do not show registry IDs unless the user explicitly asks for debugging "
+                    "details. "
+
+                    "FORMAT RULE FOR NODES: every node name in the final answer MUST be wrapped "
+                    "once in Markdown inline code, for example `Upload CSV/Excel`. Inline code "
+                    "is reserved ONLY for exact IOTA node names; do not wrap setting names, "
+                    "file formats, algorithms, or other technical terms in backticks. Never "
+                    "format a node name with bold markers. "
+
+                    "Use get_node_details before explaining a node's exact settings, inputs, "
+                    "outputs, defaults, validation rules, or before judging whether that node "
+                    "is appropriate for a specific step. Recommend only nodes that exist in "
+                    "the implemented node catalog. Do not add unrelated next-stage nodes just "
+                    "to make the answer longer. Answer the user's current question first. "
+
+                    "When a setting type represents repeatable blocks, such as imputation_blocks, "
+                    "normalization_blocks, replacement_blocks, or scatter_blocks, do not describe "
+                    "it as one simple setting. Explain that the user can add multiple blocks, then "
+                    "explain the configurable fields and method-specific options inside each block "
+                    "using the setting's help text from get_node_details. "
+
+                    "When a user describes a goal such as training a model, cleaning data, "
+                    "handling missing values, analyzing correlations, detecting outliers, "
+                    "selecting features, or visualizing data, use advise_workflow first. "
+                    "Treat the advisor as the source of truth for the logical step order. "
+                    "Use only the exact live catalog node names returned inside the advisor "
+                    "result. If the advisor returns multiple candidates for a choice step, "
+                    "recommend the smallest relevant set and explain the tradeoff briefly. "
+                    "For each step, show the exact node name first, then one concise sentence "
+                    "about why it is used and whether it is required or conditional. Do not "
+                    "pretend to build or execute the workflow. "
+
+                    "RESPONSE STYLE: keep answers compact and easy to scan. Prefer one short "
+                    "intro sentence followed by a small numbered or bulleted list. Use Markdown "
+                    "headings only when the answer truly has multiple sections. Use bold only "
+                    "for short labels, never for entire sentences. At most two relevant emojis "
+                    "may be used in a response, and only when they improve scanning (for example "
+                    "✅ for a recommended path or ⚠️ for an important condition). Avoid decorative "
+                    "emoji, repeated headings, and filler such as asking whether the user wants "
+                    "more information unless a follow-up question is actually needed. "
 
                     "When describing the current workflow, list every node instance "
                     "separately using its instanceId, label, typeLabel, and registryId. "
                     "Never merge nodes merely because they use the same registryId. "
-
                     "Use get_current_workflow when discussing the selected workflow. "
-                    "Use list_nodes before recommending nodes. "
-                    "Use get_node_details before judging a node configuration. "
 
                     "Do not assume an empty setting is invalid. Some nodes interpret an "
-                    "empty columns list as all compatible columns. "
-                    "Do not report a configuration problem unless it conflicts with the "
-                    "node definition, connection rules, or an explicit validation result. "
-
-                    "Large files and long parameter values may be intentionally summarized. "
-                    "Do not describe summarized or truncated values as configuration errors. "
+                    "empty columns list as all compatible columns. Do not report a "
+                    "configuration problem unless it conflicts with the node definition, "
+                    "connection rules, or an explicit validation result. Large files and "
+                    "long parameter values may be intentionally summarized; do not describe "
+                    "summarized or truncated values as errors. "
 
                     "All available tools are read-only. Never claim that you created, "
-                    "modified, saved, validated, or executed a workflow. "
-                    "Always call validate_current_workflow before reporting workflow "
-                    "configuration, connection, or validation problems. Only describe issues "
-                    "returned by the validator as confirmed problems. "
+                    "modified, saved, or executed a workflow. Always call "
+                    "validate_current_workflow before reporting workflow configuration, "
+                    "connection, or validation problems. Only describe issues returned by "
+                    "the validator as confirmed problems. "
                 ),
                 input=conversation_input,
                 tools=tools,
-                tool_choice="auto",
+                tool_choice="required" if tool_round == 0 else "auto",
                     max_output_tokens=1_200,
                     store=False,
                 )
@@ -161,6 +269,13 @@ class AssistantService:
                 except ImportError:
                     raise
                 if isinstance(exc, OpenAIError):
+                    logger.warning(
+                        "AI provider request failed: model=%s status=%s request_id=%s error_type=%s",
+                        self.model,
+                        getattr(exc, "status_code", None),
+                        getattr(exc, "request_id", None),
+                        type(exc).__name__,
+                    )
                     raise AssistantProviderError("The AI provider request failed.") from exc
                 raise
 
@@ -171,9 +286,33 @@ class AssistantService:
             ]
 
             if not function_calls:
-                return response.output_text or (
+                final_text = response.output_text or (
                     "I could not generate a complete response."
                 )
+                invalid_node_pills = self._invalid_node_pills(
+                    final_text,
+                    allowed_node_names,
+                )
+                if not invalid_node_pills:
+                    return final_text
+
+                conversation_input.extend(response.output)
+                conversation_input.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Internal grounding correction: the draft used these "
+                            "backticked labels that were not returned as exact IOTA "
+                            "node names in this turn: "
+                            + ", ".join(invalid_node_pills)
+                            + ". Revise the answer. Call list_nodes again if needed. "
+                            "Use backticks only for exact catalog node names returned "
+                            "by a tool in this turn. Do not mention this correction to "
+                            "the user."
+                        ),
+                    }
+                )
+                continue
 
             conversation_input.extend(response.output)
 
@@ -185,6 +324,24 @@ class AssistantService:
                     workflow_id=workflow_id,
                     owner_username=owner_username,
                 )
+
+                if call.name == "list_nodes":
+                    for node in result.get("nodes", []):
+                        name = str(node.get("name") or "").strip()
+                        if name:
+                            allowed_node_names.add(name)
+                elif call.name == "get_node_details":
+                    node = result.get("node") or {}
+                    name = str(node.get("name") or "").strip()
+                    if name:
+                        allowed_node_names.add(name)
+                elif call.name == "advise_workflow":
+                    for pattern in result.get("patterns", []):
+                        for step in pattern.get("steps", []):
+                            for node in step.get("nodes", []):
+                                name = str(node.get("name") or "").strip()
+                                if name:
+                                    allowed_node_names.add(name)
 
                 conversation_input.append(
                     {
@@ -216,6 +373,12 @@ class AssistantService:
 
             if not isinstance(arguments, dict):
                 return {"error": "Tool arguments must be an object."}
+
+            if tool_name == "search_app_guide":
+                return execute_app_guide_tool(tool_name, arguments)
+
+            if tool_name == "advise_workflow":
+                return execute_workflow_advisor_tool(tool_name, arguments)
 
             if tool_name == "get_current_workflow":
                 if workflow_id is None:

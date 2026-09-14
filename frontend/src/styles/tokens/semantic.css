@@ -30,9 +30,9 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
-  --ui-radius-control: 4px;
-  --ui-radius-panel: 6px;
-  --ui-radius-dialog: 8px;
+  --ui-radius-control: 8px;
+  --ui-radius-panel: 12px;
+  --ui-radius-dialog: 16px;
   --motion-fast: 120ms ease;
   --motion-standard: 170ms ease;
 

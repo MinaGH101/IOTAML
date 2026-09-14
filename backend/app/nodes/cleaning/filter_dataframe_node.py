@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from app.nodes.cleaning.safe_query import filter_query
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, first_json_payload, node_label, table_output
 
@@ -95,6 +96,7 @@ def _series_filter(series: pd.Series, op: str, raw_value: Any) -> pd.Series:
 
 
 class FilterDataFrameNode(BaseNode):
+    cache_version = '2'
     id = 'CL-007'
     name = 'Data Filter'
     category = 'Data Cleaning'
@@ -114,7 +116,7 @@ class FilterDataFrameNode(BaseNode):
         setting('column', 'Column', 'column', '', required=False),
         setting('operator', 'Operator', 'select', '>', options=['>', '>=', '<', '<=', '==', '!=', 'contains', 'not_contains']),
         setting('value', 'Value', 'text', '', required=False),
-        setting('row_query', 'Row Query', 'text', '', required=False, help='Optional pandas query. If set, it is applied before the simple condition.'),
+        setting('row_query', 'Row Query', 'text', '', required=False, help='Optional safe row filter (comparisons and and/or). If set, it is applied before the simple condition.'),
         setting('match_key', 'Report Match Key', 'select', 'column', options=['column', 'column_name', 'row_index', 'id']),
         setting('conditions', 'Report Condition Blocks JSON', 'json', '{"logic":"AND","groups":[]}', required=False),
         setting('max_output_rows', 'Max Output Rows', 'integer', 100, required=False),
@@ -130,7 +132,7 @@ class FilterDataFrameNode(BaseNode):
             next_df = df.copy()
             query = str(settings.get('row_query') or '').strip()
             if query:
-                next_df = next_df.query(query)
+                next_df = filter_query(next_df, query)
 
             col = str(settings.get('column') or '').strip()
             raw_value = settings.get('value')

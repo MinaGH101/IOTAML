@@ -15,3 +15,19 @@ def test_assistant_accepts_injected_client_without_credentials() -> None:
 
     assert service.is_configured is True
     assert service._require_client() is client
+
+
+def test_assistant_uses_configured_base_url() -> None:
+    service = AssistantService(
+        api_key="test-key",
+        base_url="https://example.invalid/v1",
+    )
+
+    assert service.base_url == "https://example.invalid/v1"
+
+
+def test_assistant_defaults_to_openai_base_url(monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    service = AssistantService(api_key="test-key")
+
+    assert service.base_url == "https://api.openai.com/v1"

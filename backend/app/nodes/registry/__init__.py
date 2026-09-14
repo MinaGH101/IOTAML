@@ -33,6 +33,7 @@ from app.nodes.visualization.boxplot_node import BoxPlotNode
 from app.nodes.visualization.barplot_node import BarPlotNode
 from app.nodes.visualization.pp_plot_node import PPPlotNode
 from app.nodes.visualization.clustering_plot_node import ClusteringPlotNode
+from app.nodes.ml_data_processing.preprocessing_node import TrainingPreprocessorNode
 from app.nodes.ml_data_processing.split_node import TrainTestSplitNode
 from app.nodes.ml_data_processing.kfold_node import KFoldSplitNode
 from app.nodes.ml_data_processing.select_features_node import SelectFeaturesNode
@@ -62,6 +63,8 @@ from app.nodes.ml_training.model_nodes import (
 )
 from app.nodes.ml_analysis.model_analysis_nodes import PredictionPreviewNode, MetricsSummaryNode, FeatureImportanceNode
 from app.nodes.export_report.export_nodes import ExportCsvNode, ExportJsonNode, SimpleReportNode
+from app.nodes.cleaning.persian_values_node import PersianValuesNode
+from app.nodes.utilities.summary_nodes import RemoveDuplicatesNode, GroupSummaryNode
 from app.nodes.utilities.python_code_node import PythonCodeNode
 from app.nodes.utilities.passthrough_node import PassThroughNode
 from app.nodes.utilities.merge_dataframes_node import MergeDataFramesNode
@@ -90,15 +93,15 @@ NODE_CLASSES: list[type[BaseNode]] = [
     # Data Inspection
     DataOverviewNode, MissingValuesReportNode, CorrelationMatrixNode, StatisticalReportNode, DuplicateSampleErrorNode,
     # Data Cleaning
-    ConvertTypeNode, SelectColumnsNode, FilterDataFrameNode, ReplaceValuesNode, ImputationNode, DetectionLimitHandlingNode,
+    PersianValuesNode, RemoveDuplicatesNode, ConvertTypeNode, SelectColumnsNode, FilterDataFrameNode, ReplaceValuesNode, ImputationNode, DetectionLimitHandlingNode,
     # Anomaly Detection
     ZScoreOutlierNode, IQROutlierNode, ThresholdAnomalyNode, SortedGapOutlierNode,
     # Transformation
-    ScalerNode, NormalizationNode, RatioCalculatorNode, TransposeDataFrameNode,
+    GroupSummaryNode, ScalerNode, NormalizationNode, RatioCalculatorNode, TransposeDataFrameNode,
     # Visualizations
     HistogramNode, ScatterPlotNode, BoxPlotNode, BarPlotNode, PPPlotNode, ClusteringPlotNode,
     # ML Data Processing
-    SelectFeaturesNode, TrainTestSplitNode, KFoldSplitNode, SetTargetNode, MutualInfoFeatureScoreNode, FRegressionFeatureScoreNode,
+    TrainingPreprocessorNode, SelectFeaturesNode, TrainTestSplitNode, KFoldSplitNode, SetTargetNode, MutualInfoFeatureScoreNode, FRegressionFeatureScoreNode,
     # Regression Models
     LinearRegressionNode, RidgeRegressionNode, LassoRegressionNode, ElasticNetRegressionNode, DecisionTreeRegressorNode,
     RandomForestRegressorNode, ExtraTreesRegressorNode, GradientBoostingRegressorNode, HistGradientBoostingRegressorNode, KNNRegressorNode,

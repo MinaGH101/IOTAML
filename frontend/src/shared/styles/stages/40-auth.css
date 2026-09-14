@@ -1,0 +1,653 @@
+/* shared styles extracted from 40-auth-minimal.css. */
+.auth-theme-control .icon-button {
+width:38px!important;
+height:38px!important;
+border-radius:var(--theme-radius-panel);
+color:var(--theme-text-secondary);
+background:var(--theme-panel-muted);
+border:var(--theme-border-width) solid var(--theme-divider);
+backdrop-filter:none
+}
+.manager-shell,
+.manager-shell .app-main-topbar,
+.manager-shell .topbar,
+.iota-ai-topbar,
+.app-main-topbar.iota-ai-topbar {
+background:var(--theme-topbar-bg);
+border-bottom:var(--theme-border-width) solid var(--theme-divider);
+backdrop-filter:none
+}
+.manager-page.iota-minimal-page {
+min-height:calc(100dvh - 64px)!important;
+padding:22px!important;
+color:var(--theme-text);
+background:radial-gradient(circle at 50% -18%,var(--theme-primary-soft),var(--theme-transparent) 34%),var(--theme-app-bg);
+background-size:auto
+}
+.manager-page.iota-minimal-page::before {
+opacity:.1!important;
+background-image:linear-gradient(to right,var(--theme-panel-muted) 1px,var(--theme-transparent) 1px),linear-gradient(to bottom,var(--theme-panel-muted) 1px,var(--theme-transparent) 1px);
+background-size:42px 42px
+}
+:root[data-theme="light"] .manager-page.iota-minimal-page::before {
+opacity:.28!important;
+background-image:linear-gradient(to right,var(--theme-panel-raised) 1px,var(--theme-transparent) 1px),linear-gradient(to bottom,var(--theme-panel-raised) 1px,var(--theme-transparent) 1px)
+}
+.iota-minimal-page .manager-panel,
+.iota-minimal-page .project-card-reference,
+.iota-minimal-page .workflow-card-reference,
+.iota-minimal-page .workflow-card-ai,
+.iota-minimal-page .notification-row,
+.iota-minimal-page .empty-manager,
+.iota-minimal-page .dataset-row-ai,
+.iota-minimal-page .profile-main-card-reference,
+.iota-minimal-page .activity-panel-reference,
+.iota-minimal-page .notification-panel-reference,
+.iota-minimal-page .project-filter-panel-reference,
+.iota-minimal-page .projects-list-reference,
+.iota-minimal-page .project-info-reference,
+.iota-minimal-page .project-create-info-reference,
+.iota-minimal-page .project-data-reference,
+.iota-minimal-page .workflows-reference-card,
+.iota-minimal-page .project-create-card-reference {
+border-radius:var(--theme-radius-modal);
+border:0 solid var(--theme-divider);
+background:var(--theme-transparent);
+backdrop-filter:none;
+overflow:hidden
+}
+.iota-minimal-page .manager-panel::before,
+.iota-minimal-page .project-card::before {
+display:none!important
+}
+.iota-minimal-page .reference-back-row,
+.iota-minimal-page .profile-layout-reference,
+.iota-minimal-page .project-detail-reference-layout,
+.iota-minimal-page .project-create-reference-layout {
+position:relative;
+z-index:1;
+width:min(1180px,100%)!important;
+margin-inline:auto!important
+}
+.iota-minimal-page .reference-back-row {
+margin-bottom:12px!important
+}
+.iota-minimal-page .project-detail-reference-layout,
+.iota-minimal-page .project-create-reference-layout {
+display:grid!important;
+grid-template-columns:minmax(300px,360px) minmax(0,1fr)!important;
+gap:14px!important
+}
+.iota-minimal-page .project-filter-panel-reference,
+.iota-minimal-page .project-info-reference,
+.iota-minimal-page .project-create-info-reference {
+position:sticky!important;
+top:86px!important;
+padding: 15px 20px 15px 20px !important;
+}
+.iota-minimal-page .projects-list-reference {
+min-height:calc(100dvh - 122px)!important;
+max-height:calc(100dvh - 122px)!important;
+padding:18px!important
+}
+.iota-minimal-page .profile-main-card-reference,
+.iota-minimal-page .activity-panel-reference,
+.iota-minimal-page .notification-panel-reference,
+.iota-minimal-page .project-data-reference,
+.iota-minimal-page .workflows-reference-card,
+.iota-minimal-page .project-create-card-reference {
+padding:18px!important
+}
+.iota-minimal-page .reference-card-head,
+.iota-minimal-page .projects-toolbar-reference,
+.iota-minimal-page .profile-reference-head {
+padding-bottom:14px!important;
+margin-bottom:14px!important;
+border-bottom:var(--theme-border-width) solid var(--theme-divider)
+}
+.iota-minimal-page .section-label-reference {
+margin-bottom:14px!important;
+color:var(--theme-primary);
+font-size:11px!important;
+letter-spacing:0!important;
+text-transform:none!important
+}
+.iota-minimal-page b,
+.iota-minimal-page h2,
+.iota-minimal-page h3,
+.iota-minimal-page .reference-card-head b,
+.iota-minimal-page .manager-list-head b,
+.iota-minimal-page .profile-reference-identity h2,
+.iota-minimal-page .project-card-reference h3 {
+color:var(--theme-text)
+}
+.iota-minimal-page span,
+.iota-minimal-page p,
+.iota-minimal-page small,
+.iota-minimal-page .reference-card-head span,
+.iota-minimal-page .project-card-reference p,
+.iota-minimal-page .project-meta-reference,
+.iota-minimal-page .notification-row small {
+color:var(--theme-text-muted)
+}
+.iota-minimal-page .profile-title-line-reference h2,
+.iota-minimal-page .project-card-reference h3 {
+font-size:20px!important
+}
+.iota-minimal-page .profile-avatar-reference,
+.iota-minimal-page .project-card-icon-reference,
+.iota-minimal-page .workflow-icon,
+.iota-minimal-page .step-number-ai,
+.iota-minimal-page .access-badge-reference {
+background:var(--theme-primary-soft);
+border:var(--theme-border-width) solid var(--theme-primary-soft);
+color:var(--theme-primary)
+}
+.iota-minimal-page .profile-avatar-reference {
+width:88px!important;
+height:88px!important;
+border-radius:var(--theme-radius-modal)
+}
+.iota-minimal-page .project-card-icon-reference,
+.iota-minimal-page .workflow-icon {
+width:36px!important;
+height:36px!important;
+border-radius:var(--theme-radius-panel)
+}
+.iota-minimal-page .project-card-reference {
+min-height:174px!important;
+padding:15px!important;
+gap:10px!important;
+background:var(--theme-panel-muted);
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 30%,var(--theme-divider))
+}
+.iota-minimal-page .project-card-reference:hover,
+.iota-minimal-page .workflow-card-reference:hover,
+.iota-minimal-page .workflow-card-ai:hover,
+.iota-minimal-page .notification-row:hover {
+background:color-mix(in srgb,var(--project-color,var(--theme-primary)) 5%,var(--theme-panel-muted));
+border-color:color-mix(in srgb,var(--project-color,var(--theme-primary)) 58%,var(--theme-control-border));
+color:var(--theme-text);
+transform:none!important
+}
+.iota-minimal-page .project-card-reference p {
+min-height:auto!important;
+line-height:1.65!important
+}
+.iota-minimal-page .project-stats-reference,
+.iota-minimal-page .project-card-badges,
+.iota-minimal-page .projects-list-actions,
+.iota-minimal-page .workflow-reference-head,
+.iota-minimal-page .profile-summary-stats-ai {
+gap:8px!important
+}
+.iota-minimal-page .project-stats-reference span,
+.iota-minimal-page .project-state,
+.iota-minimal-page .project-priority,
+.iota-minimal-page .access-badge-reference {
+min-height:28px!important;
+padding:5px 9px!important;
+border-radius:var(--theme-radius-pill);
+background:var(--theme-panel-muted);
+border:var(--theme-border-width) solid var(--theme-divider)
+}
+.iota-minimal-page .project-form {
+gap:12px!important
+}
+.iota-minimal-page label,
+.iota-minimal-page .project-filter-field,
+.iota-minimal-page .profile-form-grid-reference label,
+.iota-minimal-page .workflow-name-reference label {
+color:var(--theme-text);
+font-size:12px!important;
+font-weight:400!important
+}
+.iota-minimal-page input,
+.iota-minimal-page select,
+.iota-minimal-page textarea,
+.iota-minimal-page .input-with-icon-reference,
+.iota-minimal-page .project-filter-search,
+.iota-minimal-page .project-color-control,
+.iota-minimal-page .auth-input-wrap,
+.iota-minimal-page .pinned-data-box textarea {
+min-height:42px!important;
+border-radius:var(--theme-radius-panel);
+background:var(--theme-control-bg);
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text);
+}
+.iota-minimal-page textarea {
+min-height:90px!important
+}
+.iota-minimal-page input:hover,
+.iota-minimal-page input:focus,
+.iota-minimal-page select:hover,
+.iota-minimal-page select:focus,
+.iota-minimal-page textarea:hover,
+.iota-minimal-page textarea:focus,
+.iota-minimal-page .input-with-icon-reference:hover,
+.iota-minimal-page .input-with-icon-reference:focus-within,
+.iota-minimal-page .project-filter-search:hover,
+.iota-minimal-page .project-filter-search:focus-within {
+border-color:var(--theme-control-border);
+background:color-mix(in srgb,var(--theme-control-bg) 84%,var(--theme-primary) 6%)
+}
+.iota-minimal-page .primary,
+.iota-minimal-page button.primary,
+.iota-minimal-page .auth-submit {
+min-height:40px!important;
+border-radius:var(--theme-radius-panel);
+background:var(--theme-primary-active);
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary-active) 84%,var(--theme-primary));
+color:var(--theme-white);
+font-weight:850!important
+}
+.iota-minimal-page .primary:hover,
+.iota-minimal-page button.primary:hover {
+background:color-mix(in srgb,var(--theme-primary-active) 88%,var(--theme-primary));
+color:var(--theme-white)
+}
+.iota-minimal-page .icon-button,
+.iota-minimal-page .danger,
+.iota-minimal-page .profile-image-picker > span,
+.iota-minimal-page .upload-zone {
+min-height:40px!important;
+border-radius:var(--theme-radius-panel);
+background:var(--theme-transparent);
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text)
+}
+.iota-minimal-page .icon-button:hover,
+.iota-minimal-page .profile-image-picker > span:hover,
+.iota-minimal-page .upload-zone:hover {
+border-color:var(--theme-control-border);
+color:var(--theme-primary);
+background:var(--theme-primary-soft)
+}
+.iota-minimal-page .danger {
+color:var(--theme-danger);
+border-color:var(--theme-danger-soft)
+}
+.iota-minimal-page .danger:hover {
+color:var(--theme-danger);
+border-color:var(--theme-danger-soft);
+background:var(--theme-danger-soft)
+}
+.iota-minimal-page .upload-zone {
+min-height:78px!important;
+margin:0 0 12px!important;
+color:var(--theme-primary);
+border-style:dashed
+}
+.iota-minimal-page .dataset-mini-row,
+.iota-minimal-page .dataset-row-ai,
+.iota-minimal-page .notification-row,
+.iota-minimal-page .workflow-card-reference,
+.iota-minimal-page .workflow-card-ai {
+border-radius:var(--theme-radius-panel);
+background:var(--theme-panel-muted);
+border:var(--theme-border-width) solid var(--theme-divider)
+}
+.iota-minimal-page .activity-bars-reference {
+padding:10px 0 0!important
+}
+.iota-minimal-page .activity-bar span {
+width:14px!important;
+border-radius:var(--theme-radius-pill);
+background:var(--theme-primary);
+border:0
+}
+.iota-minimal-page .manager-toast {
+position:relative!important;
+z-index:2!important;
+width:min(1180px,100%)!important;
+border-radius:var(--theme-radius-panel);
+background:var(--theme-panel-muted);
+border:var(--theme-border-width) solid var(--theme-divider);
+color:var(--theme-text)
+}
+.iota-minimal-page .manager-toast.success {
+border-color:var(--theme-success-soft);
+color:var(--theme-success)
+}
+.iota-minimal-page .manager-toast.error {
+border-color:var(--theme-danger-soft);
+color:var(--theme-danger)
+}
+.iota-minimal-page .manager-toast.info {
+border-color:var(--theme-primary-soft);
+color:var(--theme-primary)
+}
+.iota-minimal-page .success-note-reference,
+.iota-minimal-page .info-note-reference {
+border-radius:var(--theme-radius-panel);
+background:var(--theme-primary-soft);
+border:var(--theme-border-width) solid var(--theme-primary-soft)
+}
+@media (width <= 1180px) {
+.iota-minimal-page .project-detail-reference-layout,
+.iota-minimal-page .project-create-reference-layout,
+.iota-minimal-page .profile-side-stack-reference {
+grid-template-columns:1fr!important
+}
+.iota-minimal-page .project-filter-panel-reference,
+.iota-minimal-page .project-info-reference,
+.iota-minimal-page .project-create-info-reference {
+position:static!important
+}
+.iota-minimal-page .projects-list-reference {
+min-height:520px!important;
+max-height:none!important
+}
+}
+@media (width <= 760px) {
+.manager-page.iota-minimal-page {
+padding:14px!important
+}
+.iota-minimal-page .profile-form-grid-reference,
+.iota-minimal-page .form-grid-2,
+.iota-minimal-page .project-filter-date-grid,
+.iota-minimal-page .project-edit-actions-reference {
+grid-template-columns:1fr!important
+}
+.iota-minimal-page .profile-reference-head,
+.iota-minimal-page .projects-toolbar-reference,
+.iota-minimal-page .workflow-reference-head {
+flex-direction:column!important;
+align-items:stretch!important
+}
+.iota-minimal-page .project-card-grid-reference,
+.iota-minimal-page .workflow-card-grid-reference,
+.iota-minimal-page .workflow-grid-reference {
+grid-template-columns:1fr!important
+}
+}
+.iota-minimal-page .profile-layout-reference {
+display:grid!important;
+grid-template-columns:minmax(0,1fr) 300px!important;
+gap:16px!important;
+align-items:start!important;
+max-width:1180px!important
+}
+.iota-minimal-page .profile-primary-stack-reference {
+display:grid!important;
+gap:14px!important;
+min-width:0!important
+}
+.iota-minimal-page .profile-side-stack-reference {
+display:grid!important;
+grid-template-columns:1fr!important;
+gap:14px!important;
+position:sticky!important;
+top:86px!important;
+min-width:0!important
+}
+.iota-minimal-page .profile-main-card-reference,
+.iota-minimal-page .profile-password-card,
+.iota-minimal-page .activity-panel-reference,
+.iota-minimal-page .notification-panel-reference {
+padding:20px!important;
+background:var(--theme-panel-bg)!important;
+border:var(--theme-border-width) solid var(--theme-divider)!important;
+border-radius:var(--theme-radius-panel)!important;
+overflow:visible!important
+}
+.iota-minimal-page .profile-reference-head {
+display:flex!important;
+align-items:center!important;
+gap:18px!important;
+padding-bottom:18px!important;
+margin-bottom:18px!important
+}
+.iota-minimal-page .profile-avatar-column-reference {
+flex:0 0 auto!important;
+display:grid!important;
+justify-items:center!important;
+gap:8px!important;
+width:96px!important;
+min-width:0!important
+}
+.iota-minimal-page .profile-avatar-reference {
+width:76px!important;
+height:76px!important;
+border-radius:var(--theme-radius-panel)!important;
+overflow:hidden!important
+}
+.iota-minimal-page .profile-avatar-reference img {
+width:100%!important;
+height:100%!important;
+object-fit:cover!important
+}
+.iota-minimal-page .profile-upload-button-reference {
+width:100%!important;
+min-width:0!important
+}
+.iota-minimal-page .profile-upload-button-reference > span {
+width:100%!important;
+min-width:0!important;
+min-height:34px!important;
+padding:0 8px!important;
+display:flex!important;
+align-items:center!important;
+justify-content:center!important;
+gap:6px!important;
+white-space:nowrap!important;
+overflow:hidden!important;
+text-overflow:ellipsis!important;
+font-size:11px!important
+}
+.iota-minimal-page .profile-reference-identity {
+min-width:0!important;
+flex:1 1 auto!important
+}
+.iota-minimal-page .profile-title-line-reference {
+display:flex!important;
+align-items:center!important;
+flex-wrap:wrap!important;
+gap:9px!important
+}
+.iota-minimal-page .profile-title-line-reference h2 {
+margin:0!important;
+font-size:19px!important
+}
+.iota-minimal-page .profile-reference-identity p {
+margin:5px 0 0!important
+}
+.iota-minimal-page .profile-form-grid-reference {
+display:grid!important;
+grid-template-columns:repeat(2,minmax(0,1fr))!important;
+gap:12px!important
+}
+.iota-minimal-page .profile-actions-reference {
+display:flex!important;
+justify-content:flex-start!important;
+margin-top:16px!important
+}
+.iota-minimal-page .profile-save-reference {
+width:auto!important;
+min-width:138px!important;
+min-height:38px!important;
+padding:0 16px!important;
+margin:0!important
+}
+.iota-minimal-page .profile-password-card {
+display:grid!important;
+gap:14px!important
+}
+.iota-minimal-page .profile-password-card .panel-heading,
+.iota-minimal-page .activity-panel-reference .panel-heading,
+.iota-minimal-page .notification-panel-reference .panel-heading {
+display:flex!important;
+align-items:flex-start!important;
+gap:10px!important;
+margin:0!important
+}
+.iota-minimal-page .profile-password-card .panel-heading div,
+.iota-minimal-page .activity-panel-reference .panel-heading div,
+.iota-minimal-page .notification-panel-reference .panel-heading div {
+display:grid!important;
+gap:2px!important
+}
+.iota-minimal-page .profile-password-fields-reference {
+display:grid!important;
+grid-template-columns:repeat(2,minmax(0,1fr)) auto!important;
+gap:10px!important;
+align-items:end!important
+}
+.iota-minimal-page .profile-password-fields-reference label {
+display:grid!important;
+gap:6px!important;
+min-width:0!important
+}
+.iota-minimal-page .profile-password-fields-reference label > span {
+font-size:11px!important;
+color:var(--theme-text-muted)!important
+}
+.iota-minimal-page .profile-password-fields-reference input {
+width:100%!important;
+min-width:0!important;
+height:40px!important;
+min-height:40px!important;
+padding:0 12px!important;
+box-sizing:border-box!important
+}
+.iota-minimal-page .profile-password-save-reference {
+width:auto!important;
+min-width:120px!important;
+height:40px!important;
+min-height:40px!important;
+padding:0 14px!important;
+white-space:nowrap!important
+}
+.iota-minimal-page .activity-panel-reference,
+.iota-minimal-page .notification-panel-reference {
+min-height:0!important
+}
+.iota-minimal-page .notification-list {
+max-height:300px!important;
+overflow:auto!important
+}
+.iota-minimal-page .activity-bars-reference {
+height:150px!important;
+padding-top:14px!important
+}
+@media (width <= 980px) {
+.iota-minimal-page .profile-layout-reference {
+grid-template-columns:1fr!important
+}
+.iota-minimal-page .profile-side-stack-reference {
+position:static!important;
+grid-template-columns:repeat(2,minmax(0,1fr))!important
+}
+}
+@media (width <= 760px) {
+.iota-minimal-page .profile-reference-head {
+flex-direction:row!important;
+align-items:center!important
+}
+.iota-minimal-page .profile-form-grid-reference,
+.iota-minimal-page .profile-password-fields-reference,
+.iota-minimal-page .profile-side-stack-reference {
+grid-template-columns:1fr!important
+}
+.iota-minimal-page .profile-password-save-reference,
+.iota-minimal-page .profile-save-reference {
+width:100%!important
+}
+}
+@media (width <= 480px) {
+.iota-minimal-page .profile-reference-head {
+flex-direction:column!important;
+align-items:flex-start!important
+}
+.iota-minimal-page .profile-avatar-column-reference {
+width:100%!important;
+grid-template-columns:76px minmax(0,1fr)!important;
+align-items:center!important;
+justify-items:stretch!important
+}
+}
+.project-filter-search {
+width:100%!important;
+min-height:42px!important;
+display:flex!important;
+align-items:center!important;
+gap:8px!important;
+padding:0 12px!important;
+direction:rtl!important;
+overflow:hidden!important
+}
+.project-filter-search svg {
+flex:0 0 16px!important;
+width:16px!important;
+height:16px!important;
+color:var(--theme-text-muted)
+}
+.project-filter-search input {
+flex:1 1 auto!important;
+min-width:0!important;
+width:auto!important;
+height:auto!important;
+min-height:0!important;
+padding:0!important;
+border:0;
+background:var(--theme-transparent);
+outline:0;
+direction:rtl!important;
+text-align:right!important
+}
+.project-filter-search input::placeholder {
+direction:rtl!important;
+text-align:right!important
+}
+.iota-minimal-page .project-detail-reference-layout {
+width: min(1480px, 100%) !important;
+  grid-template-columns: minmax(400px, 450px) minmax(0, 1fr) !important;
+  align-items: start;
+}
+.iota-minimal-page .project-info-reference {
+max-height: calc(100dvh - 112px);
+  overflow: visible;
+}
+.iota-minimal-page .project-info-reference .project-form {
+gap: 9px !important;
+}
+.iota-minimal-page .project-info-reference textarea {
+min-height: 68px !important;
+  max-height: 90px;
+}
+.iota-minimal-page .project-info-reference .project-edit-actions {
+margin-top: 10px;
+}
+@media (max-width: 1050px) {
+.iota-minimal-page .project-detail-reference-layout {
+grid-template-columns: 1fr !important;
+}
+
+/* Keep header labels and icons aligned as one control at every page width. */
+.app-main-topbar.iota-ai-topbar .iota-nav-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.app-main-topbar.iota-ai-topbar .profile-button,
+.app-main-topbar.iota-ai-topbar .iota-user-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 7px !important;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.app-main-topbar.iota-ai-topbar .profile-button svg,
+.app-main-topbar.iota-ai-topbar .iota-user-chip > span {
+  flex: 0 0 auto;
+}
+.app-main-topbar.iota-ai-topbar .iota-user-chip b {
+  line-height: 1;
+}
+.iota-minimal-page .project-info-reference {
+position: static !important;
+    max-height: none;
+}
+}

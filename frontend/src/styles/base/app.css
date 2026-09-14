@@ -1,0 +1,39 @@
+.loading-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--theme-text-secondary);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Shared by every header; must not depend on the lazy workflow stylesheet. */
+.workflow-logo-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.workflow-logo-title img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  flex: 0 0 32px;
+  object-fit: contain;
+}
+.workflow-logo-title .iota-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

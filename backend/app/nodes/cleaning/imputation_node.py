@@ -44,6 +44,7 @@ def _constant_value(value: Any) -> Any:
 
 
 class ImputationNode(BaseNode):
+    cache_version = '2'
     id = 'CL-009'
     name = 'Imputation'
     category = 'Data Cleaning'
@@ -53,7 +54,22 @@ class ImputationNode(BaseNode):
     outputs = [port('dataframe', 'Imputed DataFrame', 'dataframe'), port('report', 'Imputation Report', 'json')]
 
     settings_schema = [
-        setting('imputation_blocks', 'Imputation Blocks', 'imputation_blocks', [], required=False, supports_dynamic=False),
+        setting(
+                'imputation_blocks',
+                'Imputation Blocks',
+                'imputation_blocks',
+                [],
+                required=False,
+                supports_dynamic=False,
+                help=(
+                    'Add one or more imputation blocks. Each block has Columns and Method. '
+                    'Methods: mean, median, constant, interpolate, knn. '
+                    'constant adds Constant Value. '
+                    'interpolate adds Interpolation Method (linear, nearest, zero, slinear) '
+                    'and Limit Direction (both, forward, backward). '
+                    'knn adds Number of Neighbors and Weights (uniform, distance).'
+                ),
+            ),
         setting('max_output_rows', 'Max Output Rows', 'integer', 100),
     ]
 
@@ -123,7 +139,7 @@ class ImputationNode(BaseNode):
         return dataframe_result(
             df,
             id_column=id_column if id_column in df.columns else None,
-            meta={**(payload.meta if payload else {}), 'imputation_blocks': len(blocks)},
+            meta={**(payload.meta if payload else {}), 'imputation_blocks': len(blocks), 'fitted_preprocessing': True},
             report=report,
             json=report,
             output=table_output(str(node['id']), f'{node_label(node)} · Imputed Rows', preview_df, max_rows),

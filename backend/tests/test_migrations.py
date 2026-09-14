@@ -6,6 +6,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 from app.core.database import Base
@@ -36,7 +37,7 @@ def test_fresh_database_reaches_head_with_model_table_parity(tmp_path, monkeypat
         expected_indexes = {index.name for index in model_table.indexes if index.name}
         assert expected_indexes.issubset(actual_indexes), table_name
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260802_0007"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == ScriptDirectory.from_config(alembic_config(database_url)).get_current_head()
 
 
 def test_legacy_0005_database_migrates_without_losing_rows(tmp_path, monkeypatch) -> None:
@@ -88,4 +89,4 @@ def test_legacy_0005_database_migrates_without_losing_rows(tmp_path, monkeypatch
         assert connection.execute(text("SELECT name FROM workflows WHERE id = 1")).scalar_one() == "legacy workflow"
         assert connection.execute(text("SELECT workflow_name FROM runs WHERE id = 1")).scalar_one() == "legacy run"
         assert connection.execute(text("SELECT original_filename FROM artifacts WHERE id = 1")).scalar_one() == "object.csv"
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260802_0007"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == ScriptDirectory.from_config(alembic_config(database_url)).get_current_head()

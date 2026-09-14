@@ -1,0 +1,2 @@
+/* Admin-only additions; shared styles are loaded once by the global entry. */
+@import "./stages/25-rbac.css";

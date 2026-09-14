@@ -1,0 +1,14 @@
+/* shared styles extracted from 65-interactive-workflow.css. */
+.selection-toggle.active {
+color:var(--theme-primary);
+  border-color:color-mix(in srgb,var(--theme-primary) 48%,var(--theme-control-border));
+  background:color-mix(in srgb,var(--theme-primary) 9%,var(--theme-control-bg))
+}
+.interactive-table td.is-selected,
+.interactive-table th.is-selected,
+.interactive-table tr.is-selected td {
+background:color-mix(in srgb,var(--theme-primary) 10%,var(--theme-panel-bg))
+}
+.workflow-problem.application {
+border-inline-start-color:var(--theme-warning)
+}

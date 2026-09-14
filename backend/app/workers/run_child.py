@@ -62,6 +62,8 @@ def _load_dataset(path: str | None) -> pd.DataFrame | None:
     suffix = dataset_path.suffix.lower()
     if suffix in {'.xlsx', '.xls'}:
         return pd.read_excel(dataset_path)
+    if suffix == '.json':
+        return pd.read_json(dataset_path)
     if suffix == '.tsv':
         return pd.read_csv(dataset_path, sep='\t')
     return pd.read_csv(dataset_path)

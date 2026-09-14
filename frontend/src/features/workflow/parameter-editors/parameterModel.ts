@@ -105,7 +105,7 @@ export const FARSI_SETTING_LABELS: Record<string, string> = {
   'Report Match Key': 'کلید تطبیق گزارش', 'Require Unique ID': 'الزام شناسه یکتا',
   'Robust Mode': 'حالت Robust', 'Robust: Quantile Max': 'بیشینه چندک Robust',
   'Robust: Quantile Min': 'کمینه چندک Robust', 'Row End': 'ردیف پایان',
-  'Row Query': 'عبارت فیلتر ردیف', 'Row Start': 'ردیف شروع',
+  'Row Query': 'عبارت فیلتر ردیف', 'Row Start': 'ردیف شروع', 'Find By':'جستجو براساس',
   'Scaling Method': 'روش مقیاس‌بندی', 'Scatter Plot Blocks': 'بلوک‌های نمودار پراکندگی',
   'Series Colors': 'رنگ سری‌ها', Shuffle: 'برزدن داده‌ها', Sort: 'مرتب‌سازی',
   'Standard Mode': 'حالت استاندارد', 'Standardize Data': 'استانداردسازی داده',

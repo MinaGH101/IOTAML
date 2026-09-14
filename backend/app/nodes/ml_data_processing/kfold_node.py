@@ -5,12 +5,14 @@ from __future__ import annotations
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
 
+from app.nodes.ml_data_processing.preprocessing_node import require_unfitted_input
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import dataframe_result, metrics_output, node_label, table_output
 from app.nodes.ml_data_processing.ml_utils import feature_target_from_inputs, training_frame
 
 
 class KFoldSplitNode(BaseNode):
+    cache_version = '2'
     id = 'MP-004'
     name = 'K-Fold Split'
     category = 'ML Data Processing'
@@ -28,6 +30,7 @@ class KFoldSplitNode(BaseNode):
 
     def run(self, node, inputs, settings, context):
         x, y, target, features, payload = feature_target_from_inputs(inputs, settings, context, str(node['id']))
+        require_unfitted_input(payload)
         data = pd.concat([x, y.rename(target)], axis=1).dropna(subset=[target])
         x = data[features]
         y = data[target]
@@ -39,9 +42,9 @@ class KFoldSplitNode(BaseNode):
             raise ValueError('Number of folds cannot be larger than the number of rows.')
 
         shuffle = bool(settings.get('shuffle', True))
-        random_state = int(settings.get('random_state') or 42)
+        random_state = int(settings.get('random_state') if settings.get('random_state') is not None else 42)
         stratify_enabled = bool(settings.get('stratify', False)) and y.nunique(dropna=True) > 1
-        splitter = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state) if stratify_enabled else KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+        splitter = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state if shuffle else None) if stratify_enabled else KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state if shuffle else None)
 
         folds = []
         data_pairs = {}

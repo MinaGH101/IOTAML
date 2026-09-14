@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from app.nodes.cleaning.safe_query import filter_query
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
 
 
 class SelectColumnsNode(BaseNode):
+    cache_version = '2'
     id = 'CL-006'
     name = 'Select Rows / Columns'
     category = 'Data Cleaning'
@@ -35,7 +37,7 @@ class SelectColumnsNode(BaseNode):
 
         query = str(settings.get('row_query') or '').strip()
         if query:
-            df = df.query(query)
+            df = filter_query(df, query)
 
         start = settings.get('row_start')
         end = settings.get('row_end')
@@ -61,7 +63,7 @@ class SelectColumnsNode(BaseNode):
 
         next_df = df.loc[:, [column for column in active_columns if column in df.columns]].copy()
         if id_column:
-            id_values = payload.lineage.source_df.iloc[row_keys][id_column].to_numpy(copy=False)
+            id_values = df[id_column].to_numpy(copy=False)
             next_df.insert(0, id_column, id_values)
         preview = table_output(str(node['id']), node_label(node), next_df, 100)
         preview['id_column'] = id_column

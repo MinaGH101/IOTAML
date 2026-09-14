@@ -1,0 +1,31 @@
+import type { NodeCatalogResponse, WorkflowVersion } from '../../../../shared/types';
+import type { useProjectDatasets } from '../_hooks/useProjectDatasets';
+import type { useRunHistory } from '../_hooks/useRunHistory';
+import type { useWorkflowCanvasActions } from '../_hooks/useWorkflowCanvasActions';
+import type { useWorkflowDocument } from '../_hooks/useWorkflowDocument';
+import type { useWorkflowExecution } from '../_hooks/useWorkflowExecution';
+import type { useWorkflowGraph } from '../_hooks/useWorkflowGraph';
+import type { useCustomNodes } from '../_hooks/useCustomNodes';
+import type { useAnalysisBoards } from '../_hooks/useAnalysisBoards';
+import type { useBoardDialogs } from '../_features/boards/_hooks/useBoardDialogs';
+import type { WorkflowComponentsController } from '../_features/components/_hooks/useWorkflowComponents';
+export type WorkflowOverlaysProps = {
+    graph: ReturnType<typeof useWorkflowGraph>;
+    boards: ReturnType<typeof useAnalysisBoards>;
+    runs: ReturnType<typeof useRunHistory>;
+    canvas: ReturnType<typeof useWorkflowCanvasActions>;
+    execution: ReturnType<typeof useWorkflowExecution>;
+    document: ReturnType<typeof useWorkflowDocument>;
+    components: WorkflowComponentsController;
+    customNodes: ReturnType<typeof useCustomNodes>;
+    boardDialogs: ReturnType<typeof useBoardDialogs>;
+    datasets: ReturnType<typeof useProjectDatasets>['datasets'];
+    catalog: NodeCatalogResponse;
+    columns: {
+        availableColumns: string[];
+        availableIdColumns: string[];
+        inheritedIdColumn: string | null;
+        availableRows: Array<Record<string, unknown>>;
+    };
+    versionPreview: WorkflowVersion | null;
+};

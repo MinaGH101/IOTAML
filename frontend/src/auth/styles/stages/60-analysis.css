@@ -1,0 +1,48 @@
+/* auth styles extracted from 60-analysis-board-custom-nodes.css. */
+.auth-page.auth-page-ai.auth-page-minimal {
+width:100vw!important;
+height:100vh!important;
+min-height:100vh!important;
+padding:0!important;
+display:flex!important;
+align-items:center!important;
+justify-content:center!important;
+overflow:hidden!important;
+direction:ltr!important
+}
+.auth-page.auth-page-ai.auth-page-minimal::before {
+display:none!important
+}
+.auth-form-clean .auth-input-wrap {
+width:100%!important
+}
+button.auth-submit,
+.auth-submit {
+min-height:34px;
+color:var(--theme-button-primary-text);
+background:var(--theme-button-primary-bg);
+background-image:none;
+border:var(--theme-border-width) solid var(--theme-button-primary-border);
+font-weight:750!important;
+transition:background-color .14s ease,border-color .14s ease,color .14s ease,transform .14s ease!important
+}
+button.auth-submit:hover,
+.auth-submit:hover {
+color:var(--theme-button-primary-text);
+background:var(--theme-button-primary-bg-hover);
+border-color:var(--theme-button-primary-bg-hover);
+transform:translateY(-1px)!important
+}
+button.auth-submit:active,
+.auth-submit:active {
+color:var(--theme-button-primary-text);
+background:var(--theme-button-primary-bg-active);
+border-color:var(--theme-button-primary-bg-active);
+transform:translateY(0)!important
+}
+button.auth-submit:disabled,
+.auth-submit:disabled {
+opacity:.5!important;
+cursor:not-allowed!important;
+transform:none!important
+}

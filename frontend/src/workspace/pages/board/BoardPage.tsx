@@ -1,134 +1,25 @@
-import { Download, Move, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { downloadOutput, normalizeOutputs, OutputBody } from '../../_components/ResultsPanel';
+import { useEffect, useState } from 'react';
 import type { AnalysisBoardItem, AnalysisBoardTab } from '../../_model/board';
-import { boardOutputKey, boardOutputTitle, resolveBoardItems } from '../../_model/boardOutputs';
-import { createOutputReference } from '../../../features/results/model/outputReference';
-import type { Run } from '../../../shared/_types';
+import type { Run } from '../../../shared/types';
 import { BoardCard, type FocusedOutput } from './_components/BoardCard';
 import { BoardTabs } from './_components/BoardControls';
+import { FocusedOutputModal } from './_components/board-page/FocusedOutputModal';
+import { useBoardOutputSync } from './_components/board-page/useBoardOutputSync';
 import { useBoardViewport } from './_hooks/useBoardViewport';
-
-type BoardPageProps = {
-  tabs: AnalysisBoardTab[];
-  activeBoardId: string;
-  items: AnalysisBoardItem[];
-  run: Run | null;
-  workflowDirty: boolean;
-  onSelectBoard: (id: string) => void;
-  onCreateBoard: () => void;
-  onUpdateItem: (id: string, patch: Partial<AnalysisBoardItem>) => void;
-  onRemoveItem: (id: string) => void;
-  onDuplicateItem: (item: AnalysisBoardItem) => void;
-  viewportStorageScope: string;
-  active: boolean;
-  readOnly?: boolean;
+type Props = {
+    tabs: AnalysisBoardTab[];
+    activeBoardId: string;
+    items: AnalysisBoardItem[];
+    run: Run | null;
+    workflowDirty: boolean;
+    onSelectBoard: (id: string) => void;
+    onCreateBoard: () => void;
+    onUpdateItem: (id: string, patch: Partial<AnalysisBoardItem>) => void;
+    onRemoveItem: (id: string) => void;
+    onDuplicateItem: (item: AnalysisBoardItem) => void;
+    viewportStorageScope: string;
+    active: boolean;
+    readOnly?: boolean;
 };
-
-export function BoardPage({
-  tabs,
-  activeBoardId,
-  items,
-  run,
-  workflowDirty,
-  onSelectBoard,
-  onCreateBoard,
-  onUpdateItem,
-  onRemoveItem,
-  onDuplicateItem,
-  viewportStorageScope,
-  active,
-  readOnly = false,
-}: BoardPageProps) {
-  const [focusedOutput, setFocusedOutput] = useState<FocusedOutput | null>(null);
-  const outputs = useMemo(() => normalizeOutputs(run, null), [run]);
-  const resolvedItems = useMemo(
-    () => resolveBoardItems(items, outputs, workflowDirty),
-    [items, outputs, workflowDirty],
-  );
-  const {
-    canvasRef,
-    worldRef,
-    startPan,
-    getViewportScale,
-  } = useBoardViewport({
-    activeBoardId,
-    initialViewport: tabs.find((tab) => tab.id === activeBoardId)?.viewport || { x: 0, y: 0, scale: 1 },
-    storageScope: viewportStorageScope,
-  });
-
-  useEffect(() => {
-    if (!active || workflowDirty || run?.status !== 'succeeded' || !run.id) return;
-    resolvedItems.forEach(({ item, currentOutput }) => {
-      if (!currentOutput || item.runId === run.id) return;
-      onUpdateItem(item.id, {
-        outputRef: createOutputReference(currentOutput, run.id, item.nodeId, boardOutputKey(currentOutput)),
-        outputKey: boardOutputKey(currentOutput),
-        runId: run.id,
-        outputKind: String(currentOutput.kind || item.outputKind || 'json'),
-        outputTitle: boardOutputTitle(currentOutput, item.outputIndex),
-      });
-    });
-  }, [active, onUpdateItem, resolvedItems, run?.id, run?.status, workflowDirty]);
-
-  useEffect(() => {
-    if (!active) setFocusedOutput(null);
-  }, [active]);
-
-  return (
-    <div className="analysis-board" dir="rtl">
-      <BoardTabs
-        tabs={tabs}
-        activeBoardId={activeBoardId}
-        readOnly={readOnly}
-        onSelectBoard={onSelectBoard}
-        onCreateBoard={onCreateBoard}
-      />
-
-      <div className="analysis-board-canvas" ref={canvasRef} onPointerDown={startPan}>
-        {items.length === 0 && (
-          <div className="analysis-board-empty workflow-shell-card">
-            <b>این برد هنوز خالی است.</b>
-            <span>از پنل خروجی سمت راست، نتیجه‌ها را به این برد اضافه کنید.</span>
-          </div>
-        )}
-        <div className="analysis-board-pan-hint"><Move size={12} /> drag empty board to pan · wheel to pan · Ctrl/Cmd + wheel to zoom</div>
-        <div className="analysis-board-world" ref={worldRef}>
-          {resolvedItems.map(({ item, output, stale }) => (
-            <BoardCard
-              key={item.id}
-              item={item}
-              output={output}
-              stale={stale}
-              runId={run?.id}
-              getViewportScale={getViewportScale}
-              onUpdateItem={onUpdateItem}
-              onRemoveItem={onRemoveItem}
-              onDuplicateItem={onDuplicateItem}
-              onFocus={setFocusedOutput}
-              readOnly={readOnly}
-              active={active}
-            />
-          ))}
-        </div>
-      </div>
-
-      {focusedOutput && createPortal(
-        <div className="modal-backdrop workflow-shell-backdrop output-fullscreen-backdrop" onClick={() => setFocusedOutput(null)}>
-          <div className="modal-card workflow-shell-popup output-fullscreen-card" onClick={(event) => event.stopPropagation()}>
-            <div className="output-fullscreen-head">
-              <h3>{focusedOutput.title}</h3>
-              <div className="output-fullscreen-actions">
-                <button className="tiny-action icon-action" title="دانلود" aria-label="دانلود" onClick={() => downloadOutput(focusedOutput.output, focusedOutput.index)}><Download size={13}/></button>
-                <button className="modal-close" title="بستن" aria-label="بستن" onClick={() => setFocusedOutput(null)}><X size={16}/></button>
-              </div>
-            </div>
-            <div className="output-fullscreen-body"><OutputBody output={focusedOutput.output} fillContainer /></div>
-          </div>
-        </div>,
-        document.body,
-      )}
-    </div>
-  );
-}
+export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSelectBoard, onCreateBoard, onUpdateItem, onRemoveItem, onDuplicateItem, viewportStorageScope, active, readOnly = false }: Props) { const [focused, setFocused] = useState<FocusedOutput | null>(null); const resolved = useBoardOutputSync({ items, run, workflowDirty, active, onUpdateItem }); const viewport = useBoardViewport({ activeBoardId, initialViewport: tabs.find((t) => t.id === activeBoardId)?.viewport || { x: 0, y: 0, scale: 1 }, storageScope: viewportStorageScope }); useEffect(() => { if (!active)
+    setFocused(null); }, [active]); return <div className="analysis-board" dir="rtl"><BoardTabs tabs={tabs} activeBoardId={activeBoardId} readOnly={readOnly} onSelectBoard={onSelectBoard} onCreateBoard={onCreateBoard}/><div className="analysis-board-canvas" ref={viewport.canvasRef} onPointerDown={viewport.startPan}>{!items.length && <div className="analysis-board-empty workflow-shell-card"><b>این برد هنوز خالی است.</b><span>از پنل خروجی سمت راست، نتیجه‌ها را به این برد اضافه کنید.</span></div>}<div className="analysis-board-world" ref={viewport.worldRef}>{resolved.map(({ item, output, stale }) => <BoardCard key={item.id} item={item} output={output} stale={stale} runId={run?.id} getViewportScale={viewport.getViewportScale} onUpdateItem={onUpdateItem} onRemoveItem={onRemoveItem} onDuplicateItem={onDuplicateItem} onFocus={setFocused} readOnly={readOnly} active={active}/>)}</div></div><FocusedOutputModal focused={focused} onClose={() => setFocused(null)}/></div>; }
