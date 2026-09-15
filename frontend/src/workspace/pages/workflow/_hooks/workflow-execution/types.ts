@@ -16,6 +16,17 @@ export type WorkflowExecutionOptions = {
     projectId: number;
     targetColumn: string;
     taskType: string;
+    getExecutionSnapshot: () => {
+        nodes: Node[];
+        edges: Edge[];
+        autosaveSnapshot: {
+            name: string;
+            graph: Record<string, unknown>;
+            project_id: number;
+        };
+        autosaveSignature: string;
+        currentOutputSignature: string;
+    };
     autosaveSnapshot: {
         name: string;
         graph: Record<string, unknown>;

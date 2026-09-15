@@ -219,17 +219,6 @@ class AssistantService:
                     "explain the configurable fields and method-specific options inside each block "
                     "using the setting's help text from get_node_details. "
 
-                    "When a user describes a goal such as training a model, cleaning data, "
-                    "handling missing values, analyzing correlations, detecting outliers, "
-                    "selecting features, or visualizing data, use advise_workflow first. "
-                    "Treat the advisor as the source of truth for the logical step order. "
-                    "Use only the exact live catalog node names returned inside the advisor "
-                    "result. If the advisor returns multiple candidates for a choice step, "
-                    "recommend the smallest relevant set and explain the tradeoff briefly. "
-                    "For each step, show the exact node name first, then one concise sentence "
-                    "about why it is used and whether it is required or conditional. Do not "
-                    "pretend to build or execute the workflow. "
-
                     "RESPONSE STYLE: keep answers compact and easy to scan. Prefer one short "
                     "intro sentence followed by a small numbered or bulleted list. Use Markdown "
                     "headings only when the answer truly has multiple sections. Use bold only "
@@ -239,10 +228,61 @@ class AssistantService:
                     "emoji, repeated headings, and filler such as asking whether the user wants "
                     "more information unless a follow-up question is actually needed. "
 
-                    "When describing the current workflow, list every node instance "
-                    "separately using its instanceId, label, typeLabel, and registryId. "
-                    "Never merge nodes merely because they use the same registryId. "
-                    "Use get_current_workflow when discussing the selected workflow. "
+                    "WORKFLOW CONTEXT FIRST. When the user refers to the current "
+                    "workflow, flow, graph, this workflow, current flow, این جریان, "
+                    "همین جریان, فلو, or asks what is already present, call "
+                    "get_current_workflow before answering. For current-workflow questions, "
+                    "reason from the returned node instances and edges, not from generic "
+                    "workflow templates alone. If the user asks which existing nodes are "
+                    "plots, charts, graphs, or نمودار, identify node instances whose "
+                    "category is Visualizations or whose outputTypes include plot. "
+
+                    "GOAL ADVICE MUST BE CONTEXT-AWARE. When a user describes a goal such "
+                    "as training a model, cleaning data, handling missing values, analyzing "
+                    "correlations, detecting outliers, selecting features, or visualizing "
+                    "data, use advise_workflow. If a workflow is selected, also use "
+                    "get_current_workflow and adapt the recommendation to what already "
+                    "exists. Do not restart from `Upload CSV/Excel` when the workflow "
+                    "already has an upstream data source. Mark existing useful nodes as "
+                    "already present, then name only the missing nodes to add. "
+
+                    "When advise_workflow returns alreadyPresent or matchedExistingNodes, "
+                    "use those fields to avoid recommending duplicate nodes. When it returns "
+                    "connectionAdvice, explicitly mention the recommended source node and the "
+                    "step it should connect to. "
+                    "When advise_workflow returns actionPlan, use it as the action-ready "
+                    "draft: explain which existing nodes can be reused, which nodes should "
+                    "be added, which connections should be made, and which settings require "
+                    "the user's domain choice. Do not expose raw JSON unless the user asks "
+                    "for developer details. "
+
+                    "FUTURE ACTION ACCESS CONTRACT. Even though the current tools are "
+                    "read-only, phrase workflow changes in a stable order that can later "
+                    "map to actions: inspect current workflow, reuse existing nodes, add "
+                    "missing nodes, connect them from the recommended source, configure "
+                    "required settings, validate, then run. Ask for confirmation before "
+                    "describing destructive changes or replacing existing settings. "
+
+                    "WHEN SUGGESTING CONNECTIONS, recommend a specific current node "
+                    "instance to connect from. Prefer the latest relevant dataframe-producing "
+                    "node after cleaning, filtering, replacement, imputation, detection-limit "
+                    "handling, type conversion, feature engineering, or normalization. Explain "
+                    "valid alternatives when more than one attachment point makes sense. For "
+                    "example, a feature-selection node can connect after raw import, but it is "
+                    "usually better after missing-value and detection-limit handling when those "
+                    "steps affect the modeling columns. "
+
+                    "IMPROVEMENT ADVICE IS NOT THE SAME AS ERROR REPORTING. If the user asks "
+                    "what is wrong, first validate the workflow before claiming confirmed "
+                    "errors. If validation returns no errors, say there are no confirmed "
+                    "configuration errors, then suggest improvements based on the likely "
+                    "workflow goal, missing stages, weak ordering, duplicate analysis, or "
+                    "settings that would make the workflow more useful. "
+
+                    "Treat the advisor as the source of truth for generic logical step order, "
+                    "but treat get_current_workflow as the source of truth for what the user "
+                    "already has. Use only exact live catalog node names returned by tools. "
+                    "Do not pretend to build or execute the workflow. "
 
                     "Do not assume an empty setting is invalid. Some nodes interpret an "
                     "empty columns list as all compatible columns. Do not report a "
@@ -378,7 +418,19 @@ class AssistantService:
                 return execute_app_guide_tool(tool_name, arguments)
 
             if tool_name == "advise_workflow":
-                return execute_workflow_advisor_tool(tool_name, arguments)
+                current_workflow = None
+                if workflow_id is not None:
+                    current_workflow = get_workflow_context(
+                        db=db,
+                        workflow_id=workflow_id,
+                        owner_username=owner_username,
+                    )
+
+                return execute_workflow_advisor_tool(
+                    tool_name,
+                    arguments,
+                    current_workflow=current_workflow,
+                )
 
             if tool_name == "get_current_workflow":
                 if workflow_id is None:

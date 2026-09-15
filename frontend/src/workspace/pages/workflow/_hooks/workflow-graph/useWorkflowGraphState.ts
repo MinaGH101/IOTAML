@@ -21,10 +21,14 @@ export function useWorkflowGraphState(store: Store) {
     const setSelectedEdgeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setSelectedEdgeId(value), [store]);
     const setSelectedEdgeIds = useCallback<Dispatch<SetStateAction<string[]>>>((value) => store.getState().setSelectedEdgeIds(value), [store]);
     const setModalNodeId = useCallback<Dispatch<SetStateAction<string | null>>>((value) => store.getState().setModalNodeId(value), [store]);
+    const getDocumentGraph = useCallback(() => {
+        const state = store.getState();
+        return { nodes: state.documentNodes, edges: state.edges };
+    }, [store]);
     const nodesById = useMemo(() => new Map(documentNodes.map((node) => [node.id, node])), [documentNodes]);
     const selectedNode = useMemo(() => nodesById.get(selectedId || '') || null, [nodesById, selectedId]);
     const selectedEdge = useMemo(() => edges.find((edge) => edge.id === selectedEdgeId) || null, [edges, selectedEdgeId]);
     const selectedFlow = useMemo(() => connectedGraph(documentNodes, edges, selectedId), [documentNodes, edges, selectedId]);
     const modalNode = useMemo(() => nodesById.get(modalNodeId || '') || null, [modalNodeId, nodesById]);
-    return { nodes, documentNodes, setNodes, edges, setEdges, nodesById, selectedNode, selectedEdge, selectedFlow, modalNode, selectedId, setSelectedId, selectedIds, setSelectedIds, selectedEdgeId, setSelectedEdgeId, selectedEdgeIds, setSelectedEdgeIds, modalNodeId, setModalNodeId, ctrlSelectionActive };
+    return { nodes, documentNodes, setNodes, edges, setEdges, getDocumentGraph, nodesById, selectedNode, selectedEdge, selectedFlow, modalNode, selectedId, setSelectedId, selectedIds, setSelectedIds, selectedEdgeId, setSelectedEdgeId, selectedEdgeIds, setSelectedEdgeIds, modalNodeId, setModalNodeId, ctrlSelectionActive };
 }

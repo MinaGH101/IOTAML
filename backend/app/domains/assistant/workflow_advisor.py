@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from app.domains.assistant.catalog import list_node_summaries
+from app.nodes.registry import canonical_node_id
 
 
 _PATTERNS_PATH = Path(__file__).with_name("knowledge") / "workflow_patterns.json"
@@ -91,11 +92,270 @@ def _resolve_step(step: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _display_name(node: dict[str, Any]) -> str:
+    return str(
+        node.get("label")
+        or node.get("typeLabel")
+        or node.get("name")
+        or ""
+    ).strip()
+
+
+def _annotate_step_with_workflow(
+    step: dict[str, Any],
+    current_workflow: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not current_workflow:
+        return step
+
+    candidate_names = {
+        str(node.get("name") or "").strip()
+        for node in step.get("nodes", [])
+        if str(node.get("name") or "").strip()
+    }
+    candidate_ids = {
+        canonical_node_id(str(node.get("id") or "").strip())
+        for node in step.get("nodes", [])
+        if str(node.get("id") or "").strip()
+    }
+
+    matches = []
+    for existing in current_workflow.get("nodes", []):
+        existing_id = canonical_node_id(str(existing.get("registryId") or ""))
+        existing_names = {
+            str(existing.get("label") or "").strip(),
+            str(existing.get("typeLabel") or "").strip(),
+        }
+
+        if existing_id in candidate_ids or candidate_names.intersection(existing_names):
+            matches.append(
+                {
+                    "instanceId": existing.get("instanceId"),
+                    "name": _display_name(existing),
+                    "registryId": existing.get("registryId"),
+                }
+            )
+
+    return {
+        **step,
+        "alreadyPresent": bool(matches),
+        "matchedExistingNodes": matches,
+    }
+
+
+def _connection_advice(
+    pattern_id: str,
+    steps: list[dict[str, Any]],
+    current_workflow: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not current_workflow:
+        return None
+
+    summary = current_workflow.get("summary") or {}
+    node_by_id = {
+        str(node.get("instanceId") or ""): node
+        for node in current_workflow.get("nodes", [])
+    }
+
+    source_ids = (
+        summary.get("preferredDataframeSourceNodeIds")
+        or summary.get("dataframeEndpointNodeIds")
+        or summary.get("dataframeNodeIds")
+        or []
+    )
+    source_nodes = [
+        node_by_id[node_id]
+        for node_id in source_ids
+        if node_id in node_by_id
+    ]
+
+    if not source_nodes:
+        return None
+
+    next_missing = next(
+        (
+            step for step in steps
+            if step.get("required") and not step.get("alreadyPresent")
+        ),
+        None,
+    )
+
+    if pattern_id in {"classification", "regression"}:
+        target_step_id = "select_features_target"
+    else:
+        target_step_id = str(next_missing.get("id")) if next_missing else ""
+
+    recommended = source_nodes[0]
+    alternatives = source_nodes[1:4]
+
+    return {
+        "recommendedSourceNodeId": recommended.get("instanceId"),
+        "recommendedSourceName": _display_name(recommended),
+        "connectToStepId": target_step_id,
+        "reason": (
+            "Prefer connecting new downstream nodes to the latest useful "
+            "dataframe-producing node, especially after cleaning, selection, "
+            "detection-limit handling, imputation, or normalization."
+        ),
+        "alternativeSourceNodes": [
+            {
+                "instanceId": node.get("instanceId"),
+                "name": _display_name(node),
+            }
+            for node in alternatives
+        ],
+    }
+
+
+def _first_node_choice(step: dict[str, Any]) -> dict[str, Any] | None:
+    nodes = step.get("nodes") or []
+    if not nodes:
+        return None
+    first = nodes[0]
+    return first if isinstance(first, dict) else None
+
+
+def _action_plan(
+    pattern_id: str,
+    steps: list[dict[str, Any]],
+    current_workflow: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build a dry-run plan that future write tools can map to actions."""
+    plan: dict[str, Any] = {
+        "mode": "dry_run",
+        "patternId": pattern_id,
+        "alreadyPresent": [],
+        "add": [],
+        "connect": [],
+        "configure": [],
+        "notes": [],
+    }
+
+    current_source: dict[str, Any] | None = None
+    source_rewind_step_ids = {"load_data", "inspect_data", "missing_values"}
+    if current_workflow:
+        summary = current_workflow.get("summary") or {}
+        node_by_id = {
+            str(node.get("instanceId") or ""): node
+            for node in current_workflow.get("nodes", [])
+        }
+        source_ids = (
+            summary.get("preferredDataframeSourceNodeIds")
+            or summary.get("dataframeEndpointNodeIds")
+            or summary.get("dataframeNodeIds")
+            or []
+        )
+        for source_id in source_ids:
+            if source_id in node_by_id:
+                current_source = node_by_id[source_id]
+                break
+
+    for step in steps:
+        step_id = str(step.get("id") or "")
+        matches = step.get("matchedExistingNodes") or []
+        if step.get("alreadyPresent") and matches:
+            first_match = matches[0]
+            plan["alreadyPresent"].append(
+                {
+                    "stepId": step_id,
+                    "instanceId": first_match.get("instanceId"),
+                    "nodeName": first_match.get("name"),
+                    "registryId": first_match.get("registryId"),
+                }
+            )
+            if current_source is None or step_id not in source_rewind_step_ids:
+                current_source = {
+                    "instanceId": first_match.get("instanceId"),
+                    "label": first_match.get("name"),
+                    "typeLabel": first_match.get("name"),
+                }
+            continue
+
+        if not step.get("required"):
+            choice = _first_node_choice(step)
+            if choice and step.get("condition"):
+                plan["notes"].append(
+                    {
+                        "stepId": step_id,
+                        "nodeId": choice.get("id"),
+                        "nodeName": choice.get("name"),
+                        "condition": step.get("condition"),
+                    }
+                )
+            continue
+
+        choice = _first_node_choice(step)
+        if not choice:
+            plan["notes"].append(
+                {
+                    "stepId": step_id,
+                    "warning": "No implemented node resolved for this required step.",
+                }
+            )
+            continue
+
+        add_action = {
+            "stepId": step_id,
+            "nodeId": choice.get("id"),
+            "nodeName": choice.get("name"),
+            "purpose": step.get("purpose"),
+            "requiresChoice": bool(step.get("selection")),
+        }
+        if step.get("selection"):
+            add_action["choices"] = [
+                {
+                    "nodeId": node.get("id"),
+                    "nodeName": node.get("name"),
+                    "description": node.get("description"),
+                }
+                for node in step.get("nodes", [])
+                if isinstance(node, dict)
+            ]
+        plan["add"].append(add_action)
+
+        if current_source:
+            plan["connect"].append(
+                {
+                    "sourceNodeId": current_source.get("instanceId"),
+                    "sourceNodeName": _display_name(current_source),
+                    "targetStepId": step_id,
+                    "targetNodeId": choice.get("id"),
+                    "targetNodeName": choice.get("name"),
+                    "reason": (
+                        "Connect the next missing step to the latest relevant "
+                        "upstream node that already prepares or produces the "
+                        "data needed for this goal."
+                    ),
+                }
+            )
+
+        current_source = {
+            "instanceId": f"new:{step_id}",
+            "label": choice.get("name"),
+            "typeLabel": choice.get("name"),
+        }
+
+    if pattern_id in {"classification", "regression"}:
+        plan["configure"].append(
+            {
+                "stepId": "select_features_target",
+                "instruction": (
+                    "Choose the target column first, then select feature columns "
+                    "that are available after the recommended upstream cleaning "
+                    "or preprocessing node."
+                ),
+            }
+        )
+
+    return plan
+
+
 def advise_workflow(
     goal: str,
     *,
     pattern_id: str | None = None,
     limit_patterns: int = 1,
+    current_workflow: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Recommend a read-only workflow plan grounded in the live node catalog.
 
@@ -139,7 +399,10 @@ def advise_workflow(
     selected_patterns: list[dict[str, Any]] = []
     for score, pattern in ranked[: max(1, min(limit_patterns, 5))]:
         steps = [
-            _resolve_step(step)
+            _annotate_step_with_workflow(
+                _resolve_step(step),
+                current_workflow,
+            )
             for step in (pattern.get("steps") or [])
             if isinstance(step, dict)
         ]
@@ -150,6 +413,16 @@ def advise_workflow(
                 "title": pattern.get("title"),
                 "score": score,
                 "steps": steps,
+                "connectionAdvice": _connection_advice(
+                    str(pattern.get("id") or ""),
+                    steps,
+                    current_workflow,
+                ),
+                "actionPlan": _action_plan(
+                    str(pattern.get("id") or ""),
+                    steps,
+                    current_workflow,
+                ),
             }
         )
 

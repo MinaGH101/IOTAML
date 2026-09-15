@@ -1,0 +1,187 @@
+{
+  "format": "iota-workflow",
+  "version": 1,
+  "app": "IOTA ML",
+  "exportedAt": "2026-09-15T00:00:00.000Z",
+  "name": "Random Forest Regression with Prediction Plot",
+  "graph": {
+    "nodes": [
+      {
+        "id": "data-input",
+        "type": "mlNode",
+        "position": { "x": 80, "y": 180 },
+        "data": {
+          "registryId": "DI-002",
+          "label": "Upload CSV/Excel",
+          "params": {
+            "sample_size": 100
+          }
+        }
+      },
+      {
+        "id": "select-target-features",
+        "type": "mlNode",
+        "position": { "x": 330, "y": 180 },
+        "data": {
+          "registryId": "MP-002",
+          "label": "Select Features & Target",
+          "params": {
+            "target_column": "YOUR_TARGET_COLUMN",
+            "columns": []
+          }
+        }
+      },
+      {
+        "id": "train-test-split",
+        "type": "mlNode",
+        "position": { "x": 610, "y": 180 },
+        "data": {
+          "registryId": "MP-001",
+          "label": "Train/Test Split",
+          "params": {
+            "test_size": 0.2,
+            "random_state": 42,
+            "shuffle": true,
+            "stratify": false
+          }
+        }
+      },
+      {
+        "id": "training-preprocessor",
+        "type": "mlNode",
+        "position": { "x": 890, "y": 180 },
+        "data": {
+          "registryId": "MP-005",
+          "label": "Training Preprocessor",
+          "params": {
+            "imputation": "median",
+            "scaling": "none"
+          }
+        }
+      },
+      {
+        "id": "random-forest",
+        "type": "mlNode",
+        "position": { "x": 1180, "y": 180 },
+        "data": {
+          "registryId": "MR-006",
+          "label": "Random Forest Regressor",
+          "params": {
+            "train_mode": "auto",
+            "target_column": "YOUR_TARGET_COLUMN",
+            "n_estimators": 200,
+            "max_depth": null,
+            "random_state": 42
+          }
+        }
+      },
+      {
+        "id": "prediction-plot",
+        "type": "mlNode",
+        "position": { "x": 1480, "y": 40 },
+        "data": {
+          "registryId": "MA-001",
+          "label": "Prediction Plot",
+          "params": {
+            "data_pairs": "test",
+            "max_points": 500,
+            "color": "#31cde3"
+          }
+        }
+      },
+      {
+        "id": "model-validation",
+        "type": "mlNode",
+        "position": { "x": 1480, "y": 210 },
+        "data": {
+          "registryId": "MA-003",
+          "label": "Model Validation",
+          "params": {
+            "data_pairs": ["test"],
+            "metrics": ["r2", "mae", "rmse"],
+            "average": "auto"
+          }
+        }
+      },
+      {
+        "id": "feature-importance",
+        "type": "mlNode",
+        "position": { "x": 1480, "y": 380 },
+        "data": {
+          "registryId": "MA-006",
+          "label": "Feature Importance",
+          "params": {
+            "color": "#31cde3"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-data-to-select",
+        "source": "data-input",
+        "target": "select-target-features",
+        "sourceHandle": "dataframe",
+        "targetHandle": "data",
+        "animated": true
+      },
+      {
+        "id": "edge-select-to-split",
+        "source": "select-target-features",
+        "target": "train-test-split",
+        "sourceHandle": "dataframe",
+        "targetHandle": "data",
+        "animated": true
+      },
+      {
+        "id": "edge-split-to-preprocess",
+        "source": "train-test-split",
+        "target": "training-preprocessor",
+        "sourceHandle": "split",
+        "targetHandle": "training",
+        "animated": true
+      },
+      {
+        "id": "edge-preprocess-to-rf",
+        "source": "training-preprocessor",
+        "target": "random-forest",
+        "sourceHandle": "training",
+        "targetHandle": "training",
+        "animated": true
+      },
+      {
+        "id": "edge-rf-to-prediction-plot",
+        "source": "random-forest",
+        "target": "prediction-plot",
+        "sourceHandle": "model",
+        "targetHandle": "model",
+        "animated": true
+      },
+      {
+        "id": "edge-rf-to-validation",
+        "source": "random-forest",
+        "target": "model-validation",
+        "sourceHandle": "model",
+        "targetHandle": "model",
+        "animated": true
+      },
+      {
+        "id": "edge-rf-to-importance",
+        "source": "random-forest",
+        "target": "feature-importance",
+        "sourceHandle": "model",
+        "targetHandle": "model",
+        "animated": true
+      }
+    ],
+    "meta": {
+      "template": true,
+      "model": "random_forest_regressor",
+      "notes": [
+        "After import, set Upload CSV/Excel to your project dataset if it is not auto-selected.",
+        "Replace YOUR_TARGET_COLUMN in Select Features & Target and Random Forest with your real target column.",
+        "Leave Feature Columns empty to use all active columns except the target, or choose a specific feature list."
+      ]
+    }
+  }
+}

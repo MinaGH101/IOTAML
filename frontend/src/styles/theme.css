@@ -435,7 +435,7 @@ background: color-mix(
 .modal-backdrop,
 .node-modal-backdrop,
 .n8n-node-backdrop.node-modal-backdrop {
-background: var(--theme-overlay-bg) !important;
+background: transparent !important;
   backdrop-filter: none !important;
 }
 .modal-card,

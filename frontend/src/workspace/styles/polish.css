@@ -728,3 +728,84 @@
   background: rgb(8 127 115 / 8%) !important;
   color: #087f73 !important;
 }
+
+.node-modal-backdrop.workflow-shell-backdrop.n8n-node-backdrop,
+:root[data-theme="light"] .node-modal-backdrop.workflow-shell-backdrop.n8n-node-backdrop {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+}
+
+.workflow-shell-page .workflow-topbar-brand {
+  min-height: 34px;
+  padding: 4px 9px 4px 5px;
+  gap: 7px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgb(45 212 191 / 14%), rgb(129 140 248 / 9%));
+  box-shadow: inset 0 0 0 1px rgb(45 212 191 / 16%);
+}
+
+.workflow-shell-page .workflow-topbar-brand img {
+  width: 27px;
+  height: 27px;
+  max-width: 27px;
+  max-height: 27px;
+  flex-basis: 27px;
+  border-radius: 6px;
+  filter: drop-shadow(0 3px 8px rgb(45 212 191 / 20%));
+}
+
+.workflow-shell-page .workflow-topbar-brand .iota-brand-name {
+  margin: 0;
+  color: #f7fafc !important;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.workflow-shell-page .left-stack .palette-grid,
+.workflow-shell-page .left-stack .palette-flyout-grid,
+.workflow-shell-page .node-palette .palette-grid,
+.workflow-shell-page .node-palette .palette-flyout-grid,
+.workflow-shell-page .palette-flyout .palette-flyout-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+.workflow-shell-page .node-palette .palette-node-card,
+.workflow-shell-page .node-palette .flyout-node-card,
+.workflow-shell-page .palette-flyout .palette-node-card,
+.workflow-shell-page .node-palette-item.palette-node-card {
+  min-height: 76px !important;
+  height: auto !important;
+  padding: 8px 5px !important;
+}
+
+.workflow-shell-page .node-palette .palette-node-name,
+.workflow-shell-page .node-palette .palette-node-card span.palette-node-name,
+.workflow-shell-page .palette-flyout .palette-node-name,
+.workflow-shell-page .palette-flyout .palette-node-card span.palette-node-name {
+  display: block !important;
+  -webkit-line-clamp: unset;
+  width: 100% !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  line-height: 1.25 !important;
+  font-size: 9.8px !important;
+  text-align: center !important;
+}
+
+:root[data-theme="light"] .workflow-shell-page .workflow-topbar-brand {
+  background: linear-gradient(135deg, rgb(8 127 115 / 10%), rgb(37 99 235 / 7%));
+  box-shadow: inset 0 0 0 1px rgb(8 127 115 / 15%);
+}
+
+:root[data-theme="light"] .workflow-shell-page .workflow-topbar-brand .iota-brand-name {
+  color: #0f2f3a !important;
+}

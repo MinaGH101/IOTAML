@@ -16,7 +16,7 @@ export function WorkflowCanvas({ run, ...p }: WorkflowStageProps & {
       </ReactFlow>
     </div>
     <div className={`analysis-board-mount-layer ${p.analysisBoardOpen ? '' : 'is-hidden'}`} aria-hidden={!p.analysisBoardOpen}>
-      <BoardPage tabs={p.boards.boards} activeBoardId={p.boards.activeBoardId} items={p.boards.activeBoard?.items || []} run={run} workflowDirty={p.workflowDirtyForBoard} onSelectBoard={p.boards.selectBoard} onCreateBoard={p.boards.createBoard} onUpdateItem={p.boards.updateItem} onRemoveItem={p.boards.removeItem} onDuplicateItem={p.boards.duplicateItem} viewportStorageScope={p.viewportStorageScope} active={p.analysisBoardOpen} readOnly={p.readOnly}/>
+      <BoardPage tabs={p.boards.boards} activeBoardId={p.boards.activeBoardId} items={p.boards.activeBoard?.items || []} run={run} workflowDirty={p.workflowDirtyForBoard} onSelectBoard={p.boards.selectBoard} onCreateBoard={p.boards.createBoard} onUpdateItem={p.boards.updateItem} onRemoveItem={p.boards.removeItem} onDuplicateItem={p.boards.duplicateItem} onSelectSourceNode={p.canvas.selectWorkflowNode} viewportStorageScope={p.viewportStorageScope} active={p.analysisBoardOpen} readOnly={p.readOnly}/>
     </div>
   </section>;
 }

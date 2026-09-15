@@ -18,15 +18,19 @@ type BoardCardProps = {
     onUpdateItem: (id: string, patch: Partial<AnalysisBoardItem>) => void;
     onRemoveItem: (id: string) => void;
     onDuplicateItem: (item: AnalysisBoardItem) => void;
+    onSelectSourceNode: (nodeId: string) => void;
     onFocus: (focused: FocusedOutput) => void;
     readOnly: boolean;
     active: boolean;
 };
-export const BoardCard = memo(function BoardCard({ item, output, stale, runId, getViewportScale, onUpdateItem, onRemoveItem, onDuplicateItem, onFocus, readOnly, active, }: BoardCardProps) {
+export const BoardCard = memo(function BoardCard({ item, output, stale, runId, getViewportScale, onUpdateItem, onRemoveItem, onDuplicateItem, onSelectSourceNode, onFocus, readOnly, active, }: BoardCardProps) {
     const title = item.sourceLabel
         ? `${item.outputTitle}`
         : item.outputTitle;
-    return (<article className={`analysis-board-card workflow-shell-card ${stale ? 'stale' : ''}`} data-board-item-id={item.id} style={{ left: item.x, top: item.y, width: item.w, height: item.h }}>
+    return (<article className={`analysis-board-card workflow-shell-card ${stale ? 'stale' : ''}`} data-board-item-id={item.id} style={{ left: item.x, top: item.y, width: item.w, height: item.h }} onClick={() => {
+            if (item.nodeId)
+                onSelectSourceNode(item.nodeId);
+        }}>
       <div className="analysis-board-card-head" onPointerDown={(event) => {
             if (!readOnly)
                 startBoardPointerAction(event, item, 'move', getViewportScale, onUpdateItem);

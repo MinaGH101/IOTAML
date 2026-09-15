@@ -1,5 +1,10 @@
 import type { AnalysisBoardItem } from './board';
 import type { Output } from './output';
+
+function outputReferenceId(output: Output) {
+    return String(output.output_id || output.id || boardOutputKey(output));
+}
+
 export function boardOutputTitle(output: Output, index: number) {
     const base = String(output.title || `خروجی ${index + 1}`);
     const source = String(output.source_label || output.branch || '').trim();
@@ -14,6 +19,20 @@ export function boardOutputKey(output: Output) {
         output.branch || '',
         output.path_index || '',
     ].map(String).join('::');
+}
+export function boardItemMatchesOutput(item: AnalysisBoardItem, output: Output, nodeIdFallback: string | null, outputIndex: number) {
+    const itemNodeId = String(item.outputRef?.nodeId || item.nodeId || '');
+    const outputNodeId = String(output.node_id || nodeIdFallback || '');
+    if (itemNodeId !== outputNodeId)
+        return false;
+    const outputId = outputReferenceId(output);
+    if (item.outputRef?.outputId && item.outputRef.outputId === outputId)
+        return true;
+    const outputKey = boardOutputKey(output);
+    return item.outputKey === outputKey && item.outputIndex === outputIndex;
+}
+export function boardItemsContainOutput(items: AnalysisBoardItem[], output: Output, nodeIdFallback: string | null, outputIndex: number) {
+    return items.some((item) => boardItemMatchesOutput(item, output, nodeIdFallback, outputIndex));
 }
 export function buildBoardOutputLookup(outputs: Output[]) {
     const byNode = new Map<string, Output[]>();
@@ -32,8 +51,7 @@ export function findCurrentBoardOutput(item: AnalysisBoardItem, lookup: Map<stri
     const referenceKey = item.outputRef?.outputId;
     if (referenceKey) {
         const referenced = searchable.find((output) => {
-            const id = String(output.output_id || output.id || boardOutputKey(output));
-            return id === referenceKey;
+            return outputReferenceId(output) === referenceKey;
         });
         if (referenced)
             return referenced;

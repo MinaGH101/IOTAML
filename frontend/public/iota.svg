@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 900" role="img" aria-labelledby="title desc">
+  <title id="title">IOTA machine learning logo</title>
+  <desc id="desc">A refined vector logo combining a gear, human profile, and neural network circuitry.</desc>
+  <defs>
+    <linearGradient id="iotaGradient" x1="170" y1="120" x2="835" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7852ee"/>
+      <stop offset=".48" stop-color="#5287f2"/>
+      <stop offset="1" stop-color="#28d1dc"/>
+    </linearGradient>
+
+    <mask id="logoMask" maskUnits="userSpaceOnUse">
+      <rect width="1024" height="900" fill="#000"/>
+
+      <!-- Gear/head silhouette rebuilt as vector geometry. -->
+      <g fill="#fff">
+        <path fill-rule="evenodd" d="
+          M376 35
+          L470 35
+          L482 123
+          C513 127 543 134 572 144
+          L627 73
+          L706 119
+          L671 201
+          C696 222 718 246 738 273
+          L826 236
+          L872 316
+          L800 372
+          C812 404 820 437 824 472
+          L914 483
+          L914 574
+          L822 586
+          C816 620 806 652 791 681
+          L862 738
+          L814 816
+          L730 780
+          C707 806 681 829 652 848
+          L687 863
+          L608 888
+          L552 815
+          C529 824 505 831 480 836
+          L470 748
+          C504 833 538 820 559 802
+          C579 785 585 762 581 730
+          C576 692 584 676 613 668
+          C633 662 638 649 625 633
+          C645 626 649 611 636 596
+          C653 590 657 578 646 564
+          C637 553 639 542 653 535
+          C674 524 678 509 666 489
+          C637 438 637 393 612 336
+          C588 282 548 246 492 226
+          C425 201 338 202 268 224
+          C213 242 166 272 127 314
+          L63 247
+          L102 202
+          L76 118
+          L155 73
+          L212 143
+          C242 133 274 126 308 122
+          L318 35
+          Z
+
+          M300 218
+          C390 197 504 207 570 253
+          C619 287 650 342 662 417
+          C664 430 665 445 665 459
+          C661 423 649 385 632 351
+          C602 290 555 253 493 233
+          C431 213 354 212 290 227
+          C219 244 159 280 111 331
+          L98 318
+          C151 265 218 237 300 218
+          Z"/>
+      </g>
+
+      <!-- Neural network rebuilt from strokes and node circles. -->
+      <g fill="#fff" stroke="#fff" stroke-width="19" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M116 454 L168 409 L222 426 L277 380 L333 405 L397 354 L457 376 L514 331 L587 344"/>
+        <path d="M248 501 L296 501 L329 564 L344 614"/>
+        <path d="M320 321 L363 294 L408 304 L438 250"/>
+        <path d="M430 489 L476 519 L512 566"/>
+        <path d="M483 258 L532 267 L569 242"/>
+        <path d="M437 250 L491 250 L529 222"/>
+        <path d="M283 380 L264 329 L232 303"/>
+        <path d="M191 356 L165 337 L132 342"/>
+        <path d="M512 445 L565 447 L618 405 L660 423"/>
+        <path d="M569 502 L596 461 L630 391"/>
+        <path d="M327 564 L386 557 L430 590"/>
+        <path d="M190 501 L151 501"/>
+        <path d="M388 401 L388 351"/>
+      </g>
+
+      <g fill="#fff">
+        <circle cx="116" cy="454" r="18"/>
+        <circle cx="168" cy="409" r="22"/>
+        <circle cx="222" cy="426" r="21"/>
+        <circle cx="277" cy="380" r="23"/>
+        <circle cx="333" cy="405" r="18"/>
+        <circle cx="397" cy="354" r="24"/>
+        <circle cx="457" cy="376" r="21"/>
+        <circle cx="514" cy="331" r="24"/>
+        <circle cx="587" cy="344" r="22"/>
+        <circle cx="660" cy="423" r="25"/>
+        <circle cx="248" cy="501" r="20"/>
+        <circle cx="296" cy="501" r="24"/>
+        <circle cx="329" cy="564" r="19"/>
+        <circle cx="344" cy="614" r="16"/>
+        <circle cx="386" cy="557" r="17"/>
+        <circle cx="430" cy="590" r="23"/>
+        <circle cx="476" cy="519" r="16"/>
+        <circle cx="512" cy="566" r="15"/>
+        <circle cx="565" cy="447" r="17"/>
+        <circle cx="618" cy="405" r="17"/>
+        <circle cx="630" cy="391" r="21"/>
+        <circle cx="596" cy="461" r="18"/>
+        <circle cx="151" cy="501" r="14"/>
+        <circle cx="320" cy="321" r="13"/>
+        <circle cx="363" cy="294" r="18"/>
+        <circle cx="408" cy="304" r="14"/>
+        <circle cx="438" cy="250" r="23"/>
+        <circle cx="491" cy="250" r="12"/>
+        <circle cx="529" cy="222" r="13"/>
+        <circle cx="569" cy="242" r="14"/>
+        <circle cx="264" cy="329" r="13"/>
+        <circle cx="232" cy="303" r="23"/>
+        <circle cx="191" cy="356" r="11"/>
+        <circle cx="165" cy="337" r="13"/>
+        <circle cx="132" cy="342" r="15"/>
+        <circle cx="107" cy="410" r="10"/>
+        <circle cx="102" cy="366" r="10"/>
+        <circle cx="219" cy="465" r="13"/>
+        <circle cx="334" cy="448" r="14"/>
+        <circle cx="401" cy="441" r="23"/>
+        <circle cx="462" cy="445" r="13"/>
+        <circle cx="541" cy="476" r="18"/>
+        <circle cx="627" cy="480" r="12"/>
+        <circle cx="255" cy="604" r="13"/>
+        <circle cx="282" cy="637" r="14"/>
+        <circle cx="219" cy="582" r="10"/>
+        <circle cx="187" cy="626" r="9"/>
+      </g>
+
+      <!-- Small transparent counters make several nodes read as precise sockets. -->
+      <g fill="#000">
+        <circle cx="116" cy="454" r="8"/>
+        <circle cx="333" cy="405" r="8"/>
+        <circle cx="565" cy="447" r="8"/>
+      </g>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="900" fill="url(#iotaGradient)" mask="url(#logoMask)"/>
+</svg>

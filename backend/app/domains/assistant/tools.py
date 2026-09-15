@@ -48,7 +48,10 @@ WORKFLOW_ADVISOR_TOOLS: list[dict[str, Any]] = [
             "Build a read-only IOTA workflow recommendation for a user's goal. "
             "Use this when the user asks what nodes to use, what order to use them "
             "in, or how to accomplish an analysis or ML task. The returned node "
-            "names are resolved from the live implemented node catalog."
+            "names are resolved from the live implemented node catalog. When a "
+            "current workflow is available, the result also marks existing steps "
+            "and returns an action-ready dry-run plan for additions, connections, "
+            "and configuration guidance."
         ),
         "parameters": {
             "type": "object",
@@ -80,6 +83,8 @@ WORKFLOW_ADVISOR_TOOLS: list[dict[str, Any]] = [
 def execute_workflow_advisor_tool(
     tool_name: str,
     arguments: dict[str, Any],
+    *,
+    current_workflow: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if tool_name != "advise_workflow":
         return {"error": f"Unsupported workflow-advisor tool: {tool_name}"}
@@ -99,7 +104,11 @@ def execute_workflow_advisor_tool(
             "error": "A workflow goal is required.",
         }
 
-    return advise_workflow(goal, pattern_id=pattern_id)
+    return advise_workflow(
+        goal,
+        pattern_id=pattern_id,
+        current_workflow=current_workflow,
+    )
 
 
 CATALOG_TOOLS: list[dict[str, Any]] = [

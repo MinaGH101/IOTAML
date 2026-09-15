@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { Output } from '../../../../features/results/components/ResultsPanel';
+import { createAutosaveSignature, createAutosaveSnapshot } from '../../../_model/workflowPersistence';
 import { normalizeEdgeHandles, normalizeFlowNodes, workflowOutputSignature, type FlowGraph } from '../../../_model/graph';
 import { useWorkflowLayout } from '../../../_hooks/useWorkflowLayout';
 import { useBoardDialogs } from '../_features/boards/_hooks/useBoardDialogs';
@@ -33,10 +34,32 @@ export function useWorkflowEditorRuntime({ initialWorkflowId }: WorkflowPageProp
         setSelectedEdgeIds: graph.setSelectedEdgeIds, setModalNodeId: graph.setModalNodeId, selectNode: graph.selectNode, enterComponentNode: data.components.enterNode,
         renameNodeSources: data.boards.renameNodeSources });
     const interactiveTable = useInteractiveTableController({ scope: `workflow:${data.document.currentWorkflowId ?? initialWorkflowId ?? 'draft'}`, nodes: graph.documentNodes, outputs, updateNodeParams: canvas.updateNodeParams });
+    const getExecutionSnapshot = useCallback(() => {
+        const latest = graph.getDocumentGraph();
+        const edges = normalizeEdgeHandles(latest.nodes, latest.edges);
+        const currentGraph: FlowGraph = {
+            nodes: latest.nodes,
+            edges,
+            meta: {
+                datasetId: base.datasets.datasetId,
+                targetColumn: base.targetColumn,
+                taskType: base.taskType,
+                analysisBoards: data.boards.serializedBoards,
+                activeAnalysisBoardId: data.boards.activeBoardId,
+            },
+        };
+        return {
+            nodes: latest.nodes,
+            edges,
+            autosaveSnapshot: createAutosaveSnapshot({ name: data.document.workflowName, graph: currentGraph as unknown as Record<string, unknown>, projectId: base.projectId }),
+            autosaveSignature: createAutosaveSignature({ name: data.document.workflowName, projectId: base.projectId, nodes: latest.nodes, edges, datasetId: base.datasets.datasetId, targetColumn: base.targetColumn, taskType: base.taskType, activeBoardId: data.boards.activeBoardId, analysisBoards: data.boards.persistenceSignature }),
+            currentOutputSignature: workflowOutputSignature(latest.nodes, edges, base.datasets.datasetId, base.targetColumn, base.taskType),
+        };
+    }, [base.datasets.datasetId, base.projectId, base.targetColumn, base.taskType, data.boards.activeBoardId, data.boards.persistenceSignature, data.boards.serializedBoards, data.document.workflowName, graph]);
     const execution = useWorkflowExecution({ nodes: graph.documentNodes, edges: graph.edges, selectedId: graph.selectedId, setSelectedId: graph.setSelectedId,
         setSelectedIds: graph.setSelectedIds, setSelectedEdgeId: graph.setSelectedEdgeId, setSelectedEdgeIds: graph.setSelectedEdgeIds, versionPreviewActive: base.readOnly,
         componentEditorActive: Boolean(data.components.editor), workflowName: data.document.workflowName, datasetId: base.datasets.datasetId, projectId: base.projectId,
-        targetColumn: base.targetColumn, taskType: base.taskType, autosaveSnapshot: data.document.autosaveSnapshot, autosaveSignature: data.document.autosaveSignature,
+        targetColumn: base.targetColumn, taskType: base.taskType, getExecutionSnapshot, autosaveSnapshot: data.document.autosaveSnapshot, autosaveSignature: data.document.autosaveSignature,
         currentOutputSignature: data.document.currentOutputSignature, persistSnapshot: data.document.persistSnapshot, setBusy: runs.setBusy, setLastRunSignature: runs.setLastRunSignature,
         recordRun: runs.recordRun, retryRunWithSignature: runs.retryRun, setMessage: base.setMessage });
     const layout = useWorkflowLayout(shell.paletteCollapsed, shell.resultsCollapsed, base.resultsWidth, base.setResultsWidth);
