@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     message: str
+    workflow_changed: bool = False
 
 
 class AssistantMessageOut(BaseModel):
@@ -129,7 +130,7 @@ async def chat(
                 for row in recent_rows
             ]
 
-        answer = await service.chat(
+        result = await service.chat(
             message=request.message,
             history=recent_history,
             db=db,
@@ -143,11 +144,14 @@ async def chat(
                 workflow_id=request.workflow_id,
                 user_id=current_user.id,
                 user_message=request.message,
-                assistant_message=answer,
+                assistant_message=result.message,
             )
             db.commit()
 
-        return ChatResponse(message=answer)
+        return ChatResponse(
+            message=result.message,
+            workflow_changed=result.workflow_changed,
+        )
 
     except AssistantNotConfiguredError as exc:
         raise HTTPException(

@@ -8,6 +8,9 @@ import type { FlowGraph } from '../../../../_model/graph';
 import type { useWorkflowPersistence } from '../useWorkflowPersistence';
 import type { UseWorkflowDocumentOptions } from './types';
 import type { useDocumentRecords } from './useDocumentRecords';
+type LoadWorkflowOptions = {
+    persistBeforeLoad?: boolean;
+};
 export function useDocumentLoader(o: UseWorkflowDocumentOptions, persistence: ReturnType<typeof useWorkflowPersistence>, records: ReturnType<typeof useDocumentRecords>) {
     useEffect(() => {
         let alive = true;
@@ -36,12 +39,13 @@ export function useDocumentLoader(o: UseWorkflowDocumentOptions, persistence: Re
             o.setMessage(error instanceof Error ? error.message : 'بارگذاری پروژه ناموفق بود'); });
         return () => { alive = false; };
     }, [o.initialWorkflowId, o.projectId, o.refreshDatasets, o.setCatalog, o.setDatasetId, o.setMessage, o.setRunHistory, records.loadRecord, records.resetDocument]);
-    return useCallback(async (value: string) => {
+    return useCallback(async (value: string, options: LoadWorkflowOptions = {}) => {
         const id = Number(value) || null;
         if (!id)
             return;
         try {
-            if (!o.versionPreview && persistence.autosaveSnapshot.name)
+            const persistBeforeLoad = options.persistBeforeLoad ?? true;
+            if (persistBeforeLoad && !o.versionPreview && persistence.autosaveSnapshot.name)
                 await persistence.persistSnapshot(persistence.autosaveSnapshot, persistence.autosaveSignature).catch((error) => { if (error instanceof ApiError && error.code === 'WORKFLOW_REVISION_CONFLICT')
                     throw error; });
             persistence.supersedeSession();

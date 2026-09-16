@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useWorkflowPersistence } from './useWorkflowPersistence';
 import { useWorkflowVersions } from './useWorkflowVersions';
 import { useDocumentGraph } from './workflow-document/useDocumentGraph';
@@ -13,11 +14,17 @@ export function useWorkflowDocument(o: UseWorkflowDocumentOptions) {
         setVersionPreview: o.setVersionPreview, applyGraph, setMessage: o.setMessage });
     const records = useDocumentRecords(o, persistence, versions, applyGraph);
     const loadWorkflow = useDocumentLoader(o, persistence, records);
+    const refreshCurrentWorkflow = useCallback(async () => {
+        const id = persistence.currentWorkflowId;
+        if (id)
+            await loadWorkflow(String(id), { persistBeforeLoad: false });
+    }, [loadWorkflow, persistence.currentWorkflowId]);
     return { currentWorkflowId: persistence.currentWorkflowId, workflowName: persistence.workflowName, setWorkflowName: persistence.setWorkflowName,
         workflowVersions: versions.items, selectedVersionId: versions.selectedId, autosaveState: persistence.autosaveState, autosaveUpdatedAt: persistence.autosaveUpdatedAt,
         autosaveLabel: persistence.autosaveLabel, versionBusy: versions.busy, versionDialogOpen: versions.dialogOpen, setVersionDialogOpen: versions.setDialogOpen,
         currentGraph: persistence.currentGraph, currentOutputSignature: persistence.currentOutputSignature, autosaveSnapshot: persistence.autosaveSnapshot,
         autosaveSignature: persistence.autosaveSignature, persistSnapshot: persistence.persistSnapshot, refreshWorkflowVersions: versions.refresh, loadWorkflow,
         saveVersion: versions.save, viewVersion: versions.view, returnToCurrentVersion: versions.returnToCurrent, restoreVersion: versions.restore,
+        refreshCurrentWorkflow,
         deleteVersion: versions.remove, exportCurrent: persistence.exportCurrent };
 }

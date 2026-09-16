@@ -110,3 +110,19 @@ def test_visualization_nodes_are_not_needed_for_ml_connection_source() -> None:
     assert connection_advice["recommendedSourceNodeId"] == "dl-1"
     assert connection_advice["recommendedSourceName"] == "Detection Limit Handling"
     assert action_plan["connect"][0]["sourceNodeId"] == "dl-1"
+
+
+def test_cleaning_goal_uses_cleaning_pattern_not_outlier_detection() -> None:
+    result = advise_workflow("یک جریان برای پاکسازی داده بساز")
+
+    pattern = result["patterns"][0]
+    assert pattern["id"] == "data_cleaning"
+
+    planned_node_names = {
+        item["nodeName"]
+        for item in pattern["actionPlan"]["add"]
+    }
+    assert "IQR Anomaly Detector" not in planned_node_names
+    assert "Select Rows / Columns" in planned_node_names
+    assert "Replace Values" in planned_node_names
+    assert "Imputation" in planned_node_names

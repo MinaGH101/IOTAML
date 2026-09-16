@@ -8,11 +8,16 @@ export type AssistantHistoryMessage = {
   created_at: string;
 };
 
+export type AssistantChatResponse = {
+  message: string;
+  workflow_changed: boolean;
+};
+
 export const assistantApi = {
   chat: (
     payload: { message: string; workflow_id?: number | null },
     signal?: AbortSignal,
-  ) => request<{ message: string }>('/api/assistant/chat', {
+  ) => request<AssistantChatResponse>('/api/assistant/chat', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(payload),

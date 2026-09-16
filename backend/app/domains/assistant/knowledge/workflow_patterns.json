@@ -252,6 +252,78 @@
       ]
     },
     {
+      "id": "data_cleaning",
+      "title": "Clean a dataset",
+      "keywords": [
+        "data cleaning",
+        "clean data",
+        "clean dataset",
+        "cleaning workflow",
+        "prepare data",
+        "data preparation",
+        "پاکسازی داده",
+        "پاک سازی داده",
+        "پاکسازی دیتاست",
+        "تمیز کردن داده",
+        "تمیزکاری داده",
+        "آماده سازی داده",
+        "آماده‌سازی داده",
+        "جریان پاکسازی"
+      ],
+      "steps": [
+        {
+          "id": "load_data",
+          "catalog_query": "upload csv excel data input",
+          "purpose": "Load the dataset into the workflow.",
+          "required": true
+        },
+        {
+          "id": "select_rows_columns",
+          "catalog_query": "select rows columns cleaning",
+          "purpose": "Keep the rows and columns that should continue through the cleaning pipeline.",
+          "required": true
+        },
+        {
+          "id": "convert_types",
+          "catalog_query": "convert column type cleaning",
+          "purpose": "Convert columns to the correct numeric, text, or date types before replacement or imputation.",
+          "required": true
+        },
+        {
+          "id": "replace_values",
+          "catalog_query": "replace values cleaning",
+          "purpose": "Standardize invalid placeholders, inconsistent labels, or sentinel values.",
+          "required": true
+        },
+        {
+          "id": "imputation",
+          "catalog_query": "imputation missing values cleaning",
+          "purpose": "Fill missing values when rows or columns should be preserved.",
+          "required": true
+        },
+        {
+          "id": "remove_duplicates",
+          "catalog_query": "remove duplicate rows cleaning",
+          "purpose": "Remove duplicate records after values and types are normalized.",
+          "required": true
+        },
+        {
+          "id": "missing_values_report",
+          "catalog_query": "missing values report",
+          "purpose": "Inspect missingness before deciding the exact imputation strategy.",
+          "required": false,
+          "condition": "Use as a side analysis node, not as the main dataframe path into imputation."
+        },
+        {
+          "id": "detection_limit_handling",
+          "catalog_query": "detection limit handling cleaning",
+          "purpose": "Handle below-detection-limit values in laboratory or sensor datasets.",
+          "required": false,
+          "condition": "Use only when the dataset contains detection-limit values such as <LOD or <0.01."
+        }
+      ]
+    },
+    {
       "id": "correlation_analysis",
       "title": "Analyze correlations",
       "keywords": [

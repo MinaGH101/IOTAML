@@ -6,6 +6,7 @@ type Options = {
     draft: string;
     messages: ChatMessage[];
     blocked: boolean;
+    onWorkflowChanged?: () => void | Promise<void>;
     setDraft: Dispatch<SetStateAction<string>>;
     setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
     setBusy: Dispatch<SetStateAction<boolean>>;
@@ -13,7 +14,7 @@ type Options = {
     setError: Dispatch<SetStateAction<string>>;
 };
 export function useAssistantActions(options: Options) {
-    const { workflowId, draft, messages, blocked, setDraft, setMessages, setBusy, setClearing, setError } = options;
+    const { workflowId, draft, messages, blocked, onWorkflowChanged, setDraft, setMessages, setBusy, setClearing, setError } = options;
     const send = useCallback(async () => {
         const content = draft.trim();
         if (!workflowId || !content || blocked)
@@ -26,6 +27,8 @@ export function useAssistantActions(options: Options) {
         try {
             const response = await assistantApi.chat({ message: content, workflow_id: workflowId });
             setMessages((current) => [...current, { id: createMessageId(), role: 'assistant', content: response.message }]);
+            if (response.workflow_changed)
+                await onWorkflowChanged?.();
         }
         catch (error) {
             setMessages((current) => current.filter((message) => message.id !== userMessage.id));
@@ -35,7 +38,7 @@ export function useAssistantActions(options: Options) {
         finally {
             setBusy(false);
         }
-    }, [blocked, draft, setBusy, setDraft, setError, setMessages, workflowId]);
+    }, [blocked, draft, onWorkflowChanged, setBusy, setDraft, setError, setMessages, workflowId]);
     const clear = useCallback(async () => {
         if (!workflowId || !messages.length || blocked)
             return;

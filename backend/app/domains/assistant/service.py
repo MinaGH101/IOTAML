@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -20,6 +21,10 @@ from .tools import (
     execute_app_guide_tool,
     execute_catalog_tool,
     execute_workflow_advisor_tool,
+)
+from .workflow_actions import (
+    WORKFLOW_ACTION_TOOLS,
+    apply_workflow_actions,
 )
 from .workflow_tools import (
     get_workflow_context,
@@ -72,6 +77,12 @@ class AssistantNotConfiguredError(RuntimeError):
 
 class AssistantProviderError(RuntimeError):
     """Raised when the configured AI provider rejects or fails a request."""
+
+
+@dataclass(frozen=True)
+class AssistantChatResult:
+    message: str
+    workflow_changed: bool = False
 
 
 class AssistantService:
@@ -143,7 +154,7 @@ class AssistantService:
         db: Session,
         workflow_id: int | None,
         owner_username: str,
-    ) -> str:
+    ) -> AssistantChatResult:
         client = self._require_client()
         context_limit = get_settings().assistant_context_message_limit
         previous_limit = max(context_limit - 1, 0)
@@ -170,15 +181,17 @@ class AssistantService:
             *CATALOG_TOOLS,
             CURRENT_WORKFLOW_TOOL,
             VALIDATE_CURRENT_WORKFLOW_TOOL,
+            *WORKFLOW_ACTION_TOOLS,
         ]
         allowed_node_names: set[str] = set()
+        workflow_changed = False
 
         for tool_round in range(self.MAX_TOOL_ROUNDS):
             try:
                 response = await client.responses.create(
                     model=self.model,
                     instructions=(
-                    "You are the read-only AI guide inside IOTA ML. "
+                    "You are the AI workflow assistant inside IOTA ML. "
                     "Your job is to teach users how the application works, explain its "
                     "implemented nodes, and guide users toward valid machine-learning "
                     "workflow designs. Always answer the user in Persian (Farsi), while "
@@ -256,12 +269,31 @@ class AssistantService:
                     "the user's domain choice. Do not expose raw JSON unless the user asks "
                     "for developer details. "
 
-                    "FUTURE ACTION ACCESS CONTRACT. Even though the current tools are "
-                    "read-only, phrase workflow changes in a stable order that can later "
-                    "map to actions: inspect current workflow, reuse existing nodes, add "
-                    "missing nodes, connect them from the recommended source, configure "
-                    "required settings, validate, then run. Ask for confirmation before "
-                    "describing destructive changes or replacing existing settings. "
+                    "ACTION INTENT. If the user asks to create, build, add, insert, remove, "
+                    "delete, connect, disconnect, configure, or update the selected workflow, "
+                    "perform the edit with apply_workflow_actions after gathering the needed "
+                    "workflow and catalog context. For broad creation requests such as "
+                    "'create a data cleaning workflow', first use advise_workflow to choose "
+                    "the implemented nodes, then apply the missing safe graph edits. If "
+                    "required settings need domain-specific choices, create the draft nodes "
+                    "with defaults and tell the user exactly what remains to configure. "
+                    "If there is no selected workflow, say a saved workflow must be opened "
+                    "before you can edit it. "
+                    "Data cleaning means dataframe preparation nodes such as selection, "
+                    "type conversion, value replacement, imputation, duplicate removal, "
+                    "and detection-limit handling when relevant. Do not use anomaly or "
+                    "outlier detector nodes for generic data cleaning unless the user "
+                    "explicitly mentions outliers, anomalies, پرت, or ناهنجاری. "
+
+                    "ACTION CONTRACT. You may modify the selected workflow only through "
+                    "apply_workflow_actions. Before any edit, inspect the current workflow "
+                    "and use the live catalog to resolve exact node IDs. Reuse existing "
+                    "useful nodes, add only missing nodes, connect them from the best "
+                    "current source, configure requested settings, then validate. Use one "
+                    "atomic action batch for multi-step edits. Ask a clarifying question "
+                    "instead of editing when a target node is ambiguous. Only remove nodes "
+                    "or disconnect edges when the user explicitly asks for that destructive "
+                    "change and the target is unambiguous. "
 
                     "WHEN SUGGESTING CONNECTIONS, recommend a specific current node "
                     "instance to connect from. Prefer the latest relevant dataframe-producing "
@@ -282,7 +314,9 @@ class AssistantService:
                     "Treat the advisor as the source of truth for generic logical step order, "
                     "but treat get_current_workflow as the source of truth for what the user "
                     "already has. Use only exact live catalog node names returned by tools. "
-                    "Do not pretend to build or execute the workflow. "
+                    "Do not pretend to build or execute the workflow: build only when "
+                    "apply_workflow_actions reports saved graph changes, and execute only "
+                    "if a future run tool reports a created run. "
 
                     "Do not assume an empty setting is invalid. Some nodes interpret an "
                     "empty columns list as all compatible columns. Do not report a "
@@ -291,8 +325,9 @@ class AssistantService:
                     "long parameter values may be intentionally summarized; do not describe "
                     "summarized or truncated values as errors. "
 
-                    "All available tools are read-only. Never claim that you created, "
-                    "modified, saved, or executed a workflow. Always call "
+                    "Never claim that you executed a workflow unless a run tool reports "
+                    "that execution was created. For graph edits, report only changes "
+                    "confirmed by apply_workflow_actions. Always call "
                     "validate_current_workflow before reporting workflow configuration, "
                     "connection, or validation problems. Only describe issues returned by "
                     "the validator as confirmed problems. "
@@ -334,7 +369,10 @@ class AssistantService:
                     allowed_node_names,
                 )
                 if not invalid_node_pills:
-                    return final_text
+                    return AssistantChatResult(
+                        message=final_text,
+                        workflow_changed=workflow_changed,
+                    )
 
                 conversation_input.extend(response.output)
                 conversation_input.append(
@@ -382,6 +420,8 @@ class AssistantService:
                                 name = str(node.get("name") or "").strip()
                                 if name:
                                     allowed_node_names.add(name)
+                elif call.name == "apply_workflow_actions":
+                    workflow_changed = workflow_changed or bool(result.get("changed"))
 
                 conversation_input.append(
                     {
@@ -463,6 +503,30 @@ class AssistantService:
                         owner_username=owner_username,
                     ),
                 }
+
+            if tool_name == "apply_workflow_actions":
+                if workflow_id is None:
+                    return {
+                        "changed": False,
+                        "error": "No workflow is currently selected.",
+                    }
+
+                operations = arguments.get("operations")
+                if not isinstance(operations, list):
+                    return {
+                        "changed": False,
+                        "error": "operations must be an array.",
+                    }
+
+                return apply_workflow_actions(
+                    db=db,
+                    workflow_id=workflow_id,
+                    owner_username=owner_username,
+                    operations=[
+                        item for item in operations
+                        if isinstance(item, dict)
+                    ],
+                )
 
             return execute_catalog_tool(tool_name, arguments)
 
