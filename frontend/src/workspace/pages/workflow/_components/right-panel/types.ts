@@ -42,7 +42,9 @@ export type RightPanelProps = {
     boardTargetId: string;
     onBoardTargetChange: (id: string) => void;
     workflowId: number | null;
+    onAssistantPrepareWorkflow?: () => void | Promise<void>;
     onAssistantWorkflowChanged?: () => void | Promise<void>;
+    onAssistantRunCreated?: (runId: number) => void | Promise<void>;
     workflowVersions: WorkflowVersionSummary[];
     selectedVersionId: number | null;
     versionPreviewActive: boolean;

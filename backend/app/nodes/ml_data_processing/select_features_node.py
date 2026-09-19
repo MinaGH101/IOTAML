@@ -18,7 +18,7 @@ class SelectFeaturesNode(BaseNode):
     outputs = [
         port('dataframe', 'Training DataFrame', 'dataframe'),
         port('features', 'Feature DataFrame', 'dataframe'),
-        port('target', 'Target Series', 'series'),
+        port('target', 'Target DataFrame', 'dataframe'),
     ]
     settings_schema = [
         setting('target_column', 'Target Column', 'column', '', required=True),
@@ -28,8 +28,6 @@ class SelectFeaturesNode(BaseNode):
     def run(self, node, inputs, settings, context):
         payload = dataframe_payload(inputs, 'data')
         df = ensure_df(payload.df if payload else None, str(node['id']))
-        id_column = payload.id_column if payload else None
-
         target = str(settings.get('target_column') or '').strip()
         if not target or target not in calculation_columns(df):
             raise ValueError('Select a valid active target column. The workflow ID cannot be the target.')
@@ -40,12 +38,12 @@ class SelectFeaturesNode(BaseNode):
 
         feature_df = df[features].copy()
         target_series = df[target].copy()
+        target_df = target_series.to_frame(name=target)
         training_df = pd.concat([feature_df, target_series.rename(target)], axis=1)
 
         feature_preview = table_output(str(node['id']), f'{node_label(node)} · Features', feature_df, 100)
-        target_preview = table_output(str(node['id']), f'{node_label(node)} · Target', target_series.to_frame(name=target), 100)
-
-        return dataframe_result(
+        target_preview = table_output(str(node['id']), f'{node_label(node)} · Target', target_df, 100)
+        training_result = dataframe_result(
             training_df,
             id_column=None,
             meta={
@@ -53,14 +51,24 @@ class SelectFeaturesNode(BaseNode):
                 'feature_columns': [str(c) for c in features],
                 'target_column': target,
             },
-            features_df=feature_df,
-            features=dataframe_result(feature_df, reset_lineage=True)['dataframe'],
-            target_series=target_series,
-            feature_columns=[str(c) for c in features],
-            target_column=target,
-            columns=[str(c) for c in features],
-            target={'name': target, 'values': target_series.tolist()},
-            data_pairs={'all': {'X': feature_df, 'y': target_series, 'label': 'All Data'}},
-            output=feature_preview,
-            outputs=[feature_preview, target_preview],
         )
+        features_result = dataframe_result(feature_df, reset_lineage=True)
+        target_result = dataframe_result(target_df, reset_lineage=True)
+
+        result = {
+            **training_result,
+            'features_df': feature_df,
+            'target_df': target_df,
+            'features': features_result,
+            'target': target_result,
+            'target_series': target_series,
+            'feature_columns': [str(c) for c in features],
+            'target_column': target,
+            'columns': [str(c) for c in features],
+            'target_metadata': {'name': target, 'values': target_series.tolist()},
+            'data_pairs': {'all': {'X': feature_df, 'y': target_series, 'label': 'All Data'}},
+            'outputs_by_port': {'dataframe': training_result, 'features': features_result, 'target': target_result},
+            'output': feature_preview,
+            'outputs': [feature_preview, target_preview],
+        }
+        return result

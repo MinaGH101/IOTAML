@@ -268,6 +268,8 @@ def update_workflow(
     workflow_id: int,
     payload: WorkflowCreate,
     owner_username: str,
+    *,
+    expected_revision: int | None = None,
 ) -> Workflow:
     """Replace the editable state of an existing workflow.
 
@@ -283,6 +285,10 @@ def update_workflow(
             Complete replacement state for the workflow.
         owner_username:
             Username that must own the workflow.
+        expected_revision:
+            Optional revision read before preparing the replacement. When
+            supplied, a newer persisted revision raises a conflict instead of
+            silently overwriting it.
 
     Returns:
         The updated workflow. When nothing changed, the existing object is
@@ -300,6 +306,16 @@ def update_workflow(
     _assert_project_access(db, payload.project_id, owner_username)
 
     workflow = get_workflow(db, workflow_id, owner_username)
+    if expected_revision is not None and workflow.revision != expected_revision:
+        raise ConflictError(
+            "WORKFLOW_REVISION_CONFLICT",
+            "The workflow was changed while this edit was being prepared.",
+            {
+                "expected_revision": expected_revision,
+                "server_revision": workflow.revision,
+                "server_graph_hash": workflow.graph_hash,
+            },
+        )
     graph_hash = sha256_json(payload.graph)
     last_run_id = _validated_last_run_id(
         db,

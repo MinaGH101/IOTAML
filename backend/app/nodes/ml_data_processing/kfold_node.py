@@ -19,7 +19,11 @@ class KFoldSplitNode(BaseNode):
     description = 'Creates K-fold train/test data pairs for model training and validation.'
 
     inputs = [port('data', 'Features + Target', 'dataframe')]
-    outputs = [port('folds', 'K-Fold Data', 'json'), port('report', 'Fold Report', 'json')]
+    outputs = [
+        port('folds', 'K-Fold Data', 'json'),
+        port('splits', 'Split DataFrames', 'dataframe'),
+        port('report', 'Fold Report', 'json'),
+    ]
 
     settings_schema = [
         setting('n_splits', 'Number of Folds', 'integer', 5),
@@ -49,6 +53,7 @@ class KFoldSplitNode(BaseNode):
         folds = []
         data_pairs = {}
         rows = []
+        split_frames = []
         split_iter = splitter.split(x, y) if stratify_enabled else splitter.split(x)
 
         for fold_number, (train_idx, test_idx) in enumerate(split_iter, start=1):
@@ -67,6 +72,8 @@ class KFoldSplitNode(BaseNode):
             data_pairs[f'fold_{fold_number}_train'] = {'X': x_train, 'y': y_train, 'label': f'Fold {fold_number} Train', 'fold': fold_number, 'part': 'train'}
             data_pairs[f'fold_{fold_number}_test'] = {'X': x_test, 'y': y_test, 'label': f'Fold {fold_number} Test', 'fold': fold_number, 'part': 'test'}
             rows.append({'fold': fold_number, 'train_rows': len(x_train), 'test_rows': len(x_test), 'features': len(features)})
+            split_frames.append(training_frame(x_train, y_train, target).assign(fold=fold_number, split='train'))
+            split_frames.append(training_frame(x_test, y_test, target).assign(fold=fold_number, split='test'))
 
         report = {
             'target_column': target,
@@ -77,6 +84,9 @@ class KFoldSplitNode(BaseNode):
             'stratify': stratify_enabled,
             'rows': int(len(x)),
         }
+        splits_df = pd.concat(split_frames, ignore_index=True) if split_frames else pd.DataFrame(columns=[*features, target, 'fold', 'split'])
+        splits_result = dataframe_result(splits_df, reset_lineage=True)
+        kfold_data = {'kind': 'k_fold', 'folds': folds, 'target_column': target, 'feature_columns': features, 'data_pairs': data_pairs}
 
         return dataframe_result(
             training_frame(x, y, target),
@@ -86,10 +96,12 @@ class KFoldSplitNode(BaseNode):
             target_series=y,
             feature_columns=features,
             target_column=target,
-            kfold_data={'kind': 'k_fold', 'folds': folds, 'target_column': target, 'feature_columns': features, 'data_pairs': data_pairs},
+            kfold_data=kfold_data,
             data_pairs=data_pairs,
+            splits=splits_result,
             report=report,
             json=report,
+            outputs_by_port={'folds': kfold_data, 'splits': splits_result, 'report': report},
             output=table_output(str(node['id']), f'{node_label(node)} · Folds', pd.DataFrame(rows), 100),
             outputs=[metrics_output(str(node['id']), f'{node_label(node)} · K-Fold Report', report), table_output(str(node['id']), f'{node_label(node)} · Folds', pd.DataFrame(rows), 100)],
         )

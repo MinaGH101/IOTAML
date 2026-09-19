@@ -25,8 +25,8 @@ class BoxPlotNode(BaseNode):
     outputs = [port('plot', 'Box Plot', 'plot')]
     settings_schema = [
         setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.'),
-        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
+    cache_version = '2'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -39,7 +39,7 @@ class BoxPlotNode(BaseNode):
         if not selected:
             raise ValueError('Select at least one numeric column for box plot.')
 
-        color = str(settings.get('color') or '#31cde3')
+        color = '#31cde3'
         plots: list[dict[str, Any]] = []
         for col in selected:
             s = coerce_numeric_series(df, str(col)).dropna()
@@ -50,5 +50,6 @@ class BoxPlotNode(BaseNode):
         if not plots:
             raise ValueError('Selected columns have no numeric values for box plot.')
         if len(plots) == 1:
-            return {'_df': df, 'plot': {'type': 'boxplot'}, 'output': plots[0]}
-        return {'_df': df, 'plot': {'type': 'boxplot_group'}, 'output': output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')}
+            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+        group = output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')
+        return {'_df': df, 'plot': group, 'outputs_by_port': {'plot': group}, 'output': group}

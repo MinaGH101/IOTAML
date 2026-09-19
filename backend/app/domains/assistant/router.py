@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     message: str
     workflow_changed: bool = False
+    run_id: int | None = None
 
 
 class AssistantMessageOut(BaseModel):
@@ -136,6 +137,7 @@ async def chat(
             db=db,
             workflow_id=request.workflow_id,
             owner_username=owner_username,
+            current_user=current_user,
         )
 
         if request.workflow_id is not None:
@@ -151,6 +153,7 @@ async def chat(
         return ChatResponse(
             message=result.message,
             workflow_changed=result.workflow_changed,
+            run_id=result.run_id,
         )
 
     except AssistantNotConfiguredError as exc:

@@ -37,8 +37,8 @@ class PPPlotNode(BaseNode):
         setting('columns', 'Columns', 'columns', [], True),
         setting('plotting_position', 'Plotting Position', 'select', 'hazen', options=['hazen', 'weibull', 'blom']),
         setting('max_points', 'Max Points Per Plot', 'integer', 2000),
-        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
+    cache_version = '2'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -51,7 +51,7 @@ class PPPlotNode(BaseNode):
 
         max_points = max(20, min(10000, int(settings.get('max_points') or 2000)))
         method = str(settings.get('plotting_position') or 'hazen')
-        color = str(settings.get('color') or '#31cde3')
+        color = '#31cde3'
         plots: list[dict[str, Any]] = []
         for column in selected:
             values = np.sort(coerce_numeric_series(df, column).dropna().to_numpy(dtype=float))
@@ -76,5 +76,6 @@ class PPPlotNode(BaseNode):
         if not plots:
             raise ValueError('Selected columns need at least three varying numeric values for a P-P plot.')
         if len(plots) == 1:
-            return {'_df': df, 'plot': {'type': 'pp_plot'}, 'output': plots[0]}
-        return {'_df': df, 'plot': {'type': 'pp_plot_group'}, 'output': output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')}
+            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+        group = output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')
+        return {'_df': df, 'plot': group, 'outputs_by_port': {'plot': group}, 'output': group}

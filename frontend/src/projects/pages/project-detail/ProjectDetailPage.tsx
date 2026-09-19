@@ -15,7 +15,7 @@ export function ProjectDetailPage(props: ProjectDetailPageProps) {
   const c = useProjectDetailController(props);
   const [datasetDeleteId, setDatasetDeleteId] = useState<number | null>(null);
   const datasetDeleteTarget = c.datasets.find((dataset) => dataset.id === datasetDeleteId);
-  return <div className="app-shell manager-shell iota-reference-shell">
+  return <div className="app-shell manager-shell iota-reference-shell project-detail-shell">
     <AppTopNav user={props.user} title={props.project.name} subtitle="جزئیات پروژه، داده‌ها و جریان‌های ذخیره‌شده" onBack={props.onBack} onProfile={props.onProfile} onAdmin={props.onAdmin} onLogout={props.onLogout} />
     <main className="manager-page project-detail-reference-page iota-minimal-page">
       <ProjectMessage message={c.message} />
@@ -24,7 +24,7 @@ export function ProjectDetailPage(props: ProjectDetailPageProps) {
           <span className="project-heading-dot" style={{ background: props.project.color, color: props.project.color }} />
           <div>
             <h2>{props.project.name}</h2>
-            <p>ویرایش اطلاعات، داده‌ها و جریان‌های پروژه</p>
+            {/* <p>ویرایش اطلاعات، داده‌ها و جریان‌های پروژه</p> */}
           </div>
         </div>
         {props.project.can_edit && <div className="project-heading-actions">
@@ -32,10 +32,12 @@ export function ProjectDetailPage(props: ProjectDetailPageProps) {
           {props.project.can_delete && <Button variant="danger" disabled={c.saving} leadingIcon={<Trash2 size={15} />} onClick={() => c.setDeleteOpen(true)}>حذف پروژه</Button>}
         </div>}
       </header>
-      <section className="project-detail-reference-layout">
-        <ProjectInfoPanel project={props.project} draft={c.draft} users={c.users} onDraftChange={c.setDraft} />
-        <section className="detail-main-stack detail-main-stack-reference"><ProjectDataPanel projectId={props.project.id} onImported={c.refresh} datasets={c.datasets} usage={c.artifactUsage} canEdit={props.project.can_edit} onUpload={c.uploadDataset} onDelete={setDatasetDeleteId} /><ProjectWorkflowsPanel project={props.project} workflows={c.workflows} manager={c.workflow} onOpenEditor={props.onOpenEditor} /></section>
-      </section>
+      <div className="project-detail-form-scroll">
+        <section className="project-detail-reference-layout">
+          <ProjectInfoPanel project={props.project} draft={c.draft} users={c.users} onDraftChange={c.setDraft} />
+          <section className="detail-main-stack detail-main-stack-reference"><ProjectDataPanel projectId={props.project.id} onImported={c.refresh} datasets={c.datasets} usage={c.artifactUsage} canEdit={props.project.can_edit} onUpload={c.uploadDataset} onDelete={setDatasetDeleteId} /><ProjectWorkflowsPanel project={props.project} workflows={c.workflows} manager={c.workflow} onOpenEditor={props.onOpenEditor} /></section>
+        </section>
+      </div>
     </main>
     <ConfirmDialog open={c.deleteOpen} title="حذف پروژه" message="این پروژه حذف شود؟ این کار قابل بازگشت نیست." confirmLabel="حذف پروژه" danger busy={c.saving} onClose={() => c.setDeleteOpen(false)} onConfirm={c.remove} />
     <ConfirmDialog open={Boolean(datasetDeleteTarget)} title="حذف داده" message={datasetDeleteTarget ? `داده «${datasetDeleteTarget.name}» حذف شود؟ این کار قابل بازگشت نیست.` : ''} confirmLabel="حذف داده" danger onClose={() => setDatasetDeleteId(null)} onConfirm={() => { if (datasetDeleteId !== null) void c.deleteDataset(datasetDeleteId); setDatasetDeleteId(null); }} />

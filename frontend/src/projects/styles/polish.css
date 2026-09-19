@@ -319,6 +319,7 @@
 }
 
 .iota-reference-shell .projects-toolbar {
+  z-index: 2;
   grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(132px, auto)) auto auto;
   gap: 10px;
   margin-bottom: 22px !important;
@@ -510,6 +511,35 @@
   background: rgb(45 212 191 / 3%);
 }
 
+.iota-reference-shell.project-detail-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iota-reference-shell.project-detail-shell > .project-detail-reference-page {
+  --project-detail-page-gutter: 32px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.project-detail-shell .project-detail-form-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: calc(100% + var(--project-detail-page-gutter) + var(--project-detail-page-gutter));
+  margin-inline: calc(0px - var(--project-detail-page-gutter));
+  padding: 0 var(--project-detail-page-gutter) 24px;
+  overflow-y: auto;
+  direction: rtl;
+  overscroll-behavior-y: contain;
+}
+
+.project-detail-shell .project-detail-heading {
+  flex: 0 0 auto;
+}
+
 .project-detail-heading {
   align-items: center;
   margin-bottom: 26px;
@@ -572,8 +602,7 @@
 }
 
 .iota-reference-shell .project-info-reference {
-  position: sticky !important;
-  top: 80px !important;
+  position: static !important;
 }
 
 .iota-reference-shell .reference-card-head {
@@ -774,6 +803,10 @@
 @media (width <= 760px) {
   .iota-reference-shell .manager-page.iota-minimal-page {
     padding: 22px 16px !important;
+  }
+
+  .iota-reference-shell.project-detail-shell > .project-detail-reference-page {
+    --project-detail-page-gutter: 16px;
   }
 
   .projects-page-heading,

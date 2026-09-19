@@ -16,17 +16,6 @@ def _text_list(value: Any) -> list[str]:
     return [item.strip() for item in str(value or '').replace(';', ',').split(',') if item.strip()]
 
 
-def _series_colors(value: Any) -> dict[str, str]:
-    if not isinstance(value, dict):
-        return {}
-    result: dict[str, str] = {}
-    for key, color in value.items():
-        text = str(color or '').strip()
-        if text:
-            result[str(key)] = text
-    return result
-
-
 class BarPlotNode(BaseNode):
     id = 'VZ-005'
     name = 'Bar Plot'
@@ -37,12 +26,12 @@ class BarPlotNode(BaseNode):
     settings_schema = [
         setting('x_columns', 'X-axis Columns', 'columns', [], True, help='Each selected dataframe column becomes one X-axis label.'),
         setting('selected_rows', 'Y-axis Rows', 'row_values', [], True, supports_dynamic=False, help='Rows are identified by values in the first dataframe column. Each selected row becomes one bar series.'),
-        setting('series_colors', 'Series Colors', 'series_colors', {}, supports_dynamic=False, help='Choose one color for each selected row series.'),
+        setting('bar_color', 'Bar Color', 'color', '#31cde3', supports_dynamic=False, help='Choose one color for all bars.'),
         setting('orientation', 'Orientation', 'select', 'vertical', options=['vertical', 'horizontal']),
         setting('guideline_values', 'Guideline Values', 'text', '', help='Optional comma-separated guideline values such as 10, 20.'),
         setting('guideline_labels', 'Guideline Labels', 'text', '', help='Optional comma-separated labels in the same order.'),
     ]
-    cache_version = '3'
+    cache_version = '4'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -74,7 +63,7 @@ class BarPlotNode(BaseNode):
         if missing:
             raise ValueError(f'Selected rows were not found: {", ".join(missing[:10])}')
 
-        colors = _series_colors(settings.get('series_colors'))
+        bar_color = str(settings.get('bar_color') or '#31cde3').strip() or '#31cde3'
         series = []
         for row_label in selected_rows:
             row = indexed.loc[row_label]
@@ -82,7 +71,7 @@ class BarPlotNode(BaseNode):
             for column in x_columns:
                 numeric = pd.to_numeric(pd.Series([row[column]]), errors='coerce').iloc[0]
                 values.append(None if pd.isna(numeric) else float(numeric))
-            series.append({'label': row_label, 'data': values, 'color': colors.get(row_label)})
+            series.append({'label': row_label, 'data': values, 'color': bar_color})
 
         if not any(any(value is not None for value in item['data']) for item in series):
             raise ValueError('The selected row and column intersections contain no numeric values.')
@@ -102,4 +91,4 @@ class BarPlotNode(BaseNode):
             orientation=str(settings.get('orientation') or 'vertical'),
             guidelines=guidelines,
         )
-        return {'plot': {'type': 'bar_plot'}, 'outputs_by_port': {'plot': result}, 'output': result}
+        return {'plot': result, 'outputs_by_port': {'plot': result}, 'output': result}

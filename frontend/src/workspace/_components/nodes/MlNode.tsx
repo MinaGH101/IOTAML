@@ -16,7 +16,7 @@ type EditableNodeData = Record<string, unknown> & {
     runtimeStatus?: RunNodeStatus['status'] | null;
 };
 function shapeClass(category: string) {
-    if (category === 'Visualizations')
+    if (category === 'Visualizations' || category === 'ML Regression Models' || category === 'ML Classification Models')
         return 'shape-ellipse';
     if (category.includes('ML Model'))
         return 'shape-square';

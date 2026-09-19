@@ -346,6 +346,11 @@
   border-radius: 7px !important;
 }
 
+.workflow-shell-page .board .ml-node.shape-ellipse::before,
+.workflow-shell-page .board .ml-node.shape-ellipse::after {
+  border-radius: var(--theme-radius-pill) !important;
+}
+
 .workflow-shell-page .board .ml-node:hover::before,
 .workflow-shell-page .board .ml-node.selected::before {
   background: color-mix(in srgb, var(--node-category-color, #2dd4bf) 76%, #1f2428) !important;

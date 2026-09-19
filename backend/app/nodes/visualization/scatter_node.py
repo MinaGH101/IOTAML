@@ -24,6 +24,7 @@ def _num(value: Any) -> float | None:
 
 
 class ScatterPlotNode(BaseNode):
+    cache_version = '2'
     id = 'VZ-003'
     name = 'Scatter Plot'
     category = 'Visualizations'
@@ -38,7 +39,7 @@ class ScatterPlotNode(BaseNode):
                 [],
                 help=(
                     'Add one or more scatter plot blocks. Each block creates an independent plot. '
-                    'Each block has Plot Title, X Column, Y Column, Color, Point Size, '
+                    'Each block has Plot Title, X Column, Y Column, Point Size, '
                     'X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. '
                     'Point Size supports values from 2 to 30. '
                     'Max Points supports values from 10 to 10000 and defaults to 1000.'
@@ -104,10 +105,12 @@ class ScatterPlotNode(BaseNode):
             raise ValueError('Add at least one valid scatter block with X and Y numeric columns.')
 
         if len(plots) == 1:
-            return {'_df': df, 'plot': {'type': 'scatter'}, 'output': plots[0]}
+            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
 
+        group = output(str(node['id']), base_title, 'plot_group', plots=plots, count=len(plots), layout='vertical')
         return {
             '_df': df,
-            'plot': {'type': 'scatter_group'},
-            'output': output(str(node['id']), base_title, 'plot_group', plots=plots, count=len(plots), layout='vertical')
+            'plot': group,
+            'outputs_by_port': {'plot': group},
+            'output': group,
         }

@@ -27,8 +27,8 @@ class HistogramNode(BaseNode):
     settings_schema = [
         setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.'),
         setting('bins', 'Bins', 'integer', 20),
-        setting('color', 'Color', 'color', '#31cde3', supports_dynamic=False),
     ]
+    cache_version = '2'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -42,7 +42,7 @@ class HistogramNode(BaseNode):
             raise ValueError('Select at least one numeric column for histogram.')
 
         bins = int(settings.get('bins') or 20)
-        color = str(settings.get('color') or '#31cde3')
+        color = '#31cde3'
         plots: list[dict[str, Any]] = []
         for col in selected:
             values = coerce_numeric_series(df, str(col)).dropna()
@@ -54,5 +54,6 @@ class HistogramNode(BaseNode):
         if not plots:
             raise ValueError('Selected columns have no numeric values for histogram.')
         if len(plots) == 1:
-            return {'_df': df, 'plot': {'type': 'histogram'}, 'output': plots[0]}
-        return {'_df': df, 'plot': {'type': 'histogram_group'}, 'output': output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')}
+            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+        group = output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')
+        return {'_df': df, 'plot': group, 'outputs_by_port': {'plot': group}, 'output': group}

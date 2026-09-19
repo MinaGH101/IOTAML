@@ -19,7 +19,16 @@ class TrainTestSplitNode(BaseNode):
     description = 'Splits selected features and target into X_train, X_test, y_train, and y_test.'
 
     inputs = [port('data', 'Features + Target', 'dataframe')]
-    outputs = [port('split', 'Train/Test Data', 'json'), port('report', 'Split Report', 'json')]
+    outputs = [
+        port('split', 'Train/Test Data', 'json'),
+        port('train', 'Train DataFrame', 'dataframe'),
+        port('test', 'Test DataFrame', 'dataframe'),
+        port('X_train', 'X Train Features', 'dataframe'),
+        port('X_test', 'X Test Features', 'dataframe'),
+        port('y_train', 'Y Train Target', 'dataframe'),
+        port('y_test', 'Y Test Target', 'dataframe'),
+        port('report', 'Split Report', 'json'),
+    ]
 
     settings_schema = [
         setting('test_size', 'Test Size', 'number', 0.2),
@@ -82,9 +91,17 @@ class TrainTestSplitNode(BaseNode):
             {'part': 'y_train', 'rows': len(y_train), 'columns': 1},
             {'part': 'y_test', 'rows': len(y_test), 'columns': 1},
         ])
+        train_df = training_frame(x_train, y_train, target)
+        test_df = training_frame(x_test, y_test, target)
+        train_result = dataframe_result(train_df, reset_lineage=True)
+        test_result = dataframe_result(test_df, reset_lineage=True)
+        x_train_result = dataframe_result(x_train.reset_index(drop=True), reset_lineage=True)
+        x_test_result = dataframe_result(x_test.reset_index(drop=True), reset_lineage=True)
+        y_train_result = dataframe_result(y_train.reset_index(drop=True).to_frame(name=target), reset_lineage=True)
+        y_test_result = dataframe_result(y_test.reset_index(drop=True).to_frame(name=target), reset_lineage=True)
 
         return dataframe_result(
-            training_frame(x_train, y_train, target),
+            train_df,
             id_column=None,
             meta={**(payload.meta if payload else {}), 'target_column': target, 'feature_columns': features, 'split': report},
             features_df=x,
@@ -93,8 +110,24 @@ class TrainTestSplitNode(BaseNode):
             target_column=target,
             split_data=split_data,
             data_pairs=split_data['data_pairs'],
+            train=train_result,
+            test=test_result,
+            X_train=x_train_result,
+            X_test=x_test_result,
+            y_train=y_train_result,
+            y_test=y_test_result,
             report=report,
             json=report,
+            outputs_by_port={
+                'split': split_data,
+                'train': train_result,
+                'test': test_result,
+                'X_train': x_train_result,
+                'X_test': x_test_result,
+                'y_train': y_train_result,
+                'y_test': y_test_result,
+                'report': report,
+            },
             output=table_output(str(node['id']), f'{node_label(node)} · Split Parts', report_df, 20),
             outputs=[metrics_output(str(node['id']), f'{node_label(node)} · Split Report', report), table_output(str(node['id']), f'{node_label(node)} · Split Parts', report_df, 20)],
         )

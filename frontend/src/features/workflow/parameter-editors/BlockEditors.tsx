@@ -1,6 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { CustomSelect } from '../../../shared/_components/CustomSelect';
-import { readThemeColor } from '../../../shared/_utils/appShared';
 import { SelectionToggleButton } from '../../../workspace/_components/SelectionToggleButton';
 import { PillPicker } from './Pickers';
 
@@ -171,7 +170,6 @@ type ScatterBlock = {
   title?: string;
   x_column?: string;
   y_column?: string;
-  color?: string;
   x_min?: number | null;
   x_max?: number | null;
   y_min?: number | null;
@@ -190,8 +188,7 @@ function scatterBlocks(value: unknown): ScatterBlock[] {
 
 export function ScatterBlocksEditor({ value, columns, onChange }: { value: unknown; columns: string[]; onChange: (blocks: ScatterBlock[]) => void }) {
   const blocks = scatterBlocks(value);
-  const plotColor = readThemeColor('--theme-plot-default');
-  const nextBlock = (): ScatterBlock => ({ title: '', x_column: columns[0] || '', y_column: columns[1] || columns[0] || '', color: plotColor, x_min: null, x_max: null, y_min: null, y_max: null, point_size: 7, max_points: 1000 });
+  const nextBlock = (): ScatterBlock => ({ title: '', x_column: columns[0] || '', y_column: columns[1] || columns[0] || '', x_min: null, x_max: null, y_min: null, y_max: null, point_size: 7, max_points: 1000 });
   const updateBlock = (index: number, patch: Partial<ScatterBlock>) => onChange(blocks.map((block, i) => i === index ? { ...block, ...patch } : block));
   const removeBlock = (index: number) => onChange(blocks.filter((_, i) => i !== index));
   const columnOptions = [{ value: '', label: 'انتخاب ستون' }, ...columns.map((column) => ({ value: column, label: column }))];
@@ -211,7 +208,6 @@ export function ScatterBlocksEditor({ value, columns, onChange }: { value: unkno
           <div className="replacement-grid">
             <label className="field"><span>ستون محور X</span><CustomSelect value={String(block.x_column || '')} options={columnOptions} onChange={(next) => updateBlock(index, { x_column: next })} /></label>
             <label className="field"><span>ستون محور Y</span><CustomSelect value={String(block.y_column || '')} options={columnOptions} onChange={(next) => updateBlock(index, { y_column: next })} /></label>
-            <label className="field color-field"><span>رنگ</span><input type="color" value={String(block.color || plotColor)} onChange={(event) => updateBlock(index, { color: event.target.value })} /></label>
             <label className="field"><span>اندازه نقاط</span><input type="number" min={2} max={30} value={Number(block.point_size || 7)} onChange={(event) => updateBlock(index, { point_size: Number(event.target.value) })} /></label>
             <label className="field"><span>کمینه X</span><input type="number" step="any" value={numericValue(block.x_min)} onChange={(event) => updateBlock(index, { x_min: parseOptionalNumber(event.target.value) })} /></label>
             <label className="field"><span>بیشینه X</span><input type="number" step="any" value={numericValue(block.x_max)} onChange={(event) => updateBlock(index, { x_max: parseOptionalNumber(event.target.value) })} /></label>

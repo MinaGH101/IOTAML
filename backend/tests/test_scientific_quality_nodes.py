@@ -71,7 +71,7 @@ def test_transposed_error_output_can_feed_row_series_bar_plot() -> None:
         {
             'x_columns': ['Au', 'Cu'],
             'selected_rows': ['mae', 'rmse'],
-            'series_colors': {'mae': '#31cde3', 'rmse': '#8b7cf6'},
+            'bar_color': '#31cde3',
             'orientation': 'vertical',
             'guideline_values': '2, 5',
             'guideline_labels': 'warning, action',
@@ -82,7 +82,7 @@ def test_transposed_error_output_can_feed_row_series_bar_plot() -> None:
     assert result['output']['categories'] == ['Au', 'Cu']
     assert result['output']['row_index_column'] == 'error'
     assert result['output']['series'][0] == {'label': 'mae', 'data': [1.2, 3.4], 'color': '#31cde3'}
-    assert result['output']['series'][1]['color'] == '#8b7cf6'
+    assert result['output']['series'][1]['color'] == '#31cde3'
     assert result['output']['guidelines'][0] == {'value': 2.0, 'label': 'warning'}
 
 

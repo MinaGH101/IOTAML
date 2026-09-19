@@ -28,6 +28,35 @@ def _compact(value: Any, depth: int = 0) -> Any:
     return value
 
 
+def _ports_for_context(node: dict[str, Any], definition: Any, side: str) -> list[dict[str, Any]]:
+    declared = getattr(definition, side, None) if definition else None
+    if declared is not None:
+        return [
+            {
+                "id": str(port.id),
+                "name": str(port.name or port.id),
+                "type": str(port.type),
+                "required": bool(port.required),
+                "multiple": bool(port.multiple),
+            }
+            for port in declared
+        ]
+
+    data = node.get("data") if isinstance(node.get("data"), dict) else {}
+    stored = data.get(side) if isinstance(data.get(side), list) else []
+    return [
+        {
+            "id": str(port.get("id") or ""),
+            "name": str(port.get("name") or port.get("id") or ""),
+            "type": str(port.get("type") or "any"),
+            "required": bool(port.get("required", side == "inputs")),
+            "multiple": bool(port.get("multiple", False)),
+        }
+        for port in stored
+        if isinstance(port, dict) and port.get("id")
+    ]
+
+
 def get_workflow_context(
     db: Session,
     workflow_id: int,
@@ -37,7 +66,7 @@ def get_workflow_context(
     graph = workflow.graph if isinstance(workflow.graph, dict) else {}
 
     nodes = []
-    for node in graph.get("nodes") or []:
+    for ordinal, node in enumerate(graph.get("nodes") or [], start=1):
         data = node.get("data") or {}
 
         registry_id = str(
@@ -46,17 +75,23 @@ def get_workflow_context(
             or ""
         )
         definition = get_node(canonical_node_id(registry_id)) if registry_id else None
-        input_types = [port.type for port in definition.inputs] if definition else []
-        output_types = [port.type for port in definition.outputs] if definition else []
+        inputs = _ports_for_context(node, definition, "inputs")
+        outputs = _ports_for_context(node, definition, "outputs")
+        input_types = [port["type"] for port in inputs]
+        output_types = [port["type"] for port in outputs]
         category = str(data.get("category") or (definition.category if definition else ""))
         type_label = str(data.get("typeLabel") or (definition.name if definition else ""))
 
         nodes.append(
             {
                 "instanceId": str(node.get("id") or ""),
+                "nodeRef": f"Node {ordinal}",
+                "ordinal": ordinal,
                 "registryId": registry_id,
                 "inputTypes": input_types,
                 "outputTypes": output_types,
+                "inputs": inputs,
+                "outputs": outputs,
                 "typeLabel": type_label,
                 "label": str(data.get("label") or ""),
                 "category": category,

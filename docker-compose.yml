@@ -143,6 +143,10 @@ services:
     build:
       context: ./backend
     command: ["python", "worker.py"]
+    # The shared backend image probes an HTTP endpoint, but this service only
+    # consumes queued runs and deliberately does not expose an HTTP server.
+    healthcheck:
+      disable: true
     environment:
       <<: *backend-environment
       WORKER_ID: ${WORKER_ID:-worker-1}

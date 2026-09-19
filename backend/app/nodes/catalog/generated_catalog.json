@@ -3402,7 +3402,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3450,16 +3450,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "integer"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "priority": "MVP",
@@ -3483,16 +3473,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "integer"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "supportsDynamicParameters": true,
@@ -3500,7 +3480,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3531,7 +3511,7 @@
       "params": [
         {
           "default": [],
-          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Color, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
+          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
           "label": "Scatter Plot Blocks",
           "name": "scatter_blocks",
           "options": [],
@@ -3544,7 +3524,7 @@
       "settingsSchema": [
         {
           "default": [],
-          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Color, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
+          "help": "Add one or more scatter plot blocks. Each block creates an independent plot. Each block has Plot Title, X Column, Y Column, Point Size, X Minimum, X Maximum, Y Minimum, Y Maximum, and Max Points. Point Size supports values from 2 to 30. Max Points supports values from 10 to 10000 and defaults to 1000.",
           "label": "Scatter Plot Blocks",
           "name": "scatter_blocks",
           "options": [],
@@ -3558,7 +3538,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3596,16 +3576,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "columns"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "priority": "MVP",
@@ -3619,16 +3589,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "columns"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "supportsDynamicParameters": true,
@@ -3636,7 +3596,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "3",
+      "cacheVersion": "4",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3686,14 +3646,14 @@
           "type": "row_values"
         },
         {
-          "default": {},
-          "help": "Choose one color for each selected row series.",
-          "label": "Series Colors",
-          "name": "series_colors",
+          "default": "#31cde3",
+          "help": "Choose one color for all bars.",
+          "label": "Bar Color",
+          "name": "bar_color",
           "options": [],
           "required": false,
           "supportsDynamic": false,
-          "type": "series_colors"
+          "type": "color"
         },
         {
           "default": "vertical",
@@ -3752,14 +3712,14 @@
           "type": "row_values"
         },
         {
-          "default": {},
-          "help": "Choose one color for each selected row series.",
-          "label": "Series Colors",
-          "name": "series_colors",
+          "default": "#31cde3",
+          "help": "Choose one color for all bars.",
+          "label": "Bar Color",
+          "name": "bar_color",
           "options": [],
           "required": false,
           "supportsDynamic": false,
-          "type": "series_colors"
+          "type": "color"
         },
         {
           "default": "vertical",
@@ -3800,7 +3760,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3862,16 +3822,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "integer"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "priority": "MVP",
@@ -3909,16 +3859,6 @@
           "required": false,
           "supportsDynamic": true,
           "type": "integer"
-        },
-        {
-          "default": "#31cde3",
-          "help": "",
-          "label": "Color",
-          "name": "color",
-          "options": [],
-          "required": false,
-          "supportsDynamic": false,
-          "type": "color"
         }
       ],
       "supportsDynamicParameters": true,
@@ -3926,7 +3866,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "2",
+      "cacheVersion": "3",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -4231,9 +4171,9 @@
         {
           "id": "target",
           "multiple": false,
-          "name": "Target Series",
+          "name": "Target DataFrame",
           "required": true,
-          "type": "series"
+          "type": "dataframe"
         }
       ],
       "params": [
@@ -4312,6 +4252,48 @@
           "name": "Train/Test Data",
           "required": true,
           "type": "json"
+        },
+        {
+          "id": "train",
+          "multiple": false,
+          "name": "Train DataFrame",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
+          "id": "test",
+          "multiple": false,
+          "name": "Test DataFrame",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
+          "id": "X_train",
+          "multiple": false,
+          "name": "X Train Features",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
+          "id": "X_test",
+          "multiple": false,
+          "name": "X Test Features",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
+          "id": "y_train",
+          "multiple": false,
+          "name": "Y Train Target",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
+          "id": "y_test",
+          "multiple": false,
+          "name": "Y Test Target",
+          "required": true,
+          "type": "dataframe"
         },
         {
           "id": "report",
@@ -4439,6 +4421,13 @@
           "type": "json"
         },
         {
+          "id": "splits",
+          "multiple": false,
+          "name": "Split DataFrames",
+          "required": true,
+          "type": "dataframe"
+        },
+        {
           "id": "report",
           "multiple": false,
           "name": "Fold Report",
@@ -4536,7 +4525,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Data Processing",
       "comingSoon": false,
@@ -4566,9 +4555,9 @@
         {
           "id": "target",
           "multiple": false,
-          "name": "Target Metadata",
+          "name": "Target DataFrame",
           "required": true,
-          "type": "json"
+          "type": "dataframe"
         }
       ],
       "params": [
@@ -4601,7 +4590,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Model Analysis",
       "comingSoon": false,
@@ -4626,7 +4615,7 @@
           "multiple": false,
           "name": "Feature Scores",
           "required": true,
-          "type": "json"
+          "type": "dataframe"
         },
         {
           "id": "plot",
@@ -4800,7 +4789,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "1",
+      "cacheVersion": "2",
       "cacheable": true,
       "category": "ML Model Analysis",
       "comingSoon": false,
@@ -4825,7 +4814,7 @@
           "multiple": false,
           "name": "Feature Scores",
           "required": true,
-          "type": "json"
+          "type": "dataframe"
         },
         {
           "id": "plot",

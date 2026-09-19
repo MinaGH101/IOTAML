@@ -11,8 +11,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.core.config import get_settings
+from app.core.errors import AppError
 
 from .tools import (
     APP_GUIDE_TOOLS,
@@ -25,6 +27,10 @@ from .tools import (
 from .workflow_actions import (
     WORKFLOW_ACTION_TOOLS,
     apply_workflow_actions,
+)
+from .workflow_execution import (
+    WORKFLOW_EXECUTION_TOOLS,
+    run_current_workflow,
 )
 from .workflow_tools import (
     get_workflow_context,
@@ -83,11 +89,19 @@ class AssistantProviderError(RuntimeError):
 class AssistantChatResult:
     message: str
     workflow_changed: bool = False
+    run_id: int | None = None
 
 
 class AssistantService:
-    MAX_TOOL_ROUNDS = 6
+    MAX_TOOL_ROUNDS = 12
     _INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
+    _UNVERIFIED_EXECUTION_CLAIM_RE = re.compile(
+        r"(?:اجرا\s*(?:با موفقیت\s*)?(?:به پایان رسید|شد)|"
+        r"جریان\s*اجرا\s*می[‌\s]*شود|"
+        r"اجرا\s*آغاز\s*شد|"
+        r"همه\s*نودها\s*(?:اجرا|ران)\s*شدند)",
+        re.IGNORECASE,
+    )
 
     def __init__(
         self,
@@ -130,6 +144,29 @@ class AssistantService:
                 invalid.append(value)
         return invalid
 
+    @classmethod
+    def _has_unverified_execution_claim(cls, text: str, run_id: int | None) -> bool:
+        """Reject completion/start claims not supported by an execution result.
+
+        ``run_current_workflow`` currently creates a queued run only, so even
+        when it returns an ID, reporting that nodes started or finished would
+        still be inaccurate.
+        """
+        return bool(cls._UNVERIFIED_EXECUTION_CLAIM_RE.search(text or ""))
+
+    @staticmethod
+    def _safe_execution_status_message(run_id: int | None) -> str:
+        if run_id is not None:
+            return (
+                f"اجرای شماره {run_id} در صف قرار گرفته است. هنوز اجرای نودها، "
+                "تکمیل شدن جریان یا آماده بودن خروجی تأیید نشده است؛ وضعیت واقعی "
+                "را در پنل نتایج یا تاریخچه اجرا بررسی کنید."
+            )
+        return (
+            "هیچ اجرای تأییدشده‌ای برای این درخواست ایجاد نشد. بنابراین نودها اجرا "
+            "نشده‌اند و خروجی جدیدی وجود ندارد."
+        )
+
     def _require_client(self) -> Any:
         if self._client is not None:
             return self._client
@@ -154,6 +191,7 @@ class AssistantService:
         db: Session,
         workflow_id: int | None,
         owner_username: str,
+        current_user: Any,
     ) -> AssistantChatResult:
         client = self._require_client()
         context_limit = get_settings().assistant_context_message_limit
@@ -182,9 +220,11 @@ class AssistantService:
             CURRENT_WORKFLOW_TOOL,
             VALIDATE_CURRENT_WORKFLOW_TOOL,
             *WORKFLOW_ACTION_TOOLS,
+            *WORKFLOW_EXECUTION_TOOLS,
         ]
         allowed_node_names: set[str] = set()
         workflow_changed = False
+        run_id: int | None = None
 
         for tool_round in range(self.MAX_TOOL_ROUNDS):
             try:
@@ -287,7 +327,13 @@ class AssistantService:
 
                     "ACTION CONTRACT. You may modify the selected workflow only through "
                     "apply_workflow_actions. Before any edit, inspect the current workflow "
-                    "and use the live catalog to resolve exact node IDs. Reuse existing "
+                    "and use its nodeRef/instanceId and declared input/output port IDs. "
+                    "Use insert_node for requests such as 'add after Node 1': it appends "
+                    "when the referenced node has no outgoing connection and otherwise "
+                    "replaces its single downstream connection. If that node branches, ask "
+                    "which downstream branch to use. Do not use add_node merely for visual "
+                    "placement when the user asked for insertion. Omit port handles unless "
+                    "the exact declared port IDs are needed to disambiguate. Reuse existing "
                     "useful nodes, add only missing nodes, connect them from the best "
                     "current source, configure requested settings, then validate. Use one "
                     "atomic action batch for multi-step edits. Ask a clarifying question "
@@ -315,8 +361,13 @@ class AssistantService:
                     "but treat get_current_workflow as the source of truth for what the user "
                     "already has. Use only exact live catalog node names returned by tools. "
                     "Do not pretend to build or execute the workflow: build only when "
-                    "apply_workflow_actions reports saved graph changes, and execute only "
-                    "if a future run tool reports a created run. "
+                    "apply_workflow_actions reports saved graph changes. When the user "
+                    "explicitly asks to run or execute the selected workflow, first call "
+                    "validate_current_workflow and call run_current_workflow only if that "
+                    "validation is valid. run_current_workflow queues an asynchronous run; "
+                    "it does not mean the nodes have run or that results are ready. In that "
+                    "case, report the returned run ID and that it is queued, never that it "
+                    "has started, completed, or succeeded. "
 
                     "Do not assume an empty setting is invalid. Some nodes interpret an "
                     "empty columns list as all compatible columns. Do not report a "
@@ -325,8 +376,10 @@ class AssistantService:
                     "long parameter values may be intentionally summarized; do not describe "
                     "summarized or truncated values as errors. "
 
-                    "Never claim that you executed a workflow unless a run tool reports "
-                    "that execution was created. For graph edits, report only changes "
+                    "Never claim that you executed a workflow unless run_current_workflow "
+                    "reports that a run was created. Never claim that nodes ran, execution "
+                    "completed, or results are available unless a run-status tool confirms "
+                    "that state. For graph edits, report only changes "
                     "confirmed by apply_workflow_actions. Always call "
                     "validate_current_workflow before reporting workflow configuration, "
                     "connection, or validation problems. Only describe issues returned by "
@@ -364,6 +417,12 @@ class AssistantService:
                 final_text = response.output_text or (
                     "I could not generate a complete response."
                 )
+                if self._has_unverified_execution_claim(final_text, run_id):
+                    return AssistantChatResult(
+                        message=self._safe_execution_status_message(run_id),
+                        workflow_changed=workflow_changed,
+                        run_id=run_id,
+                    )
                 invalid_node_pills = self._invalid_node_pills(
                     final_text,
                     allowed_node_names,
@@ -372,6 +431,7 @@ class AssistantService:
                     return AssistantChatResult(
                         message=final_text,
                         workflow_changed=workflow_changed,
+                        run_id=run_id,
                     )
 
                 conversation_input.extend(response.output)
@@ -401,6 +461,7 @@ class AssistantService:
                     db=db,
                     workflow_id=workflow_id,
                     owner_username=owner_username,
+                    current_user=current_user,
                 )
 
                 if call.name == "list_nodes":
@@ -422,6 +483,17 @@ class AssistantService:
                                     allowed_node_names.add(name)
                 elif call.name == "apply_workflow_actions":
                     workflow_changed = workflow_changed or bool(result.get("changed"))
+                elif call.name == "run_current_workflow" and result.get("created"):
+                    value = result.get("runId")
+                    run_id = value if isinstance(value, int) else None
+                    if run_id is not None:
+                        # The action is complete. Do not spend more model rounds
+                        # paraphrasing it or allow another call to create duplicates.
+                        return AssistantChatResult(
+                            message=self._safe_execution_status_message(run_id),
+                            workflow_changed=workflow_changed,
+                            run_id=run_id,
+                        )
 
                 conversation_input.append(
                     {
@@ -435,8 +507,14 @@ class AssistantService:
                     }
                 )
 
-        raise RuntimeError(
-            "The assistant exceeded the maximum number of tool rounds."
+        return AssistantChatResult(
+            message=(
+                "دستیار نتوانست پاسخ را در تعداد مراحل مجاز کامل کند. "
+                "هیچ موفقیت اجرایی را تأیید نمی‌کنم؛ وضعیت واقعی را در پنل نتایج "
+                "یا تاریخچه اجرا بررسی کنید."
+            ),
+            workflow_changed=workflow_changed,
+            run_id=run_id,
         )
 
     @staticmethod
@@ -447,6 +525,7 @@ class AssistantService:
         db: Session,
         workflow_id: int | None,
         owner_username: str,
+        current_user: Any,
     ) -> dict[str, Any]:
         try:
             arguments = json.loads(raw_arguments or "{}")
@@ -528,13 +607,32 @@ class AssistantService:
                     ],
                 )
 
+            if tool_name == "run_current_workflow":
+                if workflow_id is None:
+                    return {
+                        "created": False,
+                        "error": "No workflow is currently selected.",
+                    }
+
+                return run_current_workflow(
+                    db=db,
+                    workflow_id=workflow_id,
+                    owner_username=owner_username,
+                    current_user=current_user,
+                )
+
             return execute_catalog_tool(tool_name, arguments)
 
         except json.JSONDecodeError:
             return {
                 "error": "The assistant produced invalid tool arguments."
             }
+        except AppError as exc:
+            return {"error": exc.message, "code": exc.code, "details": exc.details}
+        except HTTPException as exc:
+            return {"error": exc.detail, "statusCode": exc.status_code}
         except Exception as exc:
+            logger.exception("Assistant tool failed: tool=%s workflow_id=%s", tool_name, workflow_id)
             return {
                 "error": "The assistant tool could not complete the request.",
                 "errorType": type(exc).__name__,

@@ -87,6 +87,8 @@ color-scheme: dark;
   
   --theme-node-menu-item-bg: #202328;
   --theme-node-menu-item-hover-bg: #2A2F34;
+  --category-model-regression: #F29A4A;
+  --category-model-classification: #43CFCB;
 }
 :root[data-theme="light"] {
 color-scheme: light;
@@ -109,6 +111,8 @@ color-scheme: light;
   --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 10%, transparent);
   --theme-info: #396FA5;
   --theme-info-soft: color-mix(in srgb, var(--theme-info) 10%, transparent);
+  --category-model-regression: #A9500B;
+  --category-model-classification: #087F83;
 
   
   --theme-app-bg: #E8EFF5;
@@ -276,6 +280,12 @@ color-scheme: light;
 .cat-model-design-train,
 .cat-ml-model-design-and-training {
 --node-category-color: var(--category-model-training); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-ml-regression-models {
+--node-category-color: var(--category-model-regression); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-ml-classification-models {
+--node-category-color: var(--category-model-classification); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
 }
 .cat-model-analysis,
 .cat-ml-model-analysis {

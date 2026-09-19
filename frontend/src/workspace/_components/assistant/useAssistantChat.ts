@@ -3,7 +3,7 @@ import { useAssistantActions } from './chat/useAssistantActions';
 import { useAssistantHistory } from './chat/useAssistantHistory';
 import type { ChatMessage } from './chat/model';
 export type { ChatMessage } from './chat/model';
-export function useAssistantChat(workflowId: number | null, onWorkflowChanged?: () => void | Promise<void>) {
+export function useAssistantChat(workflowId: number | null, prepareWorkflow?: () => void | Promise<void>, onWorkflowChanged?: () => void | Promise<void>, onRunCreated?: (runId: number) => void | Promise<void>) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
@@ -14,7 +14,7 @@ export function useAssistantChat(workflowId: number | null, onWorkflowChanged?: 
     const blocked = busy || loadingHistory || clearingHistory;
     const canSend = useMemo(() => Boolean(workflowId && draft.trim()) && !blocked, [blocked, draft, workflowId]);
     const { send, clear } = useAssistantActions({
-        workflowId, draft, messages, blocked, onWorkflowChanged, setDraft, setMessages, setBusy, setClearing: setClearingHistory, setError,
+        workflowId, draft, messages, blocked, prepareWorkflow, onWorkflowChanged, onRunCreated, setDraft, setMessages, setBusy, setClearing: setClearingHistory, setError,
     });
     return { messages, draft, setDraft, busy, loadingHistory, clearingHistory, error, canSend, send, clear };
 }

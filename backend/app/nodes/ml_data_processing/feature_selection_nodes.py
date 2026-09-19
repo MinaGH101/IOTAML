@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.feature_selection import f_regression, mutual_info_classif, mutual_info_regression
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import output, table_output
+from app.nodes.io import dataframe_result, output, table_output
 from app.nodes.ml_data_processing.ml_utils import feature_target_from_inputs
 
 
@@ -28,13 +28,14 @@ def _encode_x(x: pd.DataFrame) -> pd.DataFrame:
 
 
 class MutualInfoFeatureScoreNode(BaseNode):
+    cache_version = '2'
     id = 'MP-021'
     name = 'Mutual Information Scores'
     category = 'ML Model Analysis'
     description = 'Scores features using mutual information and outputs a sortable bar plot plus score table.'
 
     inputs = [port('data', 'Features + Target', 'dataframe')]
-    outputs = [port('scores', 'Feature Scores', 'json'), port('plot', 'Score Plot', 'plot')]
+    outputs = [port('scores', 'Feature Scores', 'dataframe'), port('plot', 'Score Plot', 'plot')]
 
     settings_schema = [
         setting('target_column', 'Target Column', 'column', '', required=False),
@@ -58,20 +59,28 @@ class MutualInfoFeatureScoreNode(BaseNode):
         rows = [{'feature': str(feature), 'mutual_info': float(score)} for feature, score in zip(x_encoded.columns, scores)]
         rows = _sort_rows(rows, str(settings.get('sort_order') or 'highest'), 'mutual_info')
         rows = rows[:int(settings.get('top_n') or 50)]
+        scores_df = pd.DataFrame(rows)
         bar = output(str(node['id']), 'Mutual Information Scores', 'bar', rows=rows, xKey='feature', yKey='mutual_info')
-        table = table_output(str(node['id']), 'Mutual Information Table', pd.DataFrame(rows), 500)
+        table = table_output(str(node['id']), 'Mutual Information Table', scores_df, 500)
         report = {'target_column': target, 'feature_count': len(features), 'encoded_feature_count': len(x_encoded.columns), 'task_type': 'classification' if classification else 'regression', 'rows': rows}
-        return {'scores': report, 'json': report, 'output': bar, 'outputs': [bar, table]}
+        return {
+            'scores': dataframe_result(scores_df, reset_lineage=True, meta=report),
+            'json': report,
+            'outputs_by_port': {'scores': dataframe_result(scores_df, reset_lineage=True, meta=report), 'plot': bar},
+            'output': bar,
+            'outputs': [bar, table],
+        }
 
 
 class FRegressionFeatureScoreNode(BaseNode):
+    cache_version = '2'
     id = 'MP-022'
     name = 'F-Regression Scores'
     category = 'ML Model Analysis'
     description = 'Scores regression features using sklearn f_regression and outputs a bar plot plus table.'
 
     inputs = [port('data', 'Features + Target', 'dataframe')]
-    outputs = [port('scores', 'Feature Scores', 'json'), port('plot', 'Score Plot', 'plot')]
+    outputs = [port('scores', 'Feature Scores', 'dataframe'), port('plot', 'Score Plot', 'plot')]
 
     settings_schema = [
         setting('target_column', 'Target Column', 'column', '', required=False),
@@ -91,7 +100,14 @@ class FRegressionFeatureScoreNode(BaseNode):
         rows = [{'feature': str(feature), 'f_score': float(score), 'p_value': float(pvalue)} for feature, score, pvalue in zip(x_encoded.columns, scores, pvalues)]
         rows = _sort_rows(rows, str(settings.get('sort_order') or 'highest'), 'f_score')
         rows = rows[:int(settings.get('top_n') or 50)]
+        scores_df = pd.DataFrame(rows)
         bar = output(str(node['id']), 'F-Regression Scores', 'bar', rows=rows, xKey='feature', yKey='f_score')
-        table = table_output(str(node['id']), 'F-Regression Table', pd.DataFrame(rows), 500)
+        table = table_output(str(node['id']), 'F-Regression Table', scores_df, 500)
         report = {'target_column': target, 'feature_count': len(features), 'encoded_feature_count': len(x_encoded.columns), 'rows': rows}
-        return {'scores': report, 'json': report, 'output': bar, 'outputs': [bar, table]}
+        return {
+            'scores': dataframe_result(scores_df, reset_lineage=True, meta=report),
+            'json': report,
+            'outputs_by_port': {'scores': dataframe_result(scores_df, reset_lineage=True, meta=report), 'plot': bar},
+            'output': bar,
+            'outputs': [bar, table],
+        }

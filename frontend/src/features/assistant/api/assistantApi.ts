@@ -11,6 +11,7 @@ export type AssistantHistoryMessage = {
 export type AssistantChatResponse = {
   message: string;
   workflow_changed: boolean;
+  run_id: number | null;
 };
 
 export const assistantApi = {

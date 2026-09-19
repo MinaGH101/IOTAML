@@ -4,11 +4,13 @@ import { AssistantMessageContent } from './assistant/AssistantMessageContent';
 import { useAssistantChat } from './assistant/useAssistantChat';
 type AssistantPanelProps = {
     workflowId: number | null;
+    prepareWorkflow?: () => void | Promise<void>;
     onWorkflowChanged?: () => void | Promise<void>;
+    onRunCreated?: (runId: number) => void | Promise<void>;
     onClose?: () => void;
 };
-function AssistantPanelComponent({ workflowId, onWorkflowChanged, onClose }: AssistantPanelProps) {
-    const chat = useAssistantChat(workflowId, onWorkflowChanged);
+function AssistantPanelComponent({ workflowId, prepareWorkflow, onWorkflowChanged, onRunCreated, onClose }: AssistantPanelProps) {
+    const chat = useAssistantChat(workflowId, prepareWorkflow, onWorkflowChanged, onRunCreated);
     const messageListRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
         const list = messageListRef.current;

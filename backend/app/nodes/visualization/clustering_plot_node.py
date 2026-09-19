@@ -205,7 +205,7 @@ class ClusteringPlotNode(BaseNode):
         ),
         setting('scale', 'Standardize Data', 'boolean', True, supports_dynamic=False),
     ]
-    cache_version = '2'
+    cache_version = '3'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -289,16 +289,18 @@ class ClusteringPlotNode(BaseNode):
             for method in methods
         ]
         if len(plots) == 1:
-            return {'_df': df, 'plot': {'type': 'dendrogram'}, 'output': plots[0]}
+            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+        group = output(
+            str(node['id']),
+            node_label(node),
+            'plot_group',
+            plots=plots,
+            count=len(plots),
+            layout='vertical',
+        )
         return {
             '_df': df,
-            'plot': {'type': 'dendrogram_group'},
-            'output': output(
-                str(node['id']),
-                node_label(node),
-                'plot_group',
-                plots=plots,
-                count=len(plots),
-                layout='vertical',
-            ),
+            'plot': group,
+            'outputs_by_port': {'plot': group},
+            'output': group,
         }
