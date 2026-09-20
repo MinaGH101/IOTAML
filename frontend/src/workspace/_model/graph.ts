@@ -147,7 +147,10 @@ export function normalizeEdgeHandles(nodes: Node[], edges: Edge[]): Edge[] {
         const targetPorts = Array.isArray(targetNode?.data?.inputs) ? targetNode.data.inputs as Array<{
             id?: unknown;
         }> : [];
-        const sourceHandle = String(edge.sourceHandle || sourcePorts[0]?.id || 'output');
+        const legacySplitHandle = String(sourceNode?.data?.registryId || sourceNode?.data?.catalogId || '') === 'MP-001';
+        const sourceHandle = legacySplitHandle
+            ? 'split'
+            : String(edge.sourceHandle || sourcePorts[0]?.id || 'output');
         const targetHandle = String(edge.targetHandle || targetPorts[0]?.id || 'input');
         if (edge.sourceHandle === sourceHandle && edge.targetHandle === targetHandle)
             return edge;

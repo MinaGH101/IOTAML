@@ -3644,14 +3644,7 @@
         {
           "id": "split",
           "name": "Train/Test Data",
-          "type": "json",
-          "required": true,
-          "multiple": false
-        },
-        {
-          "id": "report",
-          "name": "Split Report",
-          "type": "json",
+          "type": "any",
           "required": true,
           "multiple": false
         }
@@ -3747,7 +3740,7 @@
       "priority": "MVP",
       "validationRules": "",
       "cacheable": true,
-      "cacheVersion": "1"
+      "cacheVersion": "3"
     },
     {
       "id": "MP-004",

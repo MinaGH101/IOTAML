@@ -15,7 +15,7 @@ from app.nodes.transformation.scaler_nodes import ScalerNode
 from app.nodes.cleaning.persian_values_node import PersianValuesNode
 from app.nodes.utilities.summary_nodes import RemoveDuplicatesNode, GroupSummaryNode
 from app.workflow.graph.operations import upstream_outputs
-from app.workflow.execution.executor import execute_workflow
+from app.workflow.execution.executor import execute_workflow, visible_node_output
 
 
 CTX = SimpleNamespace(target_column='y', task_type='regression')
@@ -30,6 +30,20 @@ def test_holdout_never_fits_scaling_or_imputation():
     assert model.model.named_steps['scaler'].mean_[0] == 3
     np.testing.assert_allclose(predict_with_payload(model, pd.DataFrame({'x': [10000.]})), [20000.])
     assert frame['x'].isna().sum() == 1  # No upstream mutation.
+
+
+def test_train_test_split_exposes_one_model_ready_port_and_four_result_frames():
+    frame = pd.DataFrame({'x': [1., 2., 3., 4.], 'y': [2., 4., 6., 8.]})
+    node = {'id': 'split', 'data': {'label': 'Holdout', 'registryId': 'MP-001', 'outputs': [{'id': 'split', 'name': 'Train/Test Data', 'type': 'any'}]}}
+    result = TrainTestSplitNode().run(node, {'in': dataframe_result(frame)}, {'test_size': .5, 'shuffle': False}, CTX)
+    inputs = upstream_outputs('model', [{'source': 'split', 'sourceHandle': 'split', 'target': 'model'}], {'split': result})
+    model = LinearRegressionNode().run({'id': 'model'}, inputs, {}, CTX)['model']
+    visible = visible_node_output(node, result)
+    outputs = visible if isinstance(visible, list) else [visible]
+
+    assert model.meta['train_mode'] == 'train_test_split'
+    assert [item['title'].rsplit(' · ', 1)[-1] for item in outputs] == ['X_train', 'X_test', 'y_train', 'y_test']
+    assert {item['source_handle'] for item in outputs} == {'split'}
 
 
 def test_every_fold_fits_its_own_preprocessor():

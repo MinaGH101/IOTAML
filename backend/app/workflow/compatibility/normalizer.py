@@ -71,4 +71,13 @@ def normalize_graph(graph: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(edge, dict):
             continue
         edge.setdefault('id', f"compat-edge-{index}-{edge.get('source', '')}-{edge.get('target', '')}")
+        source = next((node for node in raw['nodes'] if str(node.get('id') or '') == str(edge.get('source') or '')), None)
+        source_id = str((source or {}).get('data', {}).get('registryId') or '')
+        # MP-001 used to expose implementation details as separate graph ports.
+        # Its public contract is now one model-ready split bundle, so old saved
+        # workflows continue to execute without a manual reconnect.
+        if source_id == 'MP-001' and str(edge.get('sourceHandle') or '') in {
+            '', 'output', 'train', 'test', 'X_train', 'X_test', 'y_train', 'y_test', 'report',
+        }:
+            edge['sourceHandle'] = 'split'
     return raw

@@ -18,6 +18,12 @@ export function useRunProgress(currentRun: Run | null, setCurrentRun: Dispatch<S
             setWorkflowLastRunId(done.id);
             setNodeStateRun((p) => mergePersistentNodeState(p, done));
         }
+        else {
+            // A failed run is still authoritative for canvas status: otherwise
+            // the error card names a node while the workspace keeps showing
+            // stale successful states.
+            setNodeStateRun(done);
+        }
         setRunHistory((items) => upsertRunSummary(items, done));
         setBusy(false);
         void refresh();

@@ -8,7 +8,7 @@ export function WorkflowErrorCard({ problem }: { problem: Record<string, unknown
       </div>
       <p>{String(problem.message || 'خطای ناشناخته')}</p>
       <dl>
-        {Boolean(problem.node_name) && <><dt>نود</dt><dd>{String(problem.node_name)} <small dir="ltr">{String(problem.node_id || '')}</small></dd></>}
+        {Boolean(problem.node_name) && <><dt>نود</dt><dd>{String(problem.node_name)}</dd></>}
         {Boolean(problem.execution_id) && <><dt>اجرای workflow</dt><dd dir="ltr">{String(problem.execution_id)}</dd></>}
         {Boolean(problem.port) && <><dt>پورت ورودی</dt><dd dir="ltr">{String(problem.port)}</dd></>}
         {Boolean(problem.setting) && <><dt>تنظیم</dt><dd dir="ltr">{String(problem.setting)}</dd></>}

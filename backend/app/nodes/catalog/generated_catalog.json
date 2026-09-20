@@ -4226,7 +4226,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "2",
+      "cacheVersion": "3",
       "cacheable": true,
       "category": "ML Data Processing",
       "comingSoon": false,
@@ -4251,56 +4251,7 @@
           "multiple": false,
           "name": "Train/Test Data",
           "required": true,
-          "type": "json"
-        },
-        {
-          "id": "train",
-          "multiple": false,
-          "name": "Train DataFrame",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "test",
-          "multiple": false,
-          "name": "Test DataFrame",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "X_train",
-          "multiple": false,
-          "name": "X Train Features",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "X_test",
-          "multiple": false,
-          "name": "X Test Features",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "y_train",
-          "multiple": false,
-          "name": "Y Train Target",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "y_test",
-          "multiple": false,
-          "name": "Y Test Target",
-          "required": true,
-          "type": "dataframe"
-        },
-        {
-          "id": "report",
-          "multiple": false,
-          "name": "Split Report",
-          "required": true,
-          "type": "json"
+          "type": "any"
         }
       ],
       "params": [

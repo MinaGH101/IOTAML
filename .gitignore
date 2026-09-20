@@ -16,3 +16,4 @@ frontend/dist/
 
 .env
 iota_assistant_model_benchmark.ipynb
+frontend/node_modules

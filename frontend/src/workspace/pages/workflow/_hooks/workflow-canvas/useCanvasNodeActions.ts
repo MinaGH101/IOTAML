@@ -1,7 +1,8 @@
 import { useCallback, useRef, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import type { Node } from '@xyflow/react';
 import { makeNode } from '../../../../_model/graph';
-import { renameWorkflowNode, updateNodeParameters, updateNodePinnedOutput, type PinnedNodeData } from '../../../../_model/nodeMutations';
+import { updateParametersAndPropagateColumns } from '../../../../_model/columnParameterPropagation';
+import { renameWorkflowNode, updateNodePinnedOutput, type PinnedNodeData } from '../../../../_model/nodeMutations';
 import { layoutWorkflowNodes } from '../../_model/workflowAutoLayout';
 import type { WorkflowCanvasOptions } from './types';
 export function useCanvasNodeActions(o: WorkflowCanvasOptions) {
@@ -15,7 +16,7 @@ export function useCanvasNodeActions(o: WorkflowCanvasOptions) {
     else
         o.selectNode(node.id, true); }, [o.enterComponentNode, o.readOnly, o.selectNode]);
     const updateNodeParams = useCallback((id: string, params: Record<string, unknown>) => { if (!o.readOnly)
-        o.setNodes((items) => updateNodeParameters(items, id, params)); }, [o.readOnly, o.setNodes]);
+        o.setNodes((items) => updateParametersAndPropagateColumns({ nodes: items, edges: o.edges, nodeId: id, params, registry: o.registry, aliases: o.catalog.aliases, datasets: o.datasets, workflowDatasetId: o.datasetId })); }, [o.catalog.aliases, o.datasetId, o.datasets, o.edges, o.readOnly, o.registry, o.setNodes]);
     const renameNode = useCallback((id: string, label: string) => { if (o.readOnly)
         return; o.setNodes((items) => renameWorkflowNode(items, id, label)); o.renameNodeSources(id, label); }, [o.readOnly, o.renameNodeSources, o.setNodes]);
     const updateNodePinned = useCallback((id: string, pinned: PinnedNodeData) => { if (!o.readOnly)

@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Edge, Node } from '@xyflow/react';
-import type { NodeCatalogResponse, RegistryNode, Run } from '../../../../../shared/types';
+import type { Dataset, NodeCatalogResponse, RegistryNode, Run } from '../../../../../shared/types';
 export type FitView = (options: {
     padding?: number;
     duration?: number;
@@ -14,6 +14,8 @@ export type WorkflowCanvasOptions = {
     setEdges: Dispatch<SetStateAction<Edge[]>>;
     registry: RegistryNode[];
     catalog: NodeCatalogResponse;
+    datasets: Dataset[];
+    datasetId: number | null;
     readOnly: boolean;
     currentRun: Run | null;
     resultsWidth: number;

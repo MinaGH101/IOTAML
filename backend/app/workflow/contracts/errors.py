@@ -88,15 +88,19 @@ def normalize_node_exception(
     node_name: str,
 ) -> WorkflowProblem:
     """Attach node context and classify expected versus unexpected failures."""
+    def display_message(message: str) -> str:
+        """Never expose an opaque canvas ID as the user-facing node name."""
+        return message.replace(f"Node {node_id}", f"Node '{node_name}'")
+
     if isinstance(exc, NodeContractError):
         source = exc.problem
         payload = source.to_dict()
-        payload.update({"node_id": node_id, "node_name": node_name})
+        payload.update({"message": display_message(source.message), "node_id": node_id, "node_name": node_name})
         return WorkflowProblem(**payload)
     if isinstance(exc, (ValueError, KeyError)):
         return WorkflowProblem(
             code="NODE_DATA_CONTRACT_INVALID",
-            message=str(exc) or "The node input data is invalid.",
+            message=display_message(str(exc) or "The node input data is invalid."),
             category="data",
             responsibility="user",
             suggested_fix=(
@@ -109,7 +113,7 @@ def normalize_node_exception(
         )
     return WorkflowProblem(
         code="NODE_APPLICATION_ERROR",
-        message=str(exc) or "The node failed without an error message.",
+        message=display_message(str(exc) or "The node failed without an error message."),
         category="application",
         responsibility="application",
         suggested_fix=(

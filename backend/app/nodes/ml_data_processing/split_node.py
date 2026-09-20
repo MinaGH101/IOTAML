@@ -7,28 +7,22 @@ from sklearn.model_selection import train_test_split
 
 from app.nodes.ml_data_processing.preprocessing_node import require_unfitted_input
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import dataframe_result, metrics_output, node_label, table_output
+from app.nodes.io import dataframe_result, node_label, table_output
 from app.nodes.ml_data_processing.ml_utils import feature_target_from_inputs, training_frame
 
 
 class TrainTestSplitNode(BaseNode):
-    cache_version = '2'
+    cache_version = '3'
     id = 'MP-001'
     name = 'Train/Test Split'
     category = 'ML Data Processing'
     description = 'Splits selected features and target into X_train, X_test, y_train, and y_test.'
 
     inputs = [port('data', 'Features + Target', 'dataframe')]
-    outputs = [
-        port('split', 'Train/Test Data', 'json'),
-        port('train', 'Train DataFrame', 'dataframe'),
-        port('test', 'Test DataFrame', 'dataframe'),
-        port('X_train', 'X Train Features', 'dataframe'),
-        port('X_test', 'X Test Features', 'dataframe'),
-        port('y_train', 'Y Train Target', 'dataframe'),
-        port('y_test', 'Y Test Target', 'dataframe'),
-        port('report', 'Split Report', 'json'),
-    ]
+    # The split is one logical training-data bundle.  Keeping it on one port
+    # lets every model consume the exact train/test pairing without asking the
+    # author to wire four independently-related values.
+    outputs = [port('split', 'Train/Test Data', 'any')]
 
     settings_schema = [
         setting('test_size', 'Test Size', 'number', 0.2),
@@ -85,12 +79,6 @@ class TrainTestSplitNode(BaseNode):
             'stratify': stratify_enabled,
         }
 
-        report_df = pd.DataFrame([
-            {'part': 'X_train', 'rows': len(x_train), 'columns': len(x_train.columns)},
-            {'part': 'X_test', 'rows': len(x_test), 'columns': len(x_test.columns)},
-            {'part': 'y_train', 'rows': len(y_train), 'columns': 1},
-            {'part': 'y_test', 'rows': len(y_test), 'columns': 1},
-        ])
         train_df = training_frame(x_train, y_train, target)
         test_df = training_frame(x_test, y_test, target)
         train_result = dataframe_result(train_df, reset_lineage=True)
@@ -99,6 +87,25 @@ class TrainTestSplitNode(BaseNode):
         x_test_result = dataframe_result(x_test.reset_index(drop=True), reset_lineage=True)
         y_train_result = dataframe_result(y_train.reset_index(drop=True).to_frame(name=target), reset_lineage=True)
         y_test_result = dataframe_result(y_test.reset_index(drop=True).to_frame(name=target), reset_lineage=True)
+
+        split_port = {'split_data': split_data, 'data_pairs': split_data['data_pairs']}
+        visible_parts = []
+        for part_name, part_result in (
+            ('X_train', x_train_result),
+            ('X_test', x_test_result),
+            ('y_train', y_train_result),
+            ('y_test', y_test_result),
+        ):
+            part_payload = part_result['dataframe']
+            part_output = table_output(str(node['id']), f'{node_label(node)} · {part_name}', part_payload.df, 100)
+            part_output.update({
+                'source_handle': 'split',
+                'source_port_name': 'Train/Test Data',
+                'id_column': part_payload.id_column,
+                'active_columns': list(part_payload.active_columns or []),
+                'source_columns': list(part_payload.source_columns or []),
+            })
+            visible_parts.append(part_output)
 
         return dataframe_result(
             train_df,
@@ -118,16 +125,7 @@ class TrainTestSplitNode(BaseNode):
             y_test=y_test_result,
             report=report,
             json=report,
-            outputs_by_port={
-                'split': split_data,
-                'train': train_result,
-                'test': test_result,
-                'X_train': x_train_result,
-                'X_test': x_test_result,
-                'y_train': y_train_result,
-                'y_test': y_test_result,
-                'report': report,
-            },
-            output=table_output(str(node['id']), f'{node_label(node)} · Split Parts', report_df, 20),
-            outputs=[metrics_output(str(node['id']), f'{node_label(node)} · Split Report', report), table_output(str(node['id']), f'{node_label(node)} · Split Parts', report_df, 20)],
+            outputs_by_port={'split': split_port},
+            visible_outputs_only=True,
+            outputs=visible_parts,
         )
