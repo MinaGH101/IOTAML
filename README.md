@@ -116,19 +116,30 @@ MinIO console: `http://localhost:9001`
 
 ## Development
 
-Copy the development template and start the default hot-reload stack:
+Copy the development template and start the watching stack:
 
 ```bash
 cp .env.development.example .env
-docker compose up -d --build
+python3 scripts/dev_watch.py
 ```
 
 Development exposes PostgreSQL, Redis, MinIO, API, and Vite on localhost. Source
-mounts are enabled by default. Filesystem polling is disabled to avoid continuous
-CPU use on Docker Desktop and WSL-mounted drives; set `CHOKIDAR_USEPOLLING=true`
-only when native file-change events do not work on the current host.
+mounts are enabled by default. Keep the watcher running in a terminal. Frontend
+edits update through Vite; Python API edits reload through Uvicorn; backend source
+edits restart the worker. Changes to the root `.env` recreate affected containers
+with the new values without rebuilding images. This includes `OPENAI_MODEL` and
+`OPENAI_API_KEY`; refresh the page if it was open during a container restart.
+Stopping the watcher leaves the containers running. Filesystem polling is disabled
+in Vite to avoid continuous CPU use on Docker Desktop and WSL-mounted drives; set
+`CHOKIDAR_USEPOLLING=true` only when native file-change events do not work on the
+current host.
 `OPENAI_API_KEY` is optional: when blank, login and the main application still
 work, while only the Assistant tab remains unavailable.
+
+Dependency changes in `backend/requirements.txt` or `frontend/package.json` still
+require `docker compose up -d --build`. PostgreSQL applies its initial database,
+user, and password only when the data volume is created; editing those values in
+`.env` does not change credentials inside an existing database.
 
 The development database and user are both named `iotaml`. PostgreSQL applies
 `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` only when its data volume

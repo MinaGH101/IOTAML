@@ -92,6 +92,7 @@ services:
     build:
       context: ./backend
     command: ["alembic", "upgrade", "head"]
+    env_file: .env
     environment: *backend-environment
     depends_on:
       postgres:
@@ -115,6 +116,7 @@ services:
     build:
       context: ./backend
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    env_file: .env
     environment: *backend-environment
     volumes:
       - ./backend:/app
@@ -143,6 +145,7 @@ services:
     build:
       context: ./backend
     command: ["python", "worker.py"]
+    env_file: .env
     # The shared backend image probes an HTTP endpoint, but this service only
     # consumes queued runs and deliberately does not expose an HTTP server.
     healthcheck:
