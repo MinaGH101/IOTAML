@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { workflowsApi } from '../../../../../features/workflow/api/workflowsApi';
 import type { Workflow } from '../../../../../shared/types';
 import { ApiError } from '../../../../../shared/api/httpClient';
+import { userFriendlyErrorMessage } from '../../../../../shared/lib/errorMessages';
 import type { useWorkflowMetadata } from './useWorkflowMetadata';
 import type { WorkflowPersistenceOptions } from './types';
 type Snapshot = {
@@ -31,7 +32,7 @@ export function useAutosave(o: WorkflowPersistenceOptions, m: ReturnType<typeof 
         }
         else {
             m.setAutosaveState('error');
-            o.setMessage(error instanceof Error ? error.message : 'ذخیره خودکار ناموفق بود');
+            o.setMessage(userFriendlyErrorMessage(error, 'ذخیره خودکار انجام نشد. اتصال اینترنت را بررسی کنید.'));
         }
         throw error;
     } }; const queued = m.autosaveQueueRef.current.catch(() => undefined).then(execute); m.autosaveQueueRef.current = queued.catch(() => undefined); return queued; }, [m.adoptWorkflow, m.autosaveQueueRef, m.editorSessionRef, m.lastSavedSignatureRef, m.setAutosaveState, m.skipNextAutosaveRef, m.workflowIdRef, m.workflowRevisionRef, o.setMessage]);

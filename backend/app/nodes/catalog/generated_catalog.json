@@ -758,7 +758,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "3",
+      "cacheVersion": "4",
       "cacheable": true,
       "category": "Data Inspection",
       "comingSoon": false,
@@ -845,7 +845,7 @@
             "mean_rpd_pct",
             "pearson_r"
           ],
-          "help": "",
+          "help": "MAE (%) is the average per-pair absolute percentage error against the raw sample, capped at 100% per pair.",
           "label": "Error Metrics",
           "name": "metrics",
           "options": [
@@ -952,7 +952,7 @@
             "mean_rpd_pct",
             "pearson_r"
           ],
-          "help": "",
+          "help": "MAE (%) is the average per-pair absolute percentage error against the raw sample, capped at 100% per pair.",
           "label": "Error Metrics",
           "name": "metrics",
           "options": [
@@ -3596,7 +3596,7 @@
       "validationRules": ""
     },
     {
-      "cacheVersion": "4",
+      "cacheVersion": "5",
       "cacheable": true,
       "category": "Visualizations",
       "comingSoon": false,
@@ -3627,21 +3627,21 @@
       "params": [
         {
           "default": [],
-          "help": "Each selected dataframe column becomes one X-axis label.",
+          "help": "Optional. Each selected numeric column becomes one X-axis label; leave blank to plot all numeric value columns.",
           "label": "X-axis Columns",
           "name": "x_columns",
           "options": [],
-          "required": true,
+          "required": false,
           "supportsDynamic": true,
           "type": "columns"
         },
         {
           "default": [],
-          "help": "Rows are identified by values in the first dataframe column. Each selected row becomes one bar series.",
+          "help": "Optional. Rows are identified by values in the first dataframe column; leave blank to plot every row as a series.",
           "label": "Y-axis Rows",
           "name": "selected_rows",
           "options": [],
-          "required": true,
+          "required": false,
           "supportsDynamic": false,
           "type": "row_values"
         },
@@ -3693,21 +3693,21 @@
       "settingsSchema": [
         {
           "default": [],
-          "help": "Each selected dataframe column becomes one X-axis label.",
+          "help": "Optional. Each selected numeric column becomes one X-axis label; leave blank to plot all numeric value columns.",
           "label": "X-axis Columns",
           "name": "x_columns",
           "options": [],
-          "required": true,
+          "required": false,
           "supportsDynamic": true,
           "type": "columns"
         },
         {
           "default": [],
-          "help": "Rows are identified by values in the first dataframe column. Each selected row becomes one bar series.",
+          "help": "Optional. Rows are identified by values in the first dataframe column; leave blank to plot every row as a series.",
           "label": "Y-axis Rows",
           "name": "selected_rows",
           "options": [],
-          "required": true,
+          "required": false,
           "supportsDynamic": false,
           "type": "row_values"
         },

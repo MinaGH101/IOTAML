@@ -30,3 +30,14 @@ def test_multiple_edges_into_single_port_are_rejected() -> None:
     }
     result = validate_workflow_graph(graph, require_connections=False)
     assert any(item.type == "multiple_edges_single_input" for item in result.errors)
+
+
+def test_bar_plot_selection_settings_are_optional() -> None:
+    result = validate_workflow_graph(
+        {"nodes": [_node("bar", "VZ-005")], "edges": []},
+        require_connections=False,
+    )
+    assert not any(
+        item.type == "missing_required_setting" and item.field in {"x_columns", "selected_rows"}
+        for item in result.errors
+    )

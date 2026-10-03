@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { workflowsApi } from '../../../../../features/workflow/api/workflowsApi';
 import { runsApi } from '../../../../../features/execution/api/runsApi';
 import type { WorkflowVersionSummary } from '../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../shared/lib/errorMessages';
 import type { WorkflowVersionsOptions } from './types';
 export function useVersionMutations(o: WorkflowVersionsOptions, setSelectedId: (id: number | null) => void, setBusy: (v: boolean) => void, setDialogOpen: (v: boolean) => void, refresh: (id?: number | null) => Promise<WorkflowVersionSummary[]>, activate: (w: Awaited<ReturnType<typeof workflowsApi.get>>, run: Awaited<ReturnType<typeof runsApi.get>> | null) => Promise<void>) {
     const save = useCallback(async (name: string, description: string) => { if (o.versionPreview) {
@@ -20,7 +21,7 @@ export function useVersionMutations(o: WorkflowVersionsOptions, setSelectedId: (
     }
     catch (e) {
         if (!(e instanceof Error && e.message === 'AUTOSAVE_SUPERSEDED'))
-            o.setMessage(e instanceof Error ? e.message : 'ذخیره نسخه ناموفق بود');
+            o.setMessage(userFriendlyErrorMessage(e, 'نسخه ذخیره نشد. نام نسخه و اتصال اینترنت را بررسی کنید.'));
     }
     finally {
         setBusy(false);
@@ -37,7 +38,7 @@ export function useVersionMutations(o: WorkflowVersionsOptions, setSelectedId: (
         o.setMessage('نسخه حذف شد');
     }
     catch (e) {
-        o.setMessage(e instanceof Error ? e.message : 'حذف نسخه ناموفق بود');
+        o.setMessage(userFriendlyErrorMessage(e, 'نسخه حذف نشد. دوباره تلاش کنید.'));
     }
     finally {
         setBusy(false);

@@ -2,6 +2,7 @@ import { componentsApi } from '../../../../../../features/components/api/compone
 import { useCallback } from 'react';
 import type { Edge, Node } from '@xyflow/react';
 import type { ComponentVersion, WorkflowComponent } from '../../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../../shared/lib/errorMessages';
 import { normalizeFlowNodes } from '../../../../../_model/graph';
 import { componentDraftSignature } from '../../../../../_model/runtimeContext';
 import { componentVersionFromSnapshot } from '../_model/componentGraph';
@@ -48,7 +49,7 @@ export function useComponentEditorNavigation(options: UseComponentEditorOptions,
             return true;
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'باز کردن کامپوننت ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'کامپوننت باز نشد. نسخه یا تنظیمات آن را بررسی کنید.'));
             return false;
         }
     }, [enterEditor, items, projectId, setMessage, user.username]);

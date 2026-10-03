@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, type FormEvent } from 'react';
-import { Bot, LoaderCircle, Send, Trash2, X } from 'lucide-react';
+import { Bot, LoaderCircle, Send, Trash2, WifiOff, X } from 'lucide-react';
 import { AssistantMessageContent } from './assistant/AssistantMessageContent';
 import { useAssistantChat } from './assistant/useAssistantChat';
 type AssistantPanelProps = {
@@ -57,7 +57,7 @@ function AssistantPanelComponent({ workflowId, prepareWorkflow, onWorkflowChange
         {chat.busy && <div className="assistant-loading"><LoaderCircle size={17} className="spin"/><span>در حال بررسی...</span></div>}
       </div>
 
-      {chat.error && <div className="assistant-error" role="alert">{chat.error}</div>}
+      {chat.error && <div className="assistant-error" role="alert"><WifiOff size={16} aria-hidden="true" /><span>{chat.error}</span></div>}
       <form className="assistant-input-wrap" onSubmit={submit}>
         <textarea value={chat.draft} disabled={!workflowId || chat.busy || chat.loadingHistory || chat.clearingHistory} rows={3} placeholder={workflowId ? 'پیام خود را بنویسید...' : 'ابتدا یک جریان ذخیره‌شده باز کنید...'} aria-label="پیام دستیار هوشمند" onChange={(event) => chat.setDraft(event.target.value)} onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {

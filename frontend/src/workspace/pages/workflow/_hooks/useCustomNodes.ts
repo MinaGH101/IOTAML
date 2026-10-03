@@ -1,6 +1,7 @@
 import { nodesApi } from '../../../../features/custom-nodes/api/nodesApi';
 import { useCallback, useState } from 'react';
 import type { CustomNodeDefinition, CustomNodePayload, RegistryNode } from '../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../shared/lib/errorMessages';
 export function useCustomNodes({ refreshRegistry, setMessage, }: {
     refreshRegistry: () => Promise<void>;
     setMessage: (message: string) => void;
@@ -27,7 +28,7 @@ export function useCustomNodes({ refreshRegistry, setMessage, }: {
             setOpen(true);
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'بارگذاری نود سفارشی ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'نود سفارشی بارگذاری نشد. دوباره تلاش کنید.'));
         }
         finally {
             setBusy(false);
@@ -46,7 +47,7 @@ export function useCustomNodes({ refreshRegistry, setMessage, }: {
             setMessage('نود سفارشی ذخیره شد و در User Nodes قرار گرفت');
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'ذخیره نود سفارشی ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'نود سفارشی ذخیره نشد. نام، پورت‌ها و کد آن را بررسی کنید.'));
         }
         finally {
             setBusy(false);
@@ -66,7 +67,7 @@ export function useCustomNodes({ refreshRegistry, setMessage, }: {
             setMessage('نود سفارشی حذف شد');
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'حذف نود سفارشی ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'نود سفارشی حذف نشد. استفاده آن در جریان‌ها را بررسی کنید.'));
         }
         finally {
             setBusy(false);

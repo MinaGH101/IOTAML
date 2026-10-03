@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Node } from '@xyflow/react';
 import type { CustomNodeDefinition, CustomNodePayload, PortDefinition, RegistryNode } from '../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../shared/lib/errorMessages';
 import { readTemplate, registryId, uniquePortId } from './helpers';
 export function useCustomNodeBuilder({ definition, workflowNodes, registry, onSave }: {
     definition: CustomNodeDefinition | null;
@@ -18,10 +19,10 @@ export function useCustomNodeBuilder({ definition, workflowNodes, registry, onSa
     await onSave({ name: name.trim(), description: description.trim(), inputs, outputs, code, template });
 }
 catch (e) {
-    setError(e instanceof Error ? e.message : 'ذخیره نود ناموفق بود.');
+    setError(userFriendlyErrorMessage(e, 'نود ذخیره نشد. نام، پورت‌ها و کد را بررسی کنید.'));
 } }; const upload = async (file: File) => { setError(''); try {
     setTemplate(await readTemplate(file));
 }
 catch (e) {
-    setError(e instanceof Error ? e.message : 'خواندن template ناموفق بود.');
+    setError(userFriendlyErrorMessage(e, 'فایل نمونه خوانده نشد. فرمت JSON یا CSV را بررسی کنید.'));
 } }; return { name, setName, description, setDescription, inputs, setInputs, outputs, setOutputs, code, setCode, template, setTemplate, sourceNodeId, setSourceNodeId, sourcePortId, setSourcePortId, error, setError, fileRef, sourceDefinition, addSourcePort, submit, upload }; }

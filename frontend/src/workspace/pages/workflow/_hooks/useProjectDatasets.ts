@@ -2,6 +2,7 @@ import { useCallback, useState, type Dispatch, type SetStateAction } from 'react
 import type { Node } from '@xyflow/react';
 import type { Dataset } from '../../../../shared/types';
 import { projectsApi } from '../../../../projects/_service/projectsApi';
+import { userFriendlyErrorMessage } from '../../../../shared/lib/errorMessages';
 export function useProjectDatasets({ projectId, setNodes, setMessage, }: {
     projectId: number;
     setNodes: Dispatch<SetStateAction<Node[]>>;
@@ -23,7 +24,7 @@ export function useProjectDatasets({ projectId, setNodes, setMessage, }: {
             setMessage(`دیتاست ${dataset.name} آپلود شد`);
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'آپلود ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'فایل آپلود نشد. نوع فایل، حجم آن و اتصال اینترنت را بررسی کنید.'));
         }
     }, [projectId, refreshDatasets, setMessage]);
     const deleteDataset = useCallback(async (id: number) => {
@@ -43,7 +44,7 @@ export function useProjectDatasets({ projectId, setNodes, setMessage, }: {
             setMessage('دیتاست حذف شد');
         }
         catch (error) {
-            setMessage(error instanceof Error ? error.message : 'حذف دیتاست ناموفق بود');
+            setMessage(userFriendlyErrorMessage(error, 'دیتاست حذف نشد. استفاده آن در جریان‌های کاری را بررسی کنید.'));
         }
     }, [refreshDatasets, setMessage, setNodes]);
     return {

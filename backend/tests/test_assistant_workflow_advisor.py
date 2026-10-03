@@ -61,6 +61,10 @@ def test_classification_advice_marks_existing_nodes_and_connection_source() -> N
     connection_advice = pattern["connectionAdvice"]
     assert connection_advice["recommendedSourceNodeId"] == "dl-1"
     assert connection_advice["connectToStepId"] == "select_features_target"
+    assert connection_advice["persianInstruction"] == (
+        "ورودی نود `Select Features & Target` را به خروجی نود "
+        "`Detection Limit Handling` وصل کنید."
+    )
 
     action_plan = pattern["actionPlan"]
     assert action_plan["mode"] == "dry_run"
@@ -68,6 +72,13 @@ def test_classification_advice_marks_existing_nodes_and_connection_source() -> N
     assert action_plan["add"][0]["stepId"] == "select_features_target"
     assert action_plan["connect"][0]["sourceNodeId"] == "dl-1"
     assert action_plan["connect"][0]["targetStepId"] == "select_features_target"
+    assert action_plan["connect"][0]["persianInstruction"].startswith("ورودی نود `")
+    recommendation = action_plan["modelRecommendation"]
+    assert recommendation["basis"] == "relative_latency_estimate"
+    assert recommendation["recommended"]["performance"]["trainingSpeed"] in {
+        "very_fast", "fast", "medium", "slow"
+    }
+    assert len(recommendation["alternatives"]) <= 2
 
 
 def test_visualization_nodes_are_not_needed_for_ml_connection_source() -> None:

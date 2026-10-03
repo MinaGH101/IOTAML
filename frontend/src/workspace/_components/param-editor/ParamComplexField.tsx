@@ -34,6 +34,9 @@ export function ParamComplexField({ param, value, label, p, m }: {
     return <div className="field">{label}<ScatterBlocksEditor value={value} columns={m.columns.calculationColumns} onChange={(v) => m.update(param.name, v)}/></div>; if (param.type === 'columns') {
     const selected = parseArray(value).filter((c) => c !== m.columns.configuredIdColumn);
     const target = String(m.params.target_column || '');
-    const cols = m.registryId === 'VZ-005' ? m.columns.calculationColumns.slice(1) : m.columns.calculationColumns.filter((c) => c !== target);
+    const barPlotRowLabel = Object.keys(p.availableRows?.[0] || {})[0] || m.columns.configuredIdColumn;
+    const cols = m.registryId === 'VZ-005'
+        ? m.columns.calculationColumns.filter((c) => c !== barPlotRowLabel)
+        : m.columns.calculationColumns.filter((c) => c !== target);
     return <div className="field">{label}<SelectionToggleButton items={cols} selected={selected} onChange={(v) => m.update(param.name, v)}/><PillPicker items={cols} selected={selected} onChange={(v) => m.update(param.name, v)} empty="ستونی برای انتخاب پیدا نشد."/></div>;
 } return null; }

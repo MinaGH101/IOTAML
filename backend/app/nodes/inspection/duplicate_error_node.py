@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_absolute_error
 
 from app.nodes.base import BaseNode, port, setting
 from app.nodes.io import dataframe_payload, dataframe_result, ensure_df, node_label, selected_columns, table_output
@@ -37,6 +38,31 @@ def _safe_corr(a: pd.Series, b: pd.Series, method: str) -> float | None:
     return None if pd.isna(value) else float(value)
 
 
+def _bounded_mae_pct(raw: pd.Series, duplicate: pd.Series) -> float:
+    """Return a per-pair normalized MAE on the inclusive 0–100 percent scale.
+
+    A duplicate result is compared with its corresponding raw sample. A
+    difference equal to the raw magnitude is 100%; larger differences are
+    capped at 100% so this quality indicator remains comparable across
+    analytes. A zero raw value is scored 0% when its duplicate is zero and
+    100% otherwise.
+    """
+    raw_values = raw.to_numpy(dtype=float, copy=False)
+    duplicate_values = duplicate.to_numpy(dtype=float, copy=False)
+    absolute_difference = np.abs(duplicate_values - raw_values)
+    denominator = np.abs(raw_values)
+    relative_error = np.divide(
+        absolute_difference,
+        denominator,
+        out=np.zeros_like(absolute_difference, dtype=float),
+        where=denominator > 0,
+    )
+    zero_reference = denominator == 0
+    relative_error[zero_reference & (absolute_difference > 0)] = 1.0
+    relative_error = np.clip(relative_error, 0.0, 1.0)
+    return float(mean_absolute_error(np.zeros_like(relative_error), relative_error) * 100)
+
+
 def _aggregate_metric(name: str, raw: pd.Series, duplicate: pd.Series) -> float | int | None:
     diff = duplicate - raw
     abs_diff = diff.abs()
@@ -49,10 +75,8 @@ def _aggregate_metric(name: str, raw: pd.Series, duplicate: pd.Series) -> float 
 
     metrics: dict[str, Callable[[], Any]] = {
         'pair_count': lambda: int(len(raw)),
-        'mae': lambda: float(abs_diff.mean()),
-        # MAE expressed relative to the mean absolute raw-sample magnitude.
-        # Zero-only raw series intentionally return null rather than infinity.
-        'mae_pct': lambda: float((abs_diff.mean() / raw.abs().mean()) * 100),
+        'mae': lambda: float(mean_absolute_error(raw, duplicate)),
+        'mae_pct': lambda: _bounded_mae_pct(raw, duplicate),
         'rmse': lambda: float(np.sqrt(np.mean(np.square(diff)))),
         'mean_bias': lambda: float(diff.mean()),
         'median_absolute_error': lambda: float(abs_diff.median()),
@@ -101,11 +125,11 @@ class DuplicateSampleErrorNode(BaseNode):
         setting('mapping_duplicate_column', 'Duplicate Sample Mapping Column', 'text', '', help='Leave blank to use the second mapping column.'),
         setting('dataframe_id_column', 'DataFrame Sample ID Column', 'column', None, False, help='Defaults to the inherited workflow ID. You may choose another original source column.'),
         setting('columns', 'Analyte / Measurement Columns', 'columns', [], help='Numeric columns for duplicate error calculation.'),
-        setting('metrics', 'Error Metrics', 'multiselect', ['pair_count', 'mae', 'rmse', 'mean_rpd_pct', 'pearson_r'], options=_METRIC_OPTIONS),
+        setting('metrics', 'Error Metrics', 'multiselect', ['pair_count', 'mae', 'rmse', 'mean_rpd_pct', 'pearson_r'], options=_METRIC_OPTIONS, help='MAE (%) is the average per-pair absolute percentage error against the raw sample, capped at 100% per pair.'),
         setting('case_sensitive_ids', 'Case-sensitive IDs', 'boolean', False, supports_dynamic=False),
         setting('duplicate_id_policy', 'Repeated DataFrame ID Policy', 'select', 'error', options=['error', 'first', 'mean_numeric'], supports_dynamic=False),
     ]
-    cache_version = '3'
+    cache_version = '4'
 
     def run(self, node: dict[str, Any], inputs: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
         payload = dataframe_payload(inputs, 'data')

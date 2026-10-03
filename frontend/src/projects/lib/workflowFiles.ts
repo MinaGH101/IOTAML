@@ -11,6 +11,6 @@ export async function importWorkflowFile(file: File, projectId: number, datasetI
   const meta = imported.graph.meta as Record<string, unknown> | undefined;
   const graph = { ...imported.graph, meta: { ...(meta || {}), datasetId: meta?.datasetId ?? datasetId } } as Record<string, unknown>;
   const validation = await workflowsApi.validate(graph);
-  if (!validation.valid) throw new Error(validation.errors.map((item) => item.message).join(' · ') || 'Workflow JSON is not valid.');
+  if (!validation.valid) throw new Error('فایل جریان کاری قابل استفاده نیست. اتصال‌ها و تنظیمات نودها را بررسی کنید.');
   return workflowsApi.create({ name: imported.name || fallbackName, project_id: projectId, graph });
 }

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { componentsApi } from '../../../../../../../features/components/api/componentsApi';
 import type { WorkflowComponent } from '../../../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../../../shared/lib/errorMessages';
 import type { ComponentLibraryOptions } from './types';
 export function useComponentDelete(o: ComponentLibraryOptions) { const [confirmDelete, setConfirmDelete] = useState<WorkflowComponent | null>(null); const deleteConfirmed = useCallback(async () => { if (!confirmDelete)
     return; o.setBusy(true); try {
@@ -10,7 +11,7 @@ export function useComponentDelete(o: ComponentLibraryOptions) { const [confirmD
     o.setMessage('کامپوننت حذف شد');
 }
 catch (e) {
-    o.setMessage(e instanceof Error ? e.message : 'حذف کامپوننت ناموفق بود');
+    o.setMessage(userFriendlyErrorMessage(e, 'کامپوننت حذف نشد. وابستگی‌های آن را بررسی کنید.'));
 }
 finally {
     o.setBusy(false);

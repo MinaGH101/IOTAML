@@ -21,6 +21,87 @@ _PATTERNS_PATH = Path(__file__).with_name("knowledge") / "workflow_patterns.json
 _TOKEN_RE = re.compile(r"[\w\u0600-\u06FF]+", re.UNICODE)
 
 
+def _model_performance_profile(name: str) -> dict[str, Any]:
+    """Return relative latency guidance without inventing hardware timings."""
+    normalized = name.casefold()
+    profile: dict[str, Any] = {
+        "trainingSpeed": "medium",
+        "predictionSpeed": "fast",
+        "scalingRecommended": False,
+        "largeDatasetSuitability": "medium",
+        "note": "Measure on the actual dataset before making a final choice.",
+    }
+
+    if "gaussian nb" in normalized or "naive bayes" in normalized:
+        profile.update(
+            trainingSpeed="very_fast",
+            predictionSpeed="very_fast",
+            largeDatasetSuitability="high",
+            note="Very fast baseline, but its feature-distribution assumptions may reduce accuracy.",
+        )
+    elif "decision tree" in normalized:
+        profile.update(
+            trainingSpeed="very_fast",
+            predictionSpeed="very_fast",
+            largeDatasetSuitability="medium",
+            note="Good fast and interpretable baseline; control depth to reduce overfitting.",
+        )
+    elif any(term in normalized for term in ["logistic regression", "linear svc", "linear regression", "ridge", "lasso", "elasticnet"]):
+        profile.update(
+            trainingSpeed="fast",
+            predictionSpeed="very_fast",
+            scalingRecommended=True,
+            largeDatasetSuitability="high",
+            note="Strong low-latency baseline; scaling is recommended for stable optimization.",
+        )
+    elif "hist gradient boosting" in normalized:
+        profile.update(
+            trainingSpeed="fast",
+            predictionSpeed="fast",
+            largeDatasetSuitability="high",
+            note="Usually a strong balance of tabular-data accuracy and training time, especially on larger datasets.",
+        )
+    elif "extra trees" in normalized:
+        profile.update(
+            trainingSpeed="fast",
+            predictionSpeed="medium",
+            largeDatasetSuitability="high",
+            note="Often faster to train than a random forest while retaining nonlinear modeling power.",
+        )
+    elif "random forest" in normalized:
+        profile.update(
+            trainingSpeed="medium",
+            predictionSpeed="medium",
+            largeDatasetSuitability="high",
+            note="Reliable nonlinear baseline; more trees increase both training and prediction delay.",
+        )
+    elif "gradient boosting" in normalized:
+        profile.update(
+            trainingSpeed="slow",
+            predictionSpeed="fast",
+            largeDatasetSuitability="medium",
+            note="Can be accurate, but sequential tree training is slower than histogram boosting.",
+        )
+    elif "knn" in normalized or "nearest" in normalized:
+        profile.update(
+            trainingSpeed="very_fast",
+            predictionSpeed="slow",
+            scalingRecommended=True,
+            largeDatasetSuitability="low",
+            note="Training is cheap, but prediction and memory cost grow with the dataset.",
+        )
+    elif "svc" in normalized:
+        profile.update(
+            trainingSpeed="slow",
+            predictionSpeed="medium",
+            scalingRecommended=True,
+            largeDatasetSuitability="low",
+            note="Useful for smaller datasets; nonlinear kernels can become slow as row count grows.",
+        )
+
+    return profile
+
+
 def _tokens(value: str) -> set[str]:
     return {
         token.casefold()
@@ -79,7 +160,16 @@ def _resolve_step(step: dict[str, Any]) -> dict[str, Any]:
     # Generic model/visualization/detector steps intentionally expose several
     # live choices. Normal steps return the best matching node only.
     is_choice_step = bool(step.get("selection"))
-    selected = candidates[:8] if is_choice_step else candidates[:1]
+    selected = candidates[:12] if is_choice_step else candidates[:1]
+
+    if is_choice_step:
+        selected = [
+            {
+                **candidate,
+                "performance": _model_performance_profile(str(candidate.get("name") or "")),
+            }
+            for candidate in selected
+        ]
 
     return {
         "id": step.get("id"),
@@ -180,10 +270,22 @@ def _connection_advice(
         None,
     )
 
-    if pattern_id in {"classification", "regression"}:
-        target_step_id = "select_features_target"
+    select_step = next(
+        (step for step in steps if step.get("id") == "select_features_target"),
+        None,
+    )
+    if pattern_id in {"classification", "regression"} and select_step and not select_step.get("alreadyPresent"):
+        target_step = select_step
     else:
-        target_step_id = str(next_missing.get("id")) if next_missing else ""
+        target_step = next_missing
+    target_step_id = str(target_step.get("id")) if target_step else ""
+    target_choice = _first_node_choice(target_step) if target_step else None
+    target_matches = target_step.get("matchedExistingNodes") if target_step else []
+    target_name = ""
+    if target_matches:
+        target_name = str(target_matches[0].get("name") or "")
+    elif target_choice:
+        target_name = str(target_choice.get("name") or "")
 
     recommended = source_nodes[0]
     alternatives = source_nodes[1:4]
@@ -192,6 +294,11 @@ def _connection_advice(
         "recommendedSourceNodeId": recommended.get("instanceId"),
         "recommendedSourceName": _display_name(recommended),
         "connectToStepId": target_step_id,
+        "connectToNodeName": target_name,
+        "persianInstruction": (
+            f"ورودی نود `{target_name}` را به خروجی نود `{_display_name(recommended)}` وصل کنید."
+            if target_name else ""
+        ),
         "reason": (
             "Prefer connecting new downstream nodes to the latest useful "
             "dataframe-producing node, especially after cleaning, selection, "
@@ -213,6 +320,74 @@ def _first_node_choice(step: dict[str, Any]) -> dict[str, Any] | None:
         return None
     first = nodes[0]
     return first if isinstance(first, dict) else None
+
+
+def _model_recommendation(
+    pattern_id: str,
+    steps: list[dict[str, Any]],
+    current_workflow: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if pattern_id not in {"classification", "regression"}:
+        return None
+
+    model_step = next((step for step in steps if step.get("id") == "model"), None)
+    candidates = model_step.get("nodes") if model_step else []
+    if not candidates:
+        return None
+
+    dataset_profile = (current_workflow or {}).get("datasetProfile") or {}
+    row_count = int(dataset_profile.get("rowCount") or 0)
+    speed_score = {"very_fast": 5, "fast": 4, "medium": 2, "slow": 0}
+
+    def score(candidate: dict[str, Any]) -> tuple[int, str]:
+        profile = candidate.get("performance") or {}
+        value = speed_score.get(str(profile.get("trainingSpeed")), 1)
+        value += speed_score.get(str(profile.get("predictionSpeed")), 1)
+        suitability = str(profile.get("largeDatasetSuitability") or "medium")
+        if row_count >= 50_000:
+            value += {"high": 5, "medium": 1, "low": -5}.get(suitability, 0)
+        elif row_count and row_count <= 10_000:
+            value += 2 if profile.get("trainingSpeed") == "very_fast" else 0
+        name = str(candidate.get("name") or "")
+        normalized = name.casefold()
+        if "hist gradient boosting" in normalized and row_count >= 20_000:
+            value += 4
+        if any(term in normalized for term in ["logistic regression", "linear svc", "ridge", "linear regression"]):
+            value += 2
+        if "decision tree" in normalized:
+            value += 1
+        return value, name.casefold()
+
+    ranked = sorted(
+        (candidate for candidate in candidates if isinstance(candidate, dict)),
+        key=lambda candidate: (-score(candidate)[0], score(candidate)[1]),
+    )
+    if not ranked:
+        return None
+
+    best = ranked[0]
+    return {
+        "basis": "relative_latency_estimate",
+        "datasetRowCount": row_count or None,
+        "datasetColumnCount": dataset_profile.get("columnCount"),
+        "recommended": {
+            "nodeId": best.get("id"),
+            "nodeName": best.get("name"),
+            "performance": best.get("performance"),
+        },
+        "alternatives": [
+            {
+                "nodeId": candidate.get("id"),
+                "nodeName": candidate.get("name"),
+                "performance": candidate.get("performance"),
+            }
+            for candidate in ranked[1:3]
+        ],
+        "timingNote": (
+            "Use relative speed labels only. Do not promise exact seconds because "
+            "hardware, row count, column count, and model settings change latency."
+        ),
+    }
 
 
 def _action_plan(
@@ -314,13 +489,18 @@ def _action_plan(
         plan["add"].append(add_action)
 
         if current_source:
+            source_name = _display_name(current_source)
+            target_name = str(choice.get("name") or "")
             plan["connect"].append(
                 {
                     "sourceNodeId": current_source.get("instanceId"),
-                    "sourceNodeName": _display_name(current_source),
+                    "sourceNodeName": source_name,
                     "targetStepId": step_id,
                     "targetNodeId": choice.get("id"),
-                    "targetNodeName": choice.get("name"),
+                    "targetNodeName": target_name,
+                    "persianInstruction": (
+                        f"ورودی نود `{target_name}` را به خروجی نود `{source_name}` وصل کنید."
+                    ),
                     "reason": (
                         "Connect the next missing step to the latest relevant "
                         "upstream node that already prepares or produces the "
@@ -346,6 +526,14 @@ def _action_plan(
                 ),
             }
         )
+
+    model_recommendation = _model_recommendation(
+        pattern_id,
+        steps,
+        current_workflow,
+    )
+    if model_recommendation:
+        plan["modelRecommendation"] = model_recommendation
 
     return plan
 

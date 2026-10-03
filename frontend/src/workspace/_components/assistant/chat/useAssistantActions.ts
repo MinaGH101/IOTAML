@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { assistantApi } from '../../../../features/assistant/api/assistantApi';
+import { ASSISTANT_ERROR_MESSAGE } from '../../../../shared/lib/errorMessages';
 import { createMessageId, type ChatMessage } from './model';
 type Options = {
     workflowId: number | null;
@@ -35,10 +36,10 @@ export function useAssistantActions(options: Options) {
             if (response.run_id !== null)
                 await onRunCreated?.(response.run_id);
         }
-        catch (error) {
+        catch {
             setMessages((current) => current.filter((message) => message.id !== userMessage.id));
             setDraft(content);
-            setError(error instanceof Error ? error.message : 'ارسال درخواست به دستیار هوشمند ناموفق بود.');
+            setError(ASSISTANT_ERROR_MESSAGE);
         }
         finally {
             setBusy(false);
@@ -53,8 +54,8 @@ export function useAssistantActions(options: Options) {
             await assistantApi.clearHistory(workflowId);
             setMessages([]);
         }
-        catch (error) {
-            setError(error instanceof Error ? error.message : 'پاک کردن تاریخچه گفتگو ناموفق بود.');
+        catch {
+            setError(ASSISTANT_ERROR_MESSAGE);
         }
         finally {
             setClearing(false);

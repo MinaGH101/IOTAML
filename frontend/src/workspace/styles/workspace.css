@@ -7,3 +7,5 @@
 @import "./stages/60-analysis.css";
 @import "./stages/65-interactive.css";
 @import "./polish.css";
+
+@import "./dashboard.css";

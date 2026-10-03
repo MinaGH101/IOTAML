@@ -24,14 +24,14 @@ class BarPlotNode(BaseNode):
     inputs = [port('data', 'DataFrame', 'dataframe')]
     outputs = [port('plot', 'Bar Plot', 'plot')]
     settings_schema = [
-        setting('x_columns', 'X-axis Columns', 'columns', [], True, help='Each selected dataframe column becomes one X-axis label.'),
-        setting('selected_rows', 'Y-axis Rows', 'row_values', [], True, supports_dynamic=False, help='Rows are identified by values in the first dataframe column. Each selected row becomes one bar series.'),
+        setting('x_columns', 'X-axis Columns', 'columns', [], help='Optional. Each selected numeric column becomes one X-axis label; leave blank to plot all numeric value columns.'),
+        setting('selected_rows', 'Y-axis Rows', 'row_values', [], supports_dynamic=False, help='Optional. Rows are identified by values in the first dataframe column; leave blank to plot every row as a series.'),
         setting('bar_color', 'Bar Color', 'color', '#31cde3', supports_dynamic=False, help='Choose one color for all bars.'),
         setting('orientation', 'Orientation', 'select', 'vertical', options=['vertical', 'horizontal']),
         setting('guideline_values', 'Guideline Values', 'text', '', help='Optional comma-separated guideline values such as 10, 20.'),
         setting('guideline_labels', 'Guideline Labels', 'text', '', help='Optional comma-separated labels in the same order.'),
     ]
-    cache_version = '4'
+    cache_version = '5'
 
     def run(self, node, inputs, settings, context):
         df = ensure_df(first_upstream_df(inputs, 'data'), str(node['id']))
@@ -39,25 +39,32 @@ class BarPlotNode(BaseNode):
             raise ValueError('Bar Plot requires an index column and at least one value column.')
 
         row_index_column = str(df.columns[0])
-        x_columns = selected_columns({'columns': settings.get('x_columns')}, df)
-        x_columns = [column for column in x_columns if column != row_index_column]
-        if not x_columns:
-            raise ValueError('Select at least one value column for the X axis. The first dataframe column is reserved as the row index.')
-
-        selected_rows = _text_list(settings.get('selected_rows'))
-        if not selected_rows:
-            raise ValueError('Select at least one row for the Y axis.')
-
-        labels = df[row_index_column].astype(str).str.strip()
-        if labels.eq('').any():
+        labels = df[row_index_column].astype('string').str.strip()
+        if labels.isna().any() or labels.eq('').any():
             raise ValueError('The first dataframe column contains empty row labels.')
         duplicate_labels = labels[labels.duplicated(keep=False)]
         if not duplicate_labels.empty:
             examples = ', '.join(duplicate_labels.drop_duplicates().head(5))
             raise ValueError(f'Values in the first dataframe column must be unique. Duplicates: {examples}')
 
+        x_columns = selected_columns({'columns': settings.get('x_columns')}, df)
+        x_columns = [column for column in x_columns if column != row_index_column]
+        if not x_columns:
+            x_columns = [
+                str(column)
+                for column in df.columns
+                if str(column) != row_index_column
+                and pd.to_numeric(df[column], errors='coerce').notna().any()
+            ]
+        if not x_columns:
+            raise ValueError('Bar Plot requires at least one numeric value column in addition to the row-label column.')
+
+        selected_rows = _text_list(settings.get('selected_rows'))
+        if not selected_rows:
+            selected_rows = labels.astype(str).tolist()
+
         indexed = df.copy()
-        indexed['__iota_row_label'] = labels
+        indexed['__iota_row_label'] = labels.astype(str)
         indexed = indexed.set_index('__iota_row_label', drop=False)
         missing = [row for row in selected_rows if row not in indexed.index]
         if missing:

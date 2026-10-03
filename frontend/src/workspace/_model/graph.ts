@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import type { AnalysisBoardItem, AnalysisBoardTab, BoardViewport } from './board';
+import { normalizeAnalysisBoardZoom, normalizeBoardViewport, type AnalysisBoardItem, type AnalysisBoardTab, type BoardViewport } from './board';
 import type { Output } from './output';
 import type { RegistryNode } from '../../shared/types';
 import { resolveRegistryId, type LegacyNodeAliases } from './catalog';
@@ -60,14 +60,15 @@ function normalizedStoredParams(registryId: string, value: unknown) {
     }
     if (registryId === 'VZ-005') {
         const selectedRows = parseColumnParam(params.selected_rows);
-        const oldColor = String(params.color || '').trim();
-        const currentColors = params.series_colors && typeof params.series_colors === 'object' && !Array.isArray(params.series_colors)
-            ? params.series_colors as Record<string, unknown>
-            : {};
+        const legacyColors = params.series_colors && typeof params.series_colors === 'object' && !Array.isArray(params.series_colors)
+            ? Object.values(params.series_colors as Record<string, unknown>).map(String).map((color) => color.trim()).filter(Boolean)
+            : [];
         return {
             x_columns: parseColumnParam(params.x_columns),
             selected_rows: selectedRows,
-            series_colors: Object.keys(currentColors).length ? currentColors : Object.fromEntries(selectedRows.map((row) => [row, oldColor]).filter(([, color]) => Boolean(color))),
+            // `bar_color` replaced the legacy per-series color map. Keep the
+            // first legacy color so an existing workflow retains its palette.
+            bar_color: String(params.bar_color || params.color || legacyColors[0] || '#31cde3').trim() || '#31cde3',
             orientation: params.orientation ?? 'vertical',
             guideline_values: params.guideline_values ?? '',
             guideline_labels: params.guideline_labels ?? '',
@@ -198,10 +199,13 @@ export function restoreAnalysisBoardItems(value: unknown): AnalysisBoardItem[] {
         outputTitle: String(item.outputTitle || `خروجی ${index + 1}`),
         outputKind: String(item.outputKind || 'json'),
         sourceLabel: item.sourceLabel ? String(item.sourceLabel) : undefined,
+        sourceTypeLabel: item.sourceTypeLabel ? String(item.sourceTypeLabel) : undefined,
         x: Number.isFinite(Number(item.x)) ? Number(item.x) : 32 + index * 28,
         y: Number.isFinite(Number(item.y)) ? Number(item.y) : 32 + index * 28,
         w: Number.isFinite(Number(item.w)) ? Number(item.w) : 430,
         h: Number.isFinite(Number(item.h)) ? Number(item.h) : 320,
+        startsRow: item.startsRow === true || undefined,
+        contentZoom: item.contentZoom === undefined ? undefined : normalizeAnalysisBoardZoom(item.contentZoom),
         runId: item.runId === undefined ? null : Number(item.runId) || null,
         outputRef: restoreOutputReference(item.outputRef),
         snapshot: restoreOutputReference(item.outputRef) ? undefined : createOutputSnapshot(item.snapshot),
@@ -229,15 +233,7 @@ export function createMainAnalysisBoard(items: AnalysisBoardItem[] = []): Analys
     };
 }
 function restoreBoardViewport(value: unknown): BoardViewport {
-    const item = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<BoardViewport> : {};
-    const x = Number(item.x);
-    const y = Number(item.y);
-    const scale = Number(item.scale);
-    return {
-        x: Number.isFinite(x) ? x : 0,
-        y: Number.isFinite(y) ? y : 0,
-        scale: Number.isFinite(scale) ? Math.min(2.25, Math.max(0.35, scale)) : 1,
-    };
+    return normalizeBoardViewport(value);
 }
 export function restoreAnalysisBoardTabs(value: unknown, legacyItems?: unknown): AnalysisBoardTab[] {
     if (!Array.isArray(value) || value.length === 0) {

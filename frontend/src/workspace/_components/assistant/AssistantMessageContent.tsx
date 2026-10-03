@@ -6,7 +6,7 @@ function renderInlineMarkdown(value: string, keyPrefix: string): ReactNode[] {
             return <strong key={key}>{renderInlineMarkdown(part.slice(2, -2), `${key}-strong`)}</strong>;
         }
         if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
-            return <code key={key}>{part.slice(1, -1)}</code>;
+            return <code key={key} dir="auto">{part.slice(1, -1)}</code>;
         }
         return <Fragment key={key}>{part}</Fragment>;
     });

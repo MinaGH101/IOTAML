@@ -1,38 +1,25 @@
-import type { CSSProperties, Dispatch, SetStateAction } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node } from '@xyflow/react';
-import { ChevronLeft, ListTree } from 'lucide-react';
+import { ListTree } from 'lucide-react';
 import { categoryClassName, nodeIcon } from '../../../_components/NodePalette';
 import type { RegistryNode } from '../../../../shared/types';
 type Props = {
     nodes: Node[];
     selectedId: string | null;
     collapsed: boolean;
-    setCollapsed: Dispatch<SetStateAction<boolean>>;
     floatingLeftStyle: CSSProperties;
     onSelectNode: (nodeId: string) => void;
+    onClose: () => void;
 };
 function nodeData(node: Node) {
     return node.data as Record<string, unknown>;
 }
-export function WorkflowNodesList({ nodes, selectedId, collapsed, setCollapsed, floatingLeftStyle, onSelectNode }: Props) {
-    if (collapsed) {
-        return (<button className="analysis-board-node-launcher" type="button" onClick={() => setCollapsed(false)} title="باز کردن لیست نودها" aria-label="باز کردن لیست نودها" style={{
-                position: 'fixed',
-                top: floatingLeftStyle.top,
-                left: floatingLeftStyle.left,
-                zIndex: floatingLeftStyle.zIndex,
-            }}>
-        <ListTree size={18}/>
-      </button>);
-    }
+export function WorkflowNodesList({ nodes, selectedId, collapsed, floatingLeftStyle, onSelectNode, onClose }: Props) {
+    if (collapsed) return null;
     return (<div className="left-stack workflow-nodes-list-panel" style={{ ...floatingLeftStyle, overflow: 'hidden' }}>
-      <button className="workflow-float-toggle workflow-float-toggle-left" type="button" onClick={() => setCollapsed(true)} title="بستن لیست نودها" aria-label="بستن لیست نودها">
-        <ChevronLeft size={15}/>
-      </button>
-
       <div className="workflow-node-list-shell">
         <div className="workflow-node-list-head">
-          <span><ListTree size={17}/> نودهای Workflow</span>
+          <span><button className="workflow-node-list-toggle" type="button" onClick={onClose} title="بستن لیست نودها" aria-label="بستن لیست نودها"><ListTree size={17}/></button> نودهای Workflow</span>
           <small>{nodes.length.toLocaleString('fa-IR')} نود</small>
         </div>
         <div className="workflow-node-list-scroll">

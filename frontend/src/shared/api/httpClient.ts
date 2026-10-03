@@ -1,4 +1,5 @@
 import { authTokenStorage } from '../auth/tokenStorage';
+import { friendlyApiErrorMessage } from '../lib/errorMessages';
 
 export const API_URL = String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 export const jsonHeaders = { 'Content-Type': 'application/json' } as const;
@@ -8,14 +9,18 @@ export class ApiError extends Error {
   readonly details: Record<string, unknown>;
   readonly requestId: string;
   readonly status: number;
+  readonly rawMessage: string;
 
   constructor(message: string, options: { code?: string; details?: Record<string, unknown>; requestId?: string; status?: number } = {}) {
-    super(message);
+    const code = options.code || 'REQUEST_FAILED';
+    const status = options.status || 0;
+    super(friendlyApiErrorMessage(code, status, message));
     this.name = 'ApiError';
-    this.code = options.code || 'REQUEST_FAILED';
+    this.code = code;
     this.details = options.details || {};
     this.requestId = options.requestId || '';
-    this.status = options.status || 0;
+    this.status = status;
+    this.rawMessage = message;
   }
 }
 

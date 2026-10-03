@@ -648,11 +648,14 @@ background: var(--theme-hover-bg) !important;
 color: var(--theme-success) !important;
 }
 .status.failed,
-.run-dot.failed,
+.run-dot.failed {
+color: var(--theme-danger) !important;
+}
 .manager-toast.error,
 .error-box,
 .auth-error {
-color: var(--theme-danger) !important;
+color: color-mix(in srgb, var(--theme-secondary) 88%, var(--theme-text)) !important;
+border-color: color-mix(in srgb, var(--theme-secondary) 38%, var(--theme-divider)) !important;
 }
 .status.running,
 .status.queued,
@@ -664,10 +667,10 @@ color: var(--theme-info) !important;
 .status.succeeded {
 background: var(--theme-success-soft) !important;
 }
-.status.failed,
+.manager-toast.error,
 .error-box,
 .auth-error {
-background: var(--theme-danger-soft) !important;
+background: var(--theme-secondary-soft) !important;
 }
 .status.running,
 .status.queued {

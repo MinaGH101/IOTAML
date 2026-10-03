@@ -18,7 +18,7 @@ export function WorkflowEditor(props: WorkflowPageProps) {
     const runtime = useWorkflowEditorRuntime(props, base, data, outputContext.outputs);
     const effects = useWorkflowEditorEffects(base, data);
     return <InteractiveTableRuntimeContext.Provider value={runtime.interactiveTable}>
-    <div className="app-shell workflow-shell-page" style={runtime.layout.appStyle}>
+    <div className={`app-shell workflow-shell-page ${base.shell.analysisBoardOpen ? 'dashboard-open' : ''} ${!base.shell.paletteCollapsed ? 'dashboard-left-expanded' : ''} ${!base.shell.resultsCollapsed ? 'dashboard-right-expanded' : ''}`} style={runtime.layout.appStyle}>
       <WorkflowEditorHeader props={props} base={base} data={data} runtime={runtime}/>
       <WorkflowEditorBody base={base} data={data} runtime={runtime} effects={effects}/>
     </div>

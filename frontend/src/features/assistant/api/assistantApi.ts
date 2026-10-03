@@ -23,7 +23,9 @@ export const assistantApi = {
     headers: jsonHeaders,
     body: JSON.stringify(payload),
     signal,
-    timeoutMs: 60_000,
+    // The provider may perform tool calls and retry before returning. Keep the
+    // browser timeout below the reverse proxy limit, but above provider retries.
+    timeoutMs: 240_000,
   }),
 
   history: (workflowId: number, signal?: AbortSignal) =>

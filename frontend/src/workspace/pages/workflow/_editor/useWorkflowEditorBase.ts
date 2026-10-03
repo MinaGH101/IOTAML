@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { NodeCatalogResponse, WorkflowVersion } from '../../../../shared/types';
 import { useWorkflowGraph } from '../_hooks/useWorkflowGraph';
@@ -15,6 +15,11 @@ export function useWorkflowEditorBase({ project, user, initialWorkflowId }: Work
     const [targetColumn, setTargetColumn] = useState('target');
     const [taskType, setTaskType] = useState('auto');
     const [message, setMessage] = useState('');
+    useEffect(() => {
+        if (!message) return;
+        const timeout = window.setTimeout(() => setMessage(''), 5000);
+        return () => window.clearTimeout(timeout);
+    }, [message]);
     const [resultsWidth, setResultsWidth] = useState(380);
     const [versionPreview, setVersionPreview] = useState<WorkflowVersion | null>(null);
     const readOnly = !project.can_edit || Boolean(versionPreview);

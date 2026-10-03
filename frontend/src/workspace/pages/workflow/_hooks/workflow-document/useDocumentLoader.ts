@@ -3,6 +3,7 @@ import { nodesApi } from '../../../../../features/custom-nodes/api/nodesApi';
 import { runsApi } from '../../../../../features/execution/api/runsApi';
 import { workflowsApi } from '../../../../../features/workflow/api/workflowsApi';
 import { ApiError } from '../../../../../shared/api/httpClient';
+import { userFriendlyErrorMessage } from '../../../../../shared/lib/errorMessages';
 import type { WorkflowVersionSummary } from '../../../../../shared/types';
 import type { FlowGraph } from '../../../../_model/graph';
 import type { useWorkflowPersistence } from '../useWorkflowPersistence';
@@ -36,7 +37,7 @@ export function useDocumentLoader(o: UseWorkflowDocumentOptions, persistence: Re
                 o.setDatasetId(fallback);
             o.setMessage('جریان بارگذاری شد');
         }).catch((error) => { if (alive)
-            o.setMessage(error instanceof Error ? error.message : 'بارگذاری پروژه ناموفق بود'); });
+            o.setMessage(userFriendlyErrorMessage(error, 'پروژه بارگذاری نشد. صفحه را تازه‌سازی و دوباره تلاش کنید.')); });
         return () => { alive = false; };
     }, [o.initialWorkflowId, o.projectId, o.refreshDatasets, o.setCatalog, o.setDatasetId, o.setMessage, o.setRunHistory, records.loadRecord, records.resetDocument]);
     return useCallback(async (value: string, options: LoadWorkflowOptions = {}) => {
@@ -55,7 +56,7 @@ export function useDocumentLoader(o: UseWorkflowDocumentOptions, persistence: Re
             o.setMessage('جریان بارگذاری شد');
         }
         catch (error) {
-            o.setMessage(error instanceof Error ? error.message : 'بارگذاری ناموفق بود');
+            o.setMessage(userFriendlyErrorMessage(error, 'جریان کاری بارگذاری نشد. دوباره آن را از فهرست انتخاب کنید.'));
         }
     }, [o.catalog.aliases, o.catalog.nodes, o.setMessage, o.versionPreview, persistence.autosaveSignature, persistence.autosaveSnapshot, persistence.persistSnapshot, persistence.supersedeSession, records.loadRecord]);
 }

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { workflowsApi } from '../../../../../features/workflow/api/workflowsApi';
 import { runsApi } from '../../../../../features/execution/api/runsApi';
 import type { Run, Workflow, WorkflowVersionSummary } from '../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../shared/lib/errorMessages';
 import type { FlowGraph } from '../../../../_model/graph';
 import type { WorkflowVersionsOptions } from './types';
 export function useVersionNavigation(o: WorkflowVersionsOptions, setSelectedId: (id: number | null) => void, setBusy: (v: boolean) => void, refresh: (id?: number | null) => Promise<WorkflowVersionSummary[]>) {
@@ -21,7 +22,7 @@ export function useVersionNavigation(o: WorkflowVersionsOptions, setSelectedId: 
         o.setMessage(`نسخه «${version.name}» فقط برای مشاهده باز شد`);
     }
     catch (e) {
-        o.setMessage(e instanceof Error ? e.message : 'دریافت نسخه ناموفق بود');
+        o.setMessage(userFriendlyErrorMessage(e, 'نسخه دریافت نشد. دوباره تلاش کنید.'));
     }
     finally {
         setBusy(false);
@@ -34,7 +35,7 @@ export function useVersionNavigation(o: WorkflowVersionsOptions, setSelectedId: 
         o.setMessage('آخرین نسخه خودکار نمایش داده شد');
     }
     catch (e) {
-        o.setMessage(e instanceof Error ? e.message : 'بازگشت به نسخه جاری ناموفق بود');
+        o.setMessage(userFriendlyErrorMessage(e, 'بازگشت به نسخه جاری انجام نشد. صفحه را تازه‌سازی کنید.'));
     }
     finally {
         setBusy(false);
@@ -48,7 +49,7 @@ export function useVersionNavigation(o: WorkflowVersionsOptions, setSelectedId: 
         o.setMessage(`نسخه «${v.name}» بازیابی شد`);
     }
     catch (e) {
-        o.setMessage(e instanceof Error ? e.message : 'بازیابی نسخه ناموفق بود');
+        o.setMessage(userFriendlyErrorMessage(e, 'نسخه بازیابی نشد. دوباره تلاش کنید.'));
     }
     finally {
         setBusy(false);

@@ -16,7 +16,7 @@ export const projectsApi = {
     const body = new FormData();
     body.append('file', file);
     if (projectId) body.append('project_id', String(projectId));
-    return request<Dataset>('/api/datasets/upload', { method: 'POST', body });
+    return request<Dataset>('/api/datasets/upload', { method: 'POST', body, timeoutMs: 300_000 });
   },
   deleteDataset: (id: number) => request<{ ok: boolean }>(`/api/datasets/${id}`, { method: 'DELETE' }),
   artifacts: (projectId?: number | null, signal?: AbortSignal) => request<Artifact[]>(`/api/artifacts${projectQuery(projectId)}`, { signal }),

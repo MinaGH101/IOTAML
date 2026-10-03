@@ -57,7 +57,7 @@ def test_duplicate_sample_error_reads_xlsx_and_exposes_error_dataframe() -> None
     assert summary.loc['Au', 'pair_count'] == 3
     assert summary.loc['Cu', 'mae'] == pytest.approx(3.0)
     assert summary.loc['Au', 'mae_pct'] == pytest.approx(10.0)
-    assert summary.loc['Cu', 'mae_pct'] == pytest.approx(1.5)
+    assert summary.loc['Cu', 'mae_pct'] == pytest.approx((3.0 + 1.5 + 1.0) / 3)
     assert result['outputs_by_port']['errors']['_df'].equals(result['_df'])
     assert set(result['outputs_by_port']) == {'errors'}
     assert result['dataframe_meta']['duplicate_sample_error']['matched_pairs'] == 3
@@ -84,6 +84,42 @@ def test_transposed_error_output_can_feed_row_series_bar_plot() -> None:
     assert result['output']['series'][0] == {'label': 'mae', 'data': [1.2, 3.4], 'color': '#31cde3'}
     assert result['output']['series'][1]['color'] == '#31cde3'
     assert result['output']['guidelines'][0] == {'value': 2.0, 'label': 'warning'}
+
+
+def test_bar_plot_uses_optional_selection_defaults() -> None:
+    frame = pd.DataFrame({'error': ['mae', 'rmse'], 'Au': [1.2, 1.5], 'Cu': [3.4, 3.8]})
+    result = BarPlotNode().run(
+        {'id': 'bar-defaults', 'data': {'label': 'Duplicate Metrics'}},
+        {'input': dataframe_result(frame, id_column='error')},
+        {'bar_color': '#8b7cf6', 'orientation': 'horizontal'},
+        None,
+    )
+
+    assert all(not item.required for item in BarPlotNode.settings_schema[:2])
+    assert result['output']['categories'] == ['Au', 'Cu']
+    assert result['output']['selected_rows'] == ['mae', 'rmse']
+    assert result['output']['orientation'] == 'horizontal'
+    assert [item['color'] for item in result['output']['series']] == ['#8b7cf6', '#8b7cf6']
+
+
+def test_duplicate_mae_percentage_is_bounded_and_handles_zero_raw_values() -> None:
+    mapping = pd.DataFrame({'Raw Sample': ['A', 'B'], 'Duplicate Sample': ['AD', 'BD']})
+    frame = pd.DataFrame({'lab_id': ['A', 'AD', 'B', 'BD'], 'Au': [10.0, 11.0, 0.0, 2.0]})
+    result = DuplicateSampleErrorNode().run(
+        {'id': 'dup-bounded-mae', 'data': {'label': 'Duplicate Error'}},
+        {'input': dataframe_result(frame, id_column='lab_id')},
+        {
+            'mapping_file': _xlsx_file_value(mapping),
+            'columns': ['Au'],
+            'metrics': ['mae', 'mae_pct'],
+            'duplicate_id_policy': 'error',
+        },
+        None,
+    )
+
+    summary = result['_df'].set_index('column')
+    assert summary.loc['Au', 'mae'] == pytest.approx(1.5)
+    assert summary.loc['Au', 'mae_pct'] == pytest.approx(55.0)
 
 
 def test_pp_plot_and_correlation_heatmap_produce_plot_outputs() -> None:

@@ -8,10 +8,11 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
 if TYPE_CHECKING:
     from openai import AsyncOpenAI
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -102,6 +103,11 @@ class AssistantService:
         r"همه\s*نودها\s*(?:اجرا|ران)\s*شدند)",
         re.IGNORECASE,
     )
+    _AMBIGUOUS_CONNECTION_RE = re.compile(
+        r"(?:→|←|->|<-|وصل\s+کنید\s*:|"
+        r"خروجی[^\n.]{0,180}ورودی[^\n.]{0,100}وصل\s+کنید)",
+        re.IGNORECASE,
+    )
 
     def __init__(
         self,
@@ -153,6 +159,13 @@ class AssistantService:
         still be inaccurate.
         """
         return bool(cls._UNVERIFIED_EXECUTION_CLAIM_RE.search(text or ""))
+
+    @classmethod
+    def _has_ambiguous_connection_format(cls, text: str) -> bool:
+        """Detect connection wording that becomes confusing in RTL output."""
+        if "وصل" not in (text or ""):
+            return False
+        return bool(cls._AMBIGUOUS_CONNECTION_RE.search(text or ""))
 
     @staticmethod
     def _safe_execution_status_message(run_id: int | None) -> str:
@@ -244,9 +257,12 @@ class AssistantService:
 
                     "NODE NAMING IS STRICT AND MUST BE GROUNDED. For every question about "
                     "data preparation, analysis, visualization, machine learning, or workflow "
-                    "design, use list_nodes before naming or recommending any node. Only node "
-                    "names returned by list_nodes or get_node_details in THIS TURN may appear "
-                    "in the answer. The catalog `name` is the exact user-visible label in the "
+                    "design, use list_nodes or advise_workflow before naming or recommending "
+                    "any node. advise_workflow already resolves its suggestions against the "
+                    "live catalog, so do not call list_nodes again for the same recommendation. Only node "
+                    "names returned by list_nodes, get_node_details, get_current_workflow, or "
+                    "advise_workflow in THIS TURN may appear in the answer. The catalog `name` "
+                    "or current instance `label` is the exact user-visible label in the "
                     "Node Palette: copy it verbatim. Never invent, translate, shorten, "
                     "paraphrase, or substitute a node name. If the catalog does not return a "
                     "suitable node, explicitly say that IOTA currently has no matching "
@@ -258,7 +274,19 @@ class AssistantService:
                     "once in Markdown inline code, for example `Upload CSV/Excel`. Inline code "
                     "is reserved ONLY for exact IOTA node names; do not wrap setting names, "
                     "file formats, algorithms, or other technical terms in backticks. Never "
-                    "format a node name with bold markers. "
+                    "format a node name with bold markers. An existing node's user-visible "
+                    "instance label returned by get_current_workflow or advise_workflow is also "
+                    "a grounded node name and should be copied verbatim. "
+
+                    "PERSIAN CONNECTION SENTENCES ARE STRICT. Never describe an edge with an "
+                    "arrow, a compact chain, 'source -> target', or a fragment such as 'وصل کنید:'. "
+                    "Write one complete Persian sentence per recommended edge, with the target "
+                    "first and source second, exactly in this grammatical form: "
+                    "«ورودی نود `TARGET` را به خروجی نود `SOURCE` وصل کنید.» For example: "
+                    "«ورودی نود `Train/Test Split` را به خروجی نود `Select Features & Target` "
+                    "وصل کنید.» When the source already exists, SOURCE must be the actual "
+                    "current node instance label returned by the workflow tool, not a generic "
+                    "phrase such as 'آخرین نود' or 'مرحله پیش‌پردازش'. "
 
                     "Use get_node_details before explaining a node's exact settings, inputs, "
                     "outputs, defaults, validation rules, or before judging whether that node "
@@ -293,9 +321,10 @@ class AssistantService:
                     "GOAL ADVICE MUST BE CONTEXT-AWARE. When a user describes a goal such "
                     "as training a model, cleaning data, handling missing values, analyzing "
                     "correlations, detecting outliers, selecting features, or visualizing "
-                    "data, use advise_workflow. If a workflow is selected, also use "
-                    "get_current_workflow and adapt the recommendation to what already "
-                    "exists. Do not restart from `Upload CSV/Excel` when the workflow "
+                    "data, use advise_workflow. When a workflow is selected, the advisor "
+                    "automatically receives its current nodes, edges, and dataset profile; "
+                    "adapt the recommendation to that context. Do not restart from "
+                    "`Upload CSV/Excel` when the workflow "
                     "already has an upstream data source. Mark existing useful nodes as "
                     "already present, then name only the missing nodes to add. "
 
@@ -307,7 +336,21 @@ class AssistantService:
                     "draft: explain which existing nodes can be reused, which nodes should "
                     "be added, which connections should be made, and which settings require "
                     "the user's domain choice. Do not expose raw JSON unless the user asks "
-                    "for developer details. "
+                    "for developer details. Prefer each connection's persianInstruction, "
+                    "preserving the target-first Persian sentence structure while wrapping "
+                    "both node names in inline code. If a workflow is selected, advise_workflow "
+                    "already receives its current graph and dataset profile; do not call "
+                    "get_current_workflow a second time unless you need settings or port details "
+                    "that are absent from the advice result. "
+
+                    "MODEL EFFICIENCY AND DELAY. For model-selection questions, do not dump the "
+                    "entire model catalog. Use actionPlan.modelRecommendation and the dataset "
+                    "row count when available. Recommend one practical default and at most two "
+                    "alternatives. Compare training speed, prediction speed, scaling needs, and "
+                    "large-dataset suitability. Prefer a low-delay baseline for an interactive "
+                    "demo unless the user explicitly prioritizes maximum accuracy. Never promise "
+                    "an exact number of seconds without measured run data; use relative terms "
+                    "such as سریع، متوسط، or کند and explain the tradeoff briefly. "
 
                     "ACTION INTENT. If the user asks to create, build, add, insert, remove, "
                     "delete, connect, disconnect, configure, or update the selected workflow, "
@@ -357,9 +400,10 @@ class AssistantService:
                     "workflow goal, missing stages, weak ordering, duplicate analysis, or "
                     "settings that would make the workflow more useful. "
 
-                    "Treat the advisor as the source of truth for generic logical step order, "
-                    "but treat get_current_workflow as the source of truth for what the user "
-                    "already has. Use only exact live catalog node names returned by tools. "
+                    "Treat the advisor as the source of truth for generic logical step order "
+                    "and its embedded current-workflow context as the source of truth for what "
+                    "the user already has. Use get_current_workflow when detailed settings or "
+                    "ports are needed. Use only grounded node names returned by tools. "
                     "Do not pretend to build or execute the workflow: build only when "
                     "apply_workflow_actions reports saved graph changes. When the user "
                     "explicitly asks to run or execute the selected workflow, first call "
@@ -388,9 +432,11 @@ class AssistantService:
                 input=conversation_input,
                 tools=tools,
                 tool_choice="required" if tool_round == 0 else "auto",
-                    max_output_tokens=1_200,
-                    store=False,
-                )
+                # Reasoning tokens count toward this limit. A small limit can
+                # exhaust the response before the model emits any visible text.
+                max_output_tokens=6_000,
+                store=False,
+            )
             except Exception as exc:
                 try:
                     from openai import OpenAIError
@@ -414,15 +460,36 @@ class AssistantService:
             ]
 
             if not function_calls:
-                final_text = response.output_text or (
-                    "I could not generate a complete response."
-                )
+                final_text = (response.output_text or "").strip()
+                if not final_text:
+                    logger.warning(
+                        "AI provider returned no final text: model=%s status=%s incomplete_reason=%s",
+                        self.model,
+                        getattr(response, "status", None),
+                        getattr(getattr(response, "incomplete_details", None), "reason", None),
+                    )
+                    raise AssistantProviderError("The AI provider returned no final text.")
                 if self._has_unverified_execution_claim(final_text, run_id):
                     return AssistantChatResult(
                         message=self._safe_execution_status_message(run_id),
                         workflow_changed=workflow_changed,
                         run_id=run_id,
                     )
+                if self._has_ambiguous_connection_format(final_text):
+                    conversation_input.extend(response.output)
+                    conversation_input.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Internal RTL formatting correction: rewrite every connection "
+                                "as one complete target-first Persian sentence in exactly this "
+                                "form: ورودی نود `TARGET` را به خروجی نود `SOURCE` وصل کنید. "
+                                "Do not use arrows, compact chains, or 'وصل کنید:'. Preserve all "
+                                "grounded node names and do not mention this correction."
+                            ),
+                        }
+                    )
+                    continue
                 invalid_node_pills = self._invalid_node_pills(
                     final_text,
                     allowed_node_names,
@@ -481,6 +548,40 @@ class AssistantService:
                                 name = str(node.get("name") or "").strip()
                                 if name:
                                     allowed_node_names.add(name)
+                            for existing in step.get("matchedExistingNodes", []):
+                                name = str(existing.get("name") or "").strip()
+                                if name:
+                                    allowed_node_names.add(name)
+                        connection = pattern.get("connectionAdvice") or {}
+                        for key in ("recommendedSourceName", "connectToNodeName"):
+                            name = str(connection.get(key) or "").strip()
+                            if name:
+                                allowed_node_names.add(name)
+                        plan = pattern.get("actionPlan") or {}
+                        for item in [
+                            *plan.get("alreadyPresent", []),
+                            *plan.get("add", []),
+                            *plan.get("connect", []),
+                        ]:
+                            for key in ("nodeName", "sourceNodeName", "targetNodeName"):
+                                name = str(item.get(key) or "").strip()
+                                if name:
+                                    allowed_node_names.add(name)
+                        recommendation = plan.get("modelRecommendation") or {}
+                        for item in [
+                            recommendation.get("recommended") or {},
+                            *(recommendation.get("alternatives") or []),
+                        ]:
+                            name = str(item.get("nodeName") or "").strip()
+                            if name:
+                                allowed_node_names.add(name)
+                elif call.name == "get_current_workflow":
+                    workflow = result.get("workflow") or {}
+                    for node in workflow.get("nodes", []):
+                        for key in ("label", "typeLabel"):
+                            name = str(node.get(key) or "").strip()
+                            if name:
+                                allowed_node_names.add(name)
                 elif call.name == "apply_workflow_actions":
                     workflow_changed = workflow_changed or bool(result.get("changed"))
                 elif call.name == "run_current_workflow" and result.get("created"):

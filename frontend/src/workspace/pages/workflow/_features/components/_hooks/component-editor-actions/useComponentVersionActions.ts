@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { componentsApi } from '../../../../../../../features/components/api/componentsApi';
 import type { ComponentBoundaryPort, ComponentVersion } from '../../../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../../../shared/lib/errorMessages';
 import { componentDraftSignature } from '../../../../../../_model/runtimeContext';
 import type { UseComponentEditorOptions } from '../../_model/componentEditorTypes';
 import type { ComponentEditorLocalState } from '../useComponentEditorState';
@@ -19,7 +20,7 @@ export function useComponentVersionActions(o: UseComponentEditorOptions, s: Comp
         o.setMessage(`نسخه ${version.semantic_version} ذخیره شد. جریان‌های موجود همچنان به نسخه قبلی متصل‌اند.`);
 }
 catch (e) {
-    o.setMessage(e instanceof Error ? e.message : 'ذخیره نسخه کامپوننت ناموفق بود');
+    o.setMessage(userFriendlyErrorMessage(e, 'نسخه کامپوننت ذخیره نشد. نام نسخه و تنظیمات آن را بررسی کنید.'));
 }
 finally {
     o.setBusy(false);

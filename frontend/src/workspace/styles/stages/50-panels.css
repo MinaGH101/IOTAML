@@ -702,6 +702,11 @@ min-height:0;
 overflow:auto;
 padding:9px
 }
+.workflow-right-tab-body.workflow-results-tab {
+display:flex;
+flex-direction:column;
+overflow:hidden
+}
 .workflow-results-tab .results-panel,
 .workflow-settings-tab .inspector,
 .workflow-history-tab .run-history-panel {
@@ -714,7 +719,10 @@ overflow:hidden!important
 }
 .workflow-results-tab .results-panel {
 display:flex!important;
-flex-direction:column!important
+flex-direction:column!important;
+flex:1 1 auto;
+height:auto!important;
+min-height:0!important
 }
 .workflow-results-tab .results-title {
 display:none!important
@@ -727,6 +735,9 @@ overflow:auto
 }
 .workflow-results-tab .results-scroll {
 flex:1 1 auto;
+min-height:0;
+overflow-y:auto;
+overflow-x:hidden;
 padding-top:8px
 }
 .workflow-settings-tab .inspector {
@@ -1497,8 +1508,6 @@ font-size:10px;
 font-weight:700;
 line-height:2.2;
 white-space:nowrap;
-direction:ltr;
-text-align:left;
 unicode-bidi:isolate
 }
 [data-theme="dark"] .assistant-message-content code {
@@ -1531,14 +1540,21 @@ color:var(--theme-primary)
 }
 .assistant-error {
 flex:0 0 auto;
+display:flex;
+align-items:center;
+gap:8px;
 margin:0 12px 8px;
 padding:8px 10px;
-border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-danger) 50%,var(--theme-divider));
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-secondary) 50%,var(--theme-divider));
 border-radius:var(--theme-radius-control);
-background:color-mix(in srgb,var(--theme-danger) 10%,var(--theme-panel-bg));
-color:var(--theme-danger);
+background:color-mix(in srgb,var(--theme-secondary) 12%,var(--theme-panel-bg));
+color:color-mix(in srgb,var(--theme-secondary) 88%,var(--theme-text));
 font-size:10px;
 line-height:1.7
+}
+.assistant-error svg {
+flex:0 0 auto;
+color:var(--theme-secondary)
 }
 .assistant-input-wrap {
 flex:0 0 auto;

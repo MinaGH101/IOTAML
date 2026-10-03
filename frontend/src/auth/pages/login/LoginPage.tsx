@@ -5,6 +5,7 @@ import { setAuthToken } from '../../../shared/_service/httpClient';
 import { ThemeToggle } from '../../../shared/_components/ThemeToggle';
 import type { UserProfile } from '../../../shared/_types';
 import { Button, IconButton, Input } from '../../../shared/ui';
+import { userFriendlyErrorMessage } from '../../../shared/lib/errorMessages';
 
 export function LoginPage({ onLogin }: { onLogin: (user: UserProfile) => void }) {
   const [username, setUsername] = useState('');
@@ -23,7 +24,7 @@ export function LoginPage({ onLogin }: { onLogin: (user: UserProfile) => void })
       setAuthToken(result.access_token);
       onLogin(result.user);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'ورود ناموفق بود');
+      setMessage(userFriendlyErrorMessage(error, 'ورود انجام نشد. نام کاربری و رمز عبور را بررسی کنید.'));
     } finally {
       setBusy(false);
     }

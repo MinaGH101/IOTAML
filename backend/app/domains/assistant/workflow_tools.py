@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections import deque
 from typing import Any
 
 from sqlalchemy.orm import Session
+
+from app.domains.datasets.repository import dataset_repository
 from app.domains.workflows.service import get_workflow, validate_graph
 from app.nodes.registry import canonical_node_id, get_node
 
@@ -126,6 +129,26 @@ def get_workflow_context(
         node["incomingNodeIds"] = incoming.get(node["instanceId"], [])
         node["outgoingNodeIds"] = outgoing.get(node["instanceId"], [])
 
+    # Depth gives the assistant a deterministic notion of "latest" that follows
+    # the graph instead of relying on canvas order. Cycles are left at their
+    # last safely computed depth; the validator reports the cycle separately.
+    indegree = {node_id: len(source_ids) for node_id, source_ids in incoming.items()}
+    graph_depth = {node_id: 0 for node_id in incoming}
+    queue = deque(node_id for node_id, degree in indegree.items() if degree == 0)
+    while queue:
+        source_id = queue.popleft()
+        for target_id in outgoing.get(source_id, []):
+            graph_depth[target_id] = max(
+                graph_depth.get(target_id, 0),
+                graph_depth.get(source_id, 0) + 1,
+            )
+            indegree[target_id] = max(0, indegree.get(target_id, 0) - 1)
+            if indegree[target_id] == 0:
+                queue.append(target_id)
+
+    for node in nodes:
+        node["graphDepth"] = graph_depth.get(node["instanceId"], 0)
+
     visualization_nodes = [
         node for node in nodes
         if node["category"] == "Visualizations" or "plot" in node["outputTypes"]
@@ -136,24 +159,59 @@ def get_workflow_context(
         if "dataframe" in node["outputTypes"]
     ]
 
+    dataframe_node_ids = {node["instanceId"] for node in dataframe_nodes}
+    for node in dataframe_nodes:
+        node["downstreamDataframeNodeIds"] = [
+            target_id
+            for target_id in outgoing.get(node["instanceId"], [])
+            if target_id in dataframe_node_ids
+        ]
+
     dataframe_endpoints = [
         node for node in dataframe_nodes
-        if not outgoing.get(node["instanceId"])
+        if not node["downstreamDataframeNodeIds"]
+    ]
+
+    modeling_source_categories = {
+        "Data Input",
+        "Data Cleaning",
+        "Transformation",
+        "ML Data Processing",
+        "Utilities",
+    }
+    modeling_source_nodes = [
+        node for node in dataframe_nodes
+        if node["category"] in modeling_source_categories
+    ] or dataframe_nodes
+    modeling_source_ids = {node["instanceId"] for node in modeling_source_nodes}
+    for node in modeling_source_nodes:
+        node["downstreamModelingNodeIds"] = [
+            target_id
+            for target_id in outgoing.get(node["instanceId"], [])
+            if target_id in modeling_source_ids
+        ]
+    modeling_endpoints = [
+        node for node in modeling_source_nodes
+        if not node["downstreamModelingNodeIds"]
     ]
 
     def attachment_rank(node: dict[str, Any]) -> int:
         category = node["category"]
         name = f"{node['label']} {node['typeLabel']}".casefold()
-        score = 0
+        score = int(node.get("graphDepth") or 0) * 10
+        if not node.get("downstreamModelingNodeIds"):
+            score += 100
         if category in {"Data Cleaning", "Transformation", "ML Data Processing"}:
-            score += 30
+            score += 40
         if any(term in name for term in ["detection", "imputation", "replace", "select", "filter", "normalize", "scaler"]):
-            score += 20
-        score += len(node.get("incomingNodeIds") or [])
+            score += 25
+        # A branch fan-in is usually a more complete modeling table than one
+        # of its individual inputs.
+        score += len(node.get("incomingNodeIds") or []) * 2
         return score
 
     preferred_dataframe_sources = sorted(
-        dataframe_nodes,
+        modeling_source_nodes,
         key=attachment_rank,
         reverse=True,
     )[:5]
@@ -163,6 +221,7 @@ def get_workflow_context(
         "visualizationNodeNames": [node["label"] or node["typeLabel"] for node in visualization_nodes],
         "dataframeNodeIds": [node["instanceId"] for node in dataframe_nodes],
         "dataframeEndpointNodeIds": [node["instanceId"] for node in dataframe_endpoints],
+        "modelingDataframeEndpointNodeIds": [node["instanceId"] for node in modeling_endpoints],
         "preferredDataframeSourceNodeIds": [node["instanceId"] for node in preferred_dataframe_sources],
         "dataQualityNodeIds": [
             node["instanceId"] for node in nodes
@@ -175,6 +234,45 @@ def get_workflow_context(
     }
 
     metadata = graph.get("meta") or {}
+    dataset_id = metadata.get("datasetId")
+    if not dataset_id:
+        for node in nodes:
+            params = node.get("params") if isinstance(node.get("params"), dict) else {}
+            candidate = params.get("dataset_id")
+            if candidate:
+                dataset_id = candidate
+                break
+
+    dataset_profile = None
+    try:
+        dataset_id_int = int(dataset_id) if dataset_id is not None else 0
+    except (TypeError, ValueError):
+        dataset_id_int = 0
+    if dataset_id_int:
+        dataset = dataset_repository.get(db, dataset_id_int, owner_username)
+        if dataset is not None:
+            columns = [
+                column for column in (dataset.columns if isinstance(dataset.columns, list) else [])
+                if isinstance(column, dict)
+            ]
+            numeric_markers = ("int", "float", "double", "decimal", "number")
+            numeric_count = sum(
+                1 for column in columns
+                if any(marker in str(column.get("dtype") or "").casefold() for marker in numeric_markers)
+            )
+            dataset_profile = {
+                "datasetId": dataset.id,
+                "name": dataset.name,
+                "rowCount": dataset.row_count,
+                "columnCount": len(columns),
+                "numericColumnCount": numeric_count,
+                "nonNumericColumnCount": max(0, len(columns) - numeric_count),
+                "columnsWithMissingValues": [
+                    str(column.get("name") or "")
+                    for column in columns
+                    if int(column.get("missing") or 0) > 0
+                ][:30],
+            }
 
     return {
         "workflowId": workflow.id,
@@ -185,6 +283,7 @@ def get_workflow_context(
         "nodes": nodes,
         "edges": edges,
         "summary": workflow_summary,
+        "datasetProfile": dataset_profile,
         "metadata": {
             "datasetId": metadata.get("datasetId"),
             "targetColumn": metadata.get("targetColumn"),

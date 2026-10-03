@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { componentsApi } from '../../../../../../../features/components/api/componentsApi';
 import type { ComponentDefinitionDraft } from '../../../../../../../shared/types';
+import { userFriendlyErrorMessage } from '../../../../../../../shared/lib/errorMessages';
 import { analyzeComponentBoundary } from '../../../../../../_model/componentBoundary';
 import { makeNode } from '../../../../../../_model/graph';
 import { groupComponentGraph } from '../../_model/componentGraph';
@@ -30,7 +31,7 @@ export function useCreateComponent(o: UseComponentEditorOptions, s: ComponentEdi
     o.setMessage(`کامپوننت «${component.name}» ساخته شد و در کتابخانه قرار گرفت.`);
 }
 catch (e) {
-    o.setMessage(e instanceof Error ? e.message : 'ساخت کامپوننت ناموفق بود');
+    o.setMessage(userFriendlyErrorMessage(e, 'کامپوننت ساخته نشد. نام، پورت‌ها و نودهای انتخاب‌شده را بررسی کنید.'));
 }
 finally {
     o.setBusy(false);

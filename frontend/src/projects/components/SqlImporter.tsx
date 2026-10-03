@@ -3,6 +3,7 @@ import { projectsApi } from '../api/projectsApi';
 import { invalidateProjectCaches } from '../lib/projectData';
 import { ChevronDown, Database } from 'lucide-react';
 import { Button, Select } from '../../shared/ui';
+import { userFriendlyErrorMessage } from '../../shared/lib/errorMessages';
 
 export function SqlImporter({ projectId, onImported }: { projectId: number; onImported: () => Promise<void> }) {
   const [sources, setSources] = useState<Array<{ name: string; tables: string[] }>>([]);
@@ -25,7 +26,7 @@ export function SqlImporter({ projectId, onImported }: { projectId: number; onIm
       invalidateProjectCaches(projectId);
       await onImported();
       setMessage('داده‌های SQL وارد شد.');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'ورود داده ناموفق بود.'); }
+    } catch (error) { setMessage(userFriendlyErrorMessage(error, 'ورود داده ناموفق بود. تنظیمات اتصال و نام جدول را بررسی کنید.')); }
     finally { setBusy(false); }
   };
   return <details className="sql-import" dir="rtl"><summary><Database size={17} /><span>ورود داده از SQL</span><ChevronDown size={16} className="sql-import-chevron" /></summary>

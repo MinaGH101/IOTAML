@@ -167,5 +167,5 @@ async def chat(
     except AssistantProviderError as exc:
         raise HTTPException(
             status_code=502,
-            detail="The AI provider could not generate a response.",
+            detail="دستیار نتوانست پاسخ کاملی از سرویس مدل دریافت کند. دوباره تلاش کنید.",
         ) from exc

@@ -102,7 +102,7 @@
 
 .requiredMark,
 .fieldError {
-  color: var(--theme-danger);
+  color: var(--theme-secondary);
 }
 
 .fieldHint,
@@ -156,7 +156,7 @@
 }
 
 .controlInvalid {
-  border-color: var(--theme-danger);
+  border-color: var(--theme-secondary);
 }
 
 .textarea {
@@ -433,10 +433,14 @@
   color: var(--theme-warning);
 }
 
-.status_danger,
-.errorMessage {
+.status_danger {
   background: var(--theme-danger-soft);
   color: var(--theme-danger);
+}
+
+.errorMessage {
+  background: var(--theme-secondary-soft);
+  color: color-mix(in srgb, var(--theme-secondary) 88%, var(--theme-text));
 }
 
 .errorMessage {
