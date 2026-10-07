@@ -15,6 +15,8 @@ export type InspectorProps = {
     onChange: (nodeId: string, params: Record<string, unknown>) => void;
     onRename: (nodeId: string, label: string) => void;
     onDelete: () => void;
+    canManageLocks?: boolean;
+    onToggleNodeLock?: (nodeId: string) => void;
     onUngroupComponent?: (node: Node) => void;
     embedded?: boolean;
     readOnly?: boolean;

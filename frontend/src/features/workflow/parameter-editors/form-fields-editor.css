@@ -1,0 +1,21 @@
+.review-form-fields { display: grid; gap: 12px; min-width: 0; }
+.review-form-field { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--theme-control-border); border-radius: var(--theme-radius-panel); background: var(--theme-panel-bg); }
+.review-form-field-open { border-color: color-mix(in srgb, var(--theme-primary) 42%, var(--theme-control-border)); }
+.review-form-field-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.review-form-field-toggle { display: grid; gap: 2px; flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--theme-text); text-align: right; cursor: pointer; }
+.review-form-field-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.review-form-field-head small { color: var(--theme-text-muted); font-size: 10px; }
+.review-form-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; padding-top: 4px; }
+.review-form-field-grid .field { min-width: 0; }
+.review-form-required { position: relative; align-self: end; min-height: 44px; padding: 10px 12px; border: 1px solid var(--theme-control-border); border-radius: var(--theme-radius-control); background: var(--theme-panel-muted); cursor: pointer; font-size: 12px; }
+.review-form-required input[type="checkbox"], .n8n-node-modal .workflow-shell-editor .review-form-required input[type="checkbox"] { position: absolute !important; opacity: 0 !important; width: 18px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; }
+.review-form-required input:focus-visible + .checkmark { outline: 2px solid var(--theme-primary); outline-offset: 3px; }
+.review-form-required input:checked + .checkmark { background: var(--theme-primary); border-color: var(--theme-primary); }
+.review-form-required > span:last-child { line-height: 1.4; }
+.assignee-picker { display: grid; gap: 8px; padding: 0; }
+.assignee-picker p { margin: 0; color: var(--theme-text-muted); font-size: 12px; line-height: 1.6; }
+.assignee-missing { display: block; }
+.review-form-advanced { grid-column: 1 / -1; padding-top: 4px; color: var(--theme-text-muted); font-size: 12px; }
+.review-form-advanced summary { cursor: pointer; width: fit-content; }
+.review-form-advanced .field { margin-top: 12px; max-width: 360px; }
+@media (max-width: 480px) { .review-form-field-grid { grid-template-columns: 1fr; } }

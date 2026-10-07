@@ -4,8 +4,8 @@ export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './
 export { Dialog, ConfirmDialog } from './Dialog';
 export type { ConfirmDialogProps, DialogProps } from './Dialog';
 
-export { Field, Input, Label, NativeSelect, Textarea } from './Form';
-export type { InputProps, LabelProps, NativeSelectOption, NativeSelectProps, TextareaProps } from './Form';
+export { Field, Input, Label, NativeSelect, SearchField, Textarea } from './Form';
+export type { InputProps, LabelProps, NativeSelectOption, NativeSelectProps, SearchFieldProps, TextareaProps } from './Form';
 
 export { Select } from './Select';
 export type { SelectOption, SelectProps } from './Select';

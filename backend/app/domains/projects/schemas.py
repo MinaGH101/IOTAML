@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ProjectAccess = Literal['edit', 'view']
+ProjectType = Literal['personal', 'team']
 EffectiveProjectAccess = Literal['owner', 'edit', 'view', 'admin']
 
 
@@ -35,6 +36,7 @@ class ProjectBase(BaseModel):
     state: str = Field(default='open', pattern='^(open|closed)$')
     priority: str = Field(default='medium', pattern='^(low|medium|high)$')
     color: str = Field(default='#31cde3', pattern='^#[0-9a-fA-F]{6}$')
+    project_type: ProjectType = 'personal'
     assignments: list[ProjectAssignmentIn] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode='after')
@@ -42,8 +44,8 @@ class ProjectBase(BaseModel):
         user_ids = [item.user_id for item in self.assignments]
         if len(user_ids) != len(set(user_ids)):
             raise ValueError('A user can only be assigned once per project.')
-        if sum(1 for item in self.assignments if item.access_type == 'edit') > 1:
-            raise ValueError('Only one user can receive edit access.')
+        if self.project_type == 'personal' and self.assignments:
+            raise ValueError('Personal projects cannot have team members.')
         return self
 
 
@@ -68,6 +70,7 @@ class ProjectOut(ProjectBase):
     can_run: bool = False
     can_delete: bool = False
     can_manage_assignments: bool = False
+    can_manage_locks: bool = False
     workflow_count: int = 0
     dataset_count: int = 0
     created_at: datetime

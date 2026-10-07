@@ -11,6 +11,7 @@ import { downloadOutput } from '../lib/outputDownload';
 import { ChartOutput } from './ChartOutput';
 import { OutputErrorBoundary } from './OutputErrorBoundary';
 import { WorkflowErrorCard } from './WorkflowErrorCard';
+import { isReviewOutput, ReviewOutput } from './ReviewOutput';
 
 export const CHART_KINDS = new Set(['scatter', 'histogram', 'bar', 'line', 'heatmap', 'matrix', 'boxplot', 'bar_plot', 'pp_plot', 'stair_outlier', 'dendrogram']);
 
@@ -54,6 +55,14 @@ function ImmediateOutput({ output, onAddToBoard, onInteractiveTableChange, colle
   const kind = String(output.kind || 'json');
   const anomalyRole = String(output.output_role || '');
   if (['thresholds', 'anomalies', 'counts'].includes(anomalyRole) && kind !== 'table') return <WorkflowErrorCard problem={{ code: 'ANOMALY_OUTPUT_CONTRACT_MISMATCH', message: `خروجی ${anomalyRole} باید جدول باشد، اما ${kind} دریافت شد.`, responsibility: 'application', node_id: output.node_id, port: output.source_handle, expected: 'table', actual: kind, suggested_fix: 'بک‌اند و فرانت‌اند را از همین نسخه اجرا کنید و سرویس‌ها را دوباره بسازید.' }} />;
+  if (isReviewOutput(output)) return <ReviewOutput output={output} />;
+  if (kind === 'work_task') return <div className="review-output" dir="rtl"><div className="review-output-head"><div><span className="review-output-eyebrow">وظیفه ارجاع‌شده</span><strong>{String(output.task_title || output.title || 'وظیفه')}</strong><small>{output.item_count ? `${Number(output.item_count).toLocaleString('fa-IR')} مورد` : String(output.subject_id || '')}</small></div><span className="review-output-pill">{Number(output.assignee_count || 0).toLocaleString('fa-IR')} ارجاع</span></div><div className="review-output-section"><p>نوع: {String(output.task_kind || '')}</p><a href="/tasks">مشاهده کارتابل وظایف</a></div></div>;
+  if (kind === 'work_task_result') {
+    const responses = Array.isArray(output.responses) ? output.responses as Array<{ task_id: number; assignee: string; status: string; answers?: Record<string, unknown> }> : [];
+    const labels = new Map((Array.isArray(output.fields) ? output.fields as Array<{ id: string; label: string }> : []).map((field) => [field.id, field.label]));
+    const displayAnswer = (value: unknown) => ({ approve: 'تأیید', reject: 'رد', revise: 'درخواست اصلاح' }[String(value)] || String(value ?? ''));
+    return <div className="review-output" dir="rtl"><div className="review-output-head"><div><span className="review-output-eyebrow">پاسخ‌های وظیفه</span><strong>{String(output.task_title || 'وظیفه')}</strong><small>{String(output.subject_id || '')}</small></div><span className="review-output-pill">{Number(output.completed || 0).toLocaleString('fa-IR')} از {Number(output.assigned || 0).toLocaleString('fa-IR')} تکمیل</span></div><div className="review-output-fields">{responses.map((item) => <div key={item.task_id}><span>{item.assignee} · {item.status === 'completed' ? 'تکمیل‌شده' : 'در انتظار'}</span><b>{item.answers ? Object.entries(item.answers).map(([key, value]) => `${labels.get(key) || key}: ${displayAnswer(value)}`).join(' · ') : '—'}</b></div>)}</div></div>;
+  }
   if (kind === 'interactive_table') return <InteractiveTableOutput output={output} onStateChange={(state) => onInteractiveTableChange?.(String(output.node_id || ''), state)} />;
   if (kind === 'table' && output.interactive_table_result === true) return <LinkedInteractiveResultTable output={output} />;
   if (kind === 'table') return <OutputTable rows={(output.rows as Record<string, unknown>[] | undefined) || []} columns={output.columns as string[] | undefined} columnLabels={output.column_labels as Record<string, string> | undefined} />;

@@ -10,8 +10,8 @@ from app.domains.auth.models import User
 from app.domains.auth.service import bootstrap_users, hash_password, verify_password
 from app.domains.projects.access import permission_for_project
 from app.domains.projects.models import Project, ProjectAssignment
-from app.domains.projects.schemas import ProjectUpdate
-from app.domains.projects.service import update_project
+from app.domains.projects.schemas import ProjectCreate, ProjectUpdate
+from app.domains.projects.service import create_project, update_project
 
 
 def _database() -> tuple[object, Session]:
@@ -65,13 +65,12 @@ def test_role_and_assignment_matrix() -> None:
         unrelated = _user('unrelated', 'expert')
         db.add_all([admin, manager, owner, editor, guest, unrelated])
         db.flush()
-        project = Project(name='Secured project', owner_username=owner.username)
+        project = Project(name='Secured project', owner_username=owner.username, project_type='team')
         db.add(project)
         db.flush()
         db.add_all([
             ProjectAssignment(project_id=project.id, user_id=editor.id, access_type='edit', assigned_by_user_id=admin.id),
             ProjectAssignment(project_id=project.id, user_id=guest.id, access_type='view', assigned_by_user_id=admin.id),
-            # Even a legacy edit assignment cannot elevate a manager outside owned projects.
             ProjectAssignment(project_id=project.id, user_id=manager.id, access_type='edit', assigned_by_user_id=admin.id),
         ])
         db.commit()
@@ -79,7 +78,7 @@ def test_role_and_assignment_matrix() -> None:
         assert permission_for_project(db, project, owner).access == 'owner'
         assert permission_for_project(db, project, admin).access == 'admin'
         manager_permission = permission_for_project(db, project, manager)
-        assert manager_permission and manager_permission.access == 'view' and not manager_permission.can_run
+        assert manager_permission and manager_permission.access == 'edit' and manager_permission.can_run
         editor_permission = permission_for_project(db, project, editor)
         assert editor_permission and editor_permission.access == 'edit' and editor_permission.can_run and not editor_permission.can_delete
         guest_permission = permission_for_project(db, project, guest)
@@ -96,7 +95,7 @@ def test_assigned_expert_can_update_project_without_changing_assignments() -> No
         editor = _user('assigned-editor', 'expert')
         db.add_all([manager, editor])
         db.flush()
-        project = Project(name='Original', description='', owner_username=manager.username)
+        project = Project(name='Original', description='', owner_username=manager.username, project_type='team')
         db.add(project)
         db.flush()
         db.add(ProjectAssignment(project_id=project.id, user_id=editor.id, access_type='edit', assigned_by_user_id=manager.id))
@@ -111,10 +110,37 @@ def test_assigned_expert_can_update_project_without_changing_assignments() -> No
             state='open',
             priority='medium',
             color='#2fa99a',
+            project_type='team',
             assignments=[{'user_id': editor.id, 'access_type': 'edit'}],
         ), editor)
         assert result.name == 'Updated by assigned expert'
         assert result.effective_access == 'edit'
+    finally:
+        db.close()
+
+
+def test_expert_owner_can_create_team_with_multiple_editors() -> None:
+    _, db = _database()
+    try:
+        owner = _user('team-owner', 'expert')
+        editor_one = _user('editor-one', 'expert')
+        editor_two = _user('editor-two', 'manager')
+        viewer = _user('viewer', 'guest')
+        db.add_all([owner, editor_one, editor_two, viewer]); db.commit()
+
+        result = create_project(db, ProjectCreate(
+            name='Research team',
+            project_type='team',
+            assignments=[
+                {'user_id': editor_one.id, 'access_type': 'edit'},
+                {'user_id': editor_two.id, 'access_type': 'edit'},
+                {'user_id': viewer.id, 'access_type': 'view'},
+            ],
+        ), owner)
+
+        assert result.project_type == 'team'
+        assert [item.access_type for item in result.assignments].count('edit') == 2
+        assert result.can_manage_assignments and result.can_manage_locks
     finally:
         db.close()
 

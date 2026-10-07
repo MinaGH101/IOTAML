@@ -183,6 +183,99 @@ color: var(--theme-text-muted);
 opacity: .78;
   cursor: not-allowed;
 }
+.project-type-selector {
+display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.project-type-selector > button {
+min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-control-bg);
+  color: var(--theme-text);
+  text-align: right;
+  cursor: pointer;
+}
+.project-type-selector > button.active {
+border-color: var(--theme-primary);
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+.project-type-selector > button > span { display: grid; gap: 3px; }
+.project-type-selector small { color: var(--theme-text-muted); font-size: 11px; font-weight: 400; }
+.team-member-search {
+height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-control);
+  background: var(--theme-control-bg);
+  color: var(--theme-text-muted);
+  transition: border-color var(--theme-transition-fast), box-shadow var(--theme-transition-fast);
+}
+.team-member-search:focus-within {
+border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-soft);
+}
+.team-member-search > .team-member-search-input {
+flex: 1;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.team-search-results {
+display: grid;
+  gap: 5px;
+  padding: 6px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--theme-radius-panel);
+  background: var(--theme-panel-bg);
+}
+.team-search-results > button,
+.team-member-list > article {
+min-height: 54px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--theme-radius-control);
+  background: transparent;
+  color: var(--theme-text);
+  text-align: right;
+}
+.team-search-results > button:hover { background: var(--theme-panel-muted); }
+.team-search-results > button > span:nth-child(2), .team-member-identity { display: grid; gap: 2px; min-width: 0; }
+.team-search-results small, .team-member-identity small { overflow: hidden; color: var(--theme-text-muted); font-size: 11px; text-overflow: ellipsis; }
+.team-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--theme-radius-round); background: var(--theme-primary-soft); color: var(--theme-primary); font-weight: 800; }
+.team-member-list { display: grid; gap: 7px; }
+.team-member-list > article { grid-template-columns: 34px minmax(120px, 1fr) auto 30px; border: var(--theme-border-width) solid var(--theme-divider); background: var(--theme-panel-bg); }
+.team-access-switch { display: flex; gap: 3px; padding: 3px; border-radius: var(--theme-radius-control); background: var(--theme-panel-muted); }
+.team-access-switch button { min-height: 30px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 0; border-radius: var(--theme-radius-control); background: transparent; color: var(--theme-text-muted); font-size: 11px; }
+.team-access-switch button.active { background: var(--theme-panel-bg); color: var(--theme-primary); }
+.team-member-remove { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: var(--theme-radius-control); background: transparent; color: var(--theme-danger); }
+.team-members-empty { min-height: 72px; display: grid; place-items: center; align-content: center; gap: 6px; color: var(--theme-text-muted); font-size: 12px; }
+.team-search-empty { margin: 0; color: var(--theme-text-muted); font-size: 12px; }
+@media (width <= 640px) {
+  .project-type-selector { grid-template-columns: 1fr; }
+  .team-member-list > article { grid-template-columns: 34px 1fr 30px; }
+  .team-access-switch { grid-column: 1 / -1; }
+}
 @media (width <= 1120px) {
 .projects-toolbar {
 grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(130px, auto));

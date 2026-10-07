@@ -37,13 +37,29 @@ export function Field({ label, hint, error, required, htmlFor, className, childr
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   invalid?: boolean;
+  bare?: boolean;
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, invalid, ...props },
+  { className, invalid, bare, ...props },
   ref,
 ) {
-  return <input {...props} ref={ref} aria-invalid={invalid || undefined} className={cx(styles.control, invalid && styles.controlInvalid, className)} />;
+  return <input {...props} ref={ref} data-ui-bare={bare ? 'true' : undefined} aria-invalid={invalid || undefined} className={cx(styles.control, bare && styles.bareControl, invalid && styles.controlInvalid, className)} />;
+});
+
+export type SearchFieldProps = Omit<InputProps, 'type'> & {
+  containerClassName?: string;
+  leading?: ReactNode;
+};
+
+export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
+  { className, containerClassName, leading, ...props },
+  ref,
+) {
+  return <div className={cx(styles.searchField, containerClassName)} data-ui-search-field="true">
+    {leading && <span className={styles.searchLeading} aria-hidden="true">{leading}</span>}
+    <Input {...props} ref={ref} bare type="search" className={cx(styles.searchInput, className)} />
+  </div>;
 });
 
 export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {

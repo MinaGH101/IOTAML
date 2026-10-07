@@ -12,7 +12,9 @@ export type NodeCategory =
   | 'Export or Report'
   | 'Utilities / Advanced'
   | 'User Nodes'
-  | 'Components';
+  | 'Components'
+  | 'Review Workflows'
+  | 'Human Tasks';
 
 export type PortType =
   | 'dataframe'
@@ -31,7 +33,8 @@ export type PortType =
   | 'schema'
   | 'trigger'
   | 'stream'
-  | 'any';
+  | 'any'
+  | 'case';
 
 export type PortDefinition = {
   id: string;
@@ -44,7 +47,7 @@ export type PortDefinition = {
 export type NodeParam = {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'input_dataframe' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors' | 'interactive_table_state';
+  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'artifact_pdf' | 'artifact_files' | 'case_intake_fields' | 'form_fields' | 'assignee_users' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'input_dataframe' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors' | 'interactive_table_state';
   default: unknown;
   required?: boolean;
   options: unknown[];

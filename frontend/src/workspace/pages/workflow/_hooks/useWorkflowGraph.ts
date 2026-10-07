@@ -3,15 +3,16 @@ import { createWorkflowGraphStore } from '../../../../features/workflow/model/wo
 import { useWorkflowGraphActions } from './workflow-graph/useWorkflowGraphActions';
 import { useWorkflowGraphKeyboard } from './workflow-graph/useWorkflowGraphKeyboard';
 import { useWorkflowGraphState } from './workflow-graph/useWorkflowGraphState';
-export function useWorkflowGraph({ readOnly }: {
+export function useWorkflowGraph({ readOnly, canManageLocks }: {
     readOnly: boolean;
+    canManageLocks: boolean;
 }) {
     const storeRef = useRef<ReturnType<typeof createWorkflowGraphStore> | null>(null);
     if (!storeRef.current)
         storeRef.current = createWorkflowGraphStore();
     const store = storeRef.current;
     const state = useWorkflowGraphState(store);
-    const actions = useWorkflowGraphActions(store, readOnly);
+    const actions = useWorkflowGraphActions(store, readOnly, canManageLocks);
     useWorkflowGraphKeyboard(store, actions.deleteSelected);
     return { ...state, ...actions };
 }

@@ -120,6 +120,9 @@ export function normalizeFlowNodes(items: Node[], registry: RegistryNode[], alia
             : currentLabel;
         return {
             ...node,
+            // Imported and API-created graphs may store the registry ID as the
+            // React Flow type. They still use IOTA's MlNode visual contract.
+            type: registryNode ? 'mlNode' : node.type,
             data: {
                 ...node.data,
                 registryId: canonicalId,
@@ -227,6 +230,7 @@ export function createMainAnalysisBoard(items: AnalysisBoardItem[] = []): Analys
     return {
         id: MAIN_ANALYSIS_BOARD_ID,
         name: 'برد اصلی',
+        locked: false,
         items,
         viewport: { x: 0, y: 0, scale: 1 },
         createdAt: new Date().toISOString(),
@@ -239,11 +243,12 @@ export function restoreAnalysisBoardTabs(value: unknown, legacyItems?: unknown):
     if (!Array.isArray(value) || value.length === 0) {
         return [createMainAnalysisBoard(restoreAnalysisBoardItems(legacyItems))];
     }
-    const tabs = value
+    const tabs: AnalysisBoardTab[] = value
         .filter((item): item is Partial<AnalysisBoardTab> => Boolean(item && typeof item === 'object' && !Array.isArray(item)))
         .map((item, index) => ({
         id: String(item.id || (index === 0 ? MAIN_ANALYSIS_BOARD_ID : `analysis-board-${Date.now()}-${index}`)),
         name: String(item.name || (index === 0 ? 'برد اصلی' : `برد ${index + 1}`)).trim() || `برد ${index + 1}`,
+        locked: item.locked === true,
         items: restoreAnalysisBoardItems(item.items),
         viewport: restoreBoardViewport(item.viewport),
         createdAt: String(item.createdAt || new Date().toISOString()),
@@ -259,6 +264,7 @@ export function serializeAnalysisBoardTabs(tabs: AnalysisBoardTab[]) {
     return tabs.map((tab) => ({
         id: tab.id,
         name: tab.name,
+        locked: tab.locked === true,
         items: serializeAnalysisBoardItems(tab.items),
         viewport: restoreBoardViewport(tab.viewport),
         createdAt: tab.createdAt,

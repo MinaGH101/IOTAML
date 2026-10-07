@@ -6,6 +6,14 @@ export function parseArray(value: unknown): string[] { return Array.isArray(valu
 export function isDynamic(value: unknown): value is { mode: 'dynamic'; expression: string } { return Boolean(value && typeof value === 'object' && (value as { mode?: string }).mode === 'dynamic'); }
 export function staticValue(value: unknown, fallback: unknown) { return isDynamic(value) ? fallback : value ?? fallback ?? ''; }
 export const FRIENDLY_OPTION_LABELS: Record<string, string> = {
+  static: 'ثابت · ورود مقدار در تنظیمات',
+  analysis: 'تحلیل', approval: 'تأیید / تصمیم', form: 'فرم سفارشی',
+  each_item: 'برای هر آیتم یک وظیفه', one_task: 'یک وظیفه برای کل فهرست',
+  dynamic: 'پویا · فرم قابل ارجاع',
+  reviews: 'داوری · پاسخ‌های جداگانه',
+  fields: 'اطلاعات پرونده · پاسخ یک نفر',
+  missing_text: 'فقط صفحه‌های بدون متن',
+  off: 'خاموش',
   pair_count: 'Pair count',
   mae: 'MAE',
   mae_pct: 'MAE (%)',
@@ -126,6 +134,9 @@ export function normalizeNumber(value: string, param: NodeParam) { if (value ===
 export function toggleItem(items: string[], item: string) { return items.includes(item) ? items.filter((value) => value !== item) : uniq([...items, item]); }
 
 export function shouldShowParam(registryId: string, paramName: string, params: Record<string, unknown>) {
+  if (registryId === 'WK-001' && paramName === 'response_fields') return params.task_kind === 'form';
+  if ((registryId === 'RV-001' || registryId === 'RV-003') && paramName === 'form_id') return params.input_mode === 'dynamic';
+  if (registryId === 'RV-002' && paramName === 'due_days') return params.input_mode !== 'static';
   if (registryId === 'TR-020') {
     const method = String(params.method || 'standard');
     if (['columns', 'method', 'max_output_rows'].includes(paramName)) return true;

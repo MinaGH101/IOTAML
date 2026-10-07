@@ -679,6 +679,7 @@ def apply_workflow_actions(
     workflow_id: int,
     owner_username: str,
     operations: list[dict[str, Any]],
+    actor_username: str | None = None,
 ) -> dict[str, Any]:
     from app.domains.workflows.schemas import WorkflowCreate
     from app.domains.workflows.service import get_workflow, update_workflow, validate_graph
@@ -693,6 +694,10 @@ def apply_workflow_actions(
     try:
         next_graph = apply_workflow_actions_to_graph(workflow.graph or {}, operations)
         applied = next_graph.pop("_assistantActionSummary", [])
+        if actor_username:
+            from app.domains.workflows.locks import enforce_locked_graph_changes
+            enforce_locked_graph_changes(workflow.graph or {}, next_graph,
+                                         owner_username=owner_username, actor_username=actor_username)
         updated = update_workflow(
             db,
             workflow.id,

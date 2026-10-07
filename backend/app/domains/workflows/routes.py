@@ -17,6 +17,7 @@ from app.domains.workflows.service import (
     get_version, get_workflow, list_versions, rename_workflow, restore_version,
     update_workflow, validate_graph,
 )
+from app.domains.workflows.locks import enforce_locked_graph_changes
 
 router = APIRouter(prefix='/workflows', tags=['workflows'])
 
@@ -67,11 +68,13 @@ def get_one(workflow_id: int, db: Session = Depends(get_db), current_user: User 
 
 @router.put('/{workflow_id}', response_model=WorkflowOut)
 def update(workflow_id: int, payload: WorkflowCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
-    _, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    workflow, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
     if payload.project_id is not None:
         target, _ = require_project_edit(db, payload.project_id, current_user)
         if target.owner_username.lower() != owner.lower():
             raise HTTPException(status_code=400, detail='A workflow cannot be moved between different project owners.')
+    enforce_locked_graph_changes(workflow.graph or {}, payload.graph or {}, owner_username=owner,
+                                 actor_username=current_user.username)
     return update_workflow(db, workflow_id, payload, owner)
 
 
@@ -83,14 +86,18 @@ def rename(workflow_id: int, payload: WorkflowRenameIn, db: Session = Depends(ge
 
 @router.delete('/{workflow_id}')
 def remove(workflow_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
-    _, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    workflow, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    enforce_locked_graph_changes(workflow.graph or {}, {'nodes': [], 'edges': [], 'meta': {'analysisBoards': []}},
+                                 owner_username=owner, actor_username=current_user.username)
     delete_workflow(db, workflow_id, owner)
     return {'ok': True}
 
 
 @router.put('/{workflow_id}/autosave', response_model=WorkflowOut)
 def autosave(workflow_id: int, payload: WorkflowAutosaveIn, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
-    _, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    workflow, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    enforce_locked_graph_changes(workflow.graph or {}, payload.graph or {}, owner_username=owner,
+                                 actor_username=current_user.username)
     return autosave_workflow(db, workflow_id, payload, owner)
 
 
@@ -114,7 +121,10 @@ def version(workflow_id: int, version_id: int, db: Session = Depends(get_db), cu
 
 @router.post('/{workflow_id}/versions/{version_id}/restore', response_model=WorkflowOut)
 def restore(workflow_id: int, version_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
-    _, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    workflow, owner = _workflow_and_owner(db, workflow_id, current_user, write=True)
+    target = get_version(db, workflow_id, version_id, owner)
+    enforce_locked_graph_changes(workflow.graph or {}, target.graph or {}, owner_username=owner,
+                                 actor_username=current_user.username)
     return restore_version(db, workflow_id, version_id, owner)
 
 

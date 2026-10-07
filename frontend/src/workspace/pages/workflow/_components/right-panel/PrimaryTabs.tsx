@@ -19,5 +19,5 @@ export function PrimaryTabs({ tab, p, inputDataframes, updateInteractiveTable }:
   </div>;
     if (tab !== 'settings')
         return null;
-    return <div className="workflow-right-tab-body workflow-settings-tab"><Inspector embedded readOnly={p.readOnly} selectedNode={p.selectedNode} selectedEdge={p.selectedEdge} registry={p.registry} aliases={p.aliases} datasets={p.datasets} availableColumns={p.availableColumns} availableIdColumns={p.availableIdColumns || []} inheritedIdColumn={p.inheritedIdColumn ?? null} availableRows={p.availableRows || []} inputDataframes={inputDataframes} onChange={p.updateNodeParams} onRename={p.renameNode} onDelete={p.deleteSelected} onUngroupComponent={p.onUngroupComponent}/></div>;
+    return <div className="workflow-right-tab-body workflow-settings-tab"><Inspector embedded readOnly={p.readOnly} canManageLocks={p.canManageLocks} onToggleNodeLock={p.onToggleNodeLock} selectedNode={p.selectedNode} selectedEdge={p.selectedEdge} registry={p.registry} aliases={p.aliases} datasets={p.datasets} availableColumns={p.availableColumns} availableIdColumns={p.availableIdColumns || []} inheritedIdColumn={p.inheritedIdColumn ?? null} availableRows={p.availableRows || []} inputDataframes={inputDataframes} onChange={p.updateNodeParams} onRename={p.renameNode} onDelete={p.deleteSelected} onUngroupComponent={p.onUngroupComponent}/></div>;
 }

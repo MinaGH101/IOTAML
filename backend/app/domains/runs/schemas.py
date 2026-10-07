@@ -8,6 +8,8 @@ class RunCreate(BaseModel):
     workflow_revision: int | None = None
     dataset_id: int | None = None
     project_id: int | None = None
+    case_record_id: int | None = Field(default=None, ge=1)
+    case_stage: str | None = Field(default=None, max_length=32)
     target_column: str | None = None
     task_type: str = 'auto'
     selected_node_id: str | None = None
@@ -26,6 +28,8 @@ class RunOut(BaseModel):
     workflow_revision: int | None
     dataset_id: int | None
     project_id: int | None = None
+    case_record_id: int | None = None
+    case_stage: str | None = None
     owner_username: str
     target_column: str | None
     task_type: str

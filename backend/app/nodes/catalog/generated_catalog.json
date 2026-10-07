@@ -72,13 +72,16 @@
     "Export or Report",
     "Utilities / Advanced",
     "User Nodes",
-    "Components"
+    "Components",
+    "Review Workflows",
+    "Human Tasks"
   ],
   "compatiblePorts": {
     "any": [
       "any",
       "artifact",
       "artifact_ref",
+      "case",
       "columns",
       "dataframe",
       "file",
@@ -107,6 +110,9 @@
       "artifact_ref",
       "file",
       "report"
+    ],
+    "case": [
+      "case"
     ],
     "columns": [
       "any",
@@ -8684,7 +8690,1496 @@
       "supportsDynamicParameters": true,
       "type": "UT-008",
       "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Start a case with proposal details and uploaded documents; JSON input remains optional for integrations.",
+      "executionMode": "instant",
+      "id": "RV-001",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "submission",
+          "multiple": false,
+          "name": "Submission",
+          "required": false,
+          "type": "json"
+        }
+      ],
+      "label": "Case Intake",
+      "name": "Case Intake",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": null,
+          "help": "",
+          "label": "فایل اصلی طرح (PDF)",
+          "name": "proposal_pdf",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_pdf"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "فایل‌های پیوست",
+          "name": "supporting_files",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_files"
+        },
+        {
+          "default": "static",
+          "help": "ثابت: مقدارها همین‌جا وارد می‌شوند. پویا: فرم قابل ارجاع ساخته می‌شود.",
+          "label": "روش تکمیل اطلاعات",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "project_intake",
+          "help": "",
+          "label": "شناسه فرم دریافت",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": [
+            {
+              "id": "project_code",
+              "label": "کد پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_title",
+              "label": "عنوان پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "proposer",
+              "label": "واحد پیشنهاددهنده",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_manager",
+              "label": "مدیر پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "reviewer",
+              "label": "داور",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_type",
+              "label": "نوع پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_area",
+              "label": "حوزه پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "start_date",
+              "label": "تاریخ شروع",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "duration_months",
+              "label": "مدت اجرا (ماه)",
+              "type": "number",
+              "value": null
+            },
+            {
+              "id": "requested_budget",
+              "label": "بودجه (میلیون ریال)",
+              "type": "number",
+              "value": null
+            },
+            {
+              "id": "project_goal",
+              "label": "هدف پروژه",
+              "type": "text",
+              "value": ""
+            }
+          ],
+          "help": "",
+          "label": "فیلدهای ثبت پروژه",
+          "name": "intake_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "case_intake_fields"
+        },
+        {
+          "default": "RDI",
+          "help": "",
+          "label": "پیشوند کد خودکار",
+          "name": "id_prefix",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": null,
+          "help": "",
+          "label": "فایل اصلی طرح (PDF)",
+          "name": "proposal_pdf",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_pdf"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "فایل‌های پیوست",
+          "name": "supporting_files",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_files"
+        },
+        {
+          "default": "static",
+          "help": "ثابت: مقدارها همین‌جا وارد می‌شوند. پویا: فرم قابل ارجاع ساخته می‌شود.",
+          "label": "روش تکمیل اطلاعات",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "project_intake",
+          "help": "",
+          "label": "شناسه فرم دریافت",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": [
+            {
+              "id": "project_code",
+              "label": "کد پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_title",
+              "label": "عنوان پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "proposer",
+              "label": "واحد پیشنهاددهنده",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_manager",
+              "label": "مدیر پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "reviewer",
+              "label": "داور",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_type",
+              "label": "نوع پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "project_area",
+              "label": "حوزه پروژه",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "start_date",
+              "label": "تاریخ شروع",
+              "type": "text",
+              "value": ""
+            },
+            {
+              "id": "duration_months",
+              "label": "مدت اجرا (ماه)",
+              "type": "number",
+              "value": null
+            },
+            {
+              "id": "requested_budget",
+              "label": "بودجه (میلیون ریال)",
+              "type": "number",
+              "value": null
+            },
+            {
+              "id": "project_goal",
+              "label": "هدف پروژه",
+              "type": "text",
+              "value": ""
+            }
+          ],
+          "help": "",
+          "label": "فیلدهای ثبت پروژه",
+          "name": "intake_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "case_intake_fields"
+        },
+        {
+          "default": "RDI",
+          "help": "",
+          "label": "پیشوند کد خودکار",
+          "name": "id_prefix",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-001",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": true,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Define typed submission or reviewer fields once; downstream nodes use the same field IDs.",
+      "executionMode": "instant",
+      "id": "RV-002",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "Form Definition",
+      "name": "Form Definition",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "dynamic",
+          "help": "ثابت: پاسخ‌ها همین‌جا ثبت می‌شوند. پویا: فرم برای ارجاع به کاربران ساخته می‌شود.",
+          "label": "روش تکمیل فرم",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "شناسه ثابت فرم",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "Expert review",
+          "help": "",
+          "label": "عنوان فرم",
+          "name": "title",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": [
+            {
+              "id": "score",
+              "label": "Score",
+              "max": 100,
+              "min": 0,
+              "required": true,
+              "type": "score"
+            },
+            {
+              "id": "comment",
+              "label": "Comment",
+              "required": false,
+              "type": "long_text"
+            }
+          ],
+          "help": "",
+          "label": "فیلدهای فرم",
+          "name": "fields",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        },
+        {
+          "default": 7,
+          "help": "",
+          "label": "مهلت پاسخ (روز)",
+          "name": "due_days",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "dynamic",
+          "help": "ثابت: پاسخ‌ها همین‌جا ثبت می‌شوند. پویا: فرم برای ارجاع به کاربران ساخته می‌شود.",
+          "label": "روش تکمیل فرم",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "شناسه ثابت فرم",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "Expert review",
+          "help": "",
+          "label": "عنوان فرم",
+          "name": "title",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": [
+            {
+              "id": "score",
+              "label": "Score",
+              "max": 100,
+              "min": 0,
+              "required": true,
+              "type": "score"
+            },
+            {
+              "id": "comment",
+              "label": "Comment",
+              "required": false,
+              "type": "long_text"
+            }
+          ],
+          "help": "",
+          "label": "فیلدهای فرم",
+          "name": "fields",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        },
+        {
+          "default": 7,
+          "help": "",
+          "label": "مهلت پاسخ (روز)",
+          "name": "due_days",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-002",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Extract PDF text page by page, OCR only unreadable pages, then optionally extract named fields with AI.",
+      "executionMode": "instant",
+      "id": "RV-003",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "Document Extract",
+      "name": "Document Extract",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": null,
+          "help": "",
+          "label": "فایل PDF جایگزین (اختیاری)",
+          "name": "artifact_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_pdf"
+        },
+        {
+          "default": "static",
+          "help": "ثابت: مقدارهای واردشده استفاده می‌شوند و فیلدهای خالی از PDF استخراج می‌شوند. پویا: فرم اصلاح استخراج ساخته می‌شود.",
+          "label": "روش تکمیل فیلدها",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "extraction_review",
+          "help": "",
+          "label": "شناسه فرم اصلاح استخراج",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": 60,
+          "help": "",
+          "label": "حداکثر صفحه‌های خواندنی",
+          "name": "max_pages",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": "missing_text",
+          "help": "",
+          "label": "خواندن صفحه‌های تصویری (OCR)",
+          "name": "ocr_mode",
+          "options": [
+            "missing_text",
+            "off"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": 4,
+          "help": "",
+          "label": "حداکثر صفحه‌های OCR",
+          "name": "max_ocr_pages",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "فیلدهای استخراج و بازبینی",
+          "name": "extraction_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "راهنمای استخراج برای AI (اختیاری)",
+          "name": "user_prompt",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": null,
+          "help": "",
+          "label": "فایل PDF جایگزین (اختیاری)",
+          "name": "artifact_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "artifact_pdf"
+        },
+        {
+          "default": "static",
+          "help": "ثابت: مقدارهای واردشده استفاده می‌شوند و فیلدهای خالی از PDF استخراج می‌شوند. پویا: فرم اصلاح استخراج ساخته می‌شود.",
+          "label": "روش تکمیل فیلدها",
+          "name": "input_mode",
+          "options": [
+            "static",
+            "dynamic"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "extraction_review",
+          "help": "",
+          "label": "شناسه فرم اصلاح استخراج",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": 60,
+          "help": "",
+          "label": "حداکثر صفحه‌های خواندنی",
+          "name": "max_pages",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": "missing_text",
+          "help": "",
+          "label": "خواندن صفحه‌های تصویری (OCR)",
+          "name": "ocr_mode",
+          "options": [
+            "missing_text",
+            "off"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": 4,
+          "help": "",
+          "label": "حداکثر صفحه‌های OCR",
+          "name": "max_ocr_pages",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": [],
+          "help": "",
+          "label": "فیلدهای استخراج و بازبینی",
+          "name": "extraction_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "راهنمای استخراج برای AI (اختیاری)",
+          "name": "user_prompt",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-003",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Check required fields deterministically and optionally ask AI for advisory concerns.",
+      "executionMode": "instant",
+      "id": "RV-004",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "Case Validation",
+      "name": "Case Validation",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "project_title",
+          "help": "",
+          "label": "Required field IDs (comma separated)",
+          "name": "required_field_ids",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "Additional validation instructions for AI (optional)",
+          "name": "user_prompt",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "project_title",
+          "help": "",
+          "label": "Required field IDs (comma separated)",
+          "name": "required_field_ids",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "Additional validation instructions for AI (optional)",
+          "name": "user_prompt",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-004",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Suggest rubric scores with evidence; human scores remain separate.",
+      "executionMode": "instant",
+      "id": "RV-005",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "AI Review",
+      "name": "AI Review",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Scoring form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "Review instructions for AI",
+          "name": "user_prompt",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": 30000,
+          "help": "",
+          "label": "Maximum document characters",
+          "name": "max_document_chars",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Scoring form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "Review instructions for AI",
+          "name": "user_prompt",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": 30000,
+          "help": "",
+          "label": "Maximum document characters",
+          "name": "max_document_chars",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-005",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Validate a named reviewer response against the published form and add it to the case.",
+      "executionMode": "instant",
+      "id": "RV-006",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        },
+        {
+          "id": "response",
+          "multiple": false,
+          "name": "Reviewer response",
+          "required": true,
+          "type": "json"
+        }
+      ],
+      "label": "Record Human Review",
+      "name": "Record Human Review",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-006",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": true,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Average human reviewers per criterion, then sum the criterion averages.",
+      "executionMode": "instant",
+      "id": "RV-007",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "Score Aggregation",
+      "name": "Score Aggregation",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        },
+        {
+          "id": "metrics",
+          "multiple": false,
+          "name": "Scores",
+          "required": true,
+          "type": "metrics"
+        }
+      ],
+      "params": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Scoring form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": 1,
+          "help": "",
+          "label": "Minimum reviewers",
+          "name": "minimum_reviewers",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "Scoring form ID",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": 1,
+          "help": "",
+          "label": "Minimum reviewers",
+          "name": "minimum_reviewers",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-007",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Record a human gate decision and its reason without replacing it with an AI recommendation.",
+      "executionMode": "instant",
+      "id": "RV-008",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        },
+        {
+          "id": "decision",
+          "multiple": false,
+          "name": "Human decision",
+          "required": true,
+          "type": "json"
+        }
+      ],
+      "label": "Decision Record",
+      "name": "Decision Record",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "gate_2",
+          "help": "",
+          "label": "Gate ID",
+          "name": "gate_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "gate_2",
+          "help": "",
+          "label": "Gate ID",
+          "name": "gate_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-008",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Create a form task for each named user when the run completes.",
+      "executionMode": "instant",
+      "id": "RV-009",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "label": "Assign Form Tasks",
+      "name": "Assign Form Tasks",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "",
+          "help": "اختیاری؛ فرم ساخته‌شده در همین مسیر به‌صورت خودکار انتخاب می‌شود.",
+          "label": "شناسه فرم (در صورت وجود چند فرم)",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "کاربران مسئول تکمیل فرم",
+          "name": "assignees",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "assignee_users"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "",
+          "help": "اختیاری؛ فرم ساخته‌شده در همین مسیر به‌صورت خودکار انتخاب می‌شود.",
+          "label": "شناسه فرم (در صورت وجود چند فرم)",
+          "name": "form_id",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "کاربران مسئول تکمیل فرم",
+          "name": "assignees",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "assignee_users"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-009",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Review Workflows",
+      "comingSoon": false,
+      "description": "Load submitted forms for one case so scoring can continue in a later run.",
+      "executionMode": "instant",
+      "id": "RV-010",
+      "implemented": true,
+      "inputs": [],
+      "label": "Load Review Responses",
+      "name": "Load Review Responses",
+      "outputs": [
+        {
+          "id": "case",
+          "multiple": false,
+          "name": "Case",
+          "required": true,
+          "type": "case"
+        }
+      ],
+      "params": [
+        {
+          "default": "",
+          "help": "پرونده‌ای را انتخاب کنید که فرم آن ارجاع شده است. تعداد پاسخ‌های ثبت‌شده در فهرست نمایش داده می‌شود.",
+          "label": "شناسه پرونده",
+          "name": "case_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "شناسه فرم",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "reviews",
+          "help": "داوری: پاسخ هر کاربر جدا ثبت می‌شود. اطلاعات پرونده: پاسخ یک کاربر به فیلدهای پرونده افزوده می‌شود.",
+          "label": "محل ثبت پاسخ‌ها",
+          "name": "response_target",
+          "options": [
+            "reviews",
+            "fields"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "",
+          "help": "پرونده‌ای را انتخاب کنید که فرم آن ارجاع شده است. تعداد پاسخ‌های ثبت‌شده در فهرست نمایش داده می‌شود.",
+          "label": "شناسه پرونده",
+          "name": "case_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "expert_review",
+          "help": "",
+          "label": "شناسه فرم",
+          "name": "form_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "reviews",
+          "help": "داوری: پاسخ هر کاربر جدا ثبت می‌شود. اطلاعات پرونده: پاسخ یک کاربر به فیلدهای پرونده افزوده می‌شود.",
+          "label": "محل ثبت پاسخ‌ها",
+          "name": "response_target",
+          "options": [
+            "reviews",
+            "fields"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "RV-010",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Human Tasks",
+      "comingSoon": false,
+      "description": "Assign analysis, approval, or a custom form to project users. Each assignee gets a private task.",
+      "executionMode": "instant",
+      "id": "WK-001",
+      "implemented": true,
+      "inputs": [
+        {
+          "id": "source",
+          "multiple": false,
+          "name": "Context (optional)",
+          "required": false,
+          "type": "any"
+        }
+      ],
+      "label": "Assign Work Task",
+      "name": "Assign Work Task",
+      "outputs": [
+        {
+          "id": "task",
+          "multiple": false,
+          "name": "Task",
+          "required": true,
+          "type": "any"
+        }
+      ],
+      "params": [
+        {
+          "default": "analysis",
+          "help": "",
+          "label": "نوع وظیفه",
+          "name": "task_kind",
+          "options": [
+            "analysis",
+            "approval",
+            "form"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "عنوان وظیفه",
+          "name": "title",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "راهنمای انجام کار",
+          "name": "instructions",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "مسئولان انجام کار",
+          "name": "assignees",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "assignee_users"
+        },
+        {
+          "default": 7,
+          "help": "",
+          "label": "مهلت (روز)",
+          "name": "due_days",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": "each_item",
+          "help": "برای هر آیتم یک وظیفه بسازید، یا کل فهرست را یکجا ارجاع دهید.",
+          "label": "فهرست ورودی",
+          "name": "list_mode",
+          "options": [
+            "each_item",
+            "one_task"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": [],
+          "help": "برای فرم سفارشی فیلدها را تعریف کنید. تحلیل و تأیید فرم آماده دارند.",
+          "label": "فیلدهای پاسخ",
+          "name": "response_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": "analysis",
+          "help": "",
+          "label": "نوع وظیفه",
+          "name": "task_kind",
+          "options": [
+            "analysis",
+            "approval",
+            "form"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "عنوان وظیفه",
+          "name": "title",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "text"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "راهنمای انجام کار",
+          "name": "instructions",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "textarea"
+        },
+        {
+          "default": "",
+          "help": "",
+          "label": "مسئولان انجام کار",
+          "name": "assignees",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "assignee_users"
+        },
+        {
+          "default": 7,
+          "help": "",
+          "label": "مهلت (روز)",
+          "name": "due_days",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "integer"
+        },
+        {
+          "default": "each_item",
+          "help": "برای هر آیتم یک وظیفه بسازید، یا کل فهرست را یکجا ارجاع دهید.",
+          "label": "فهرست ورودی",
+          "name": "list_mode",
+          "options": [
+            "each_item",
+            "one_task"
+          ],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "select"
+        },
+        {
+          "default": [],
+          "help": "برای فرم سفارشی فیلدها را تعریف کنید. تحلیل و تأیید فرم آماده دارند.",
+          "label": "فیلدهای پاسخ",
+          "name": "response_fields",
+          "options": [],
+          "required": false,
+          "supportsDynamic": false,
+          "type": "form_fields"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "WK-001",
+      "validationRules": ""
+    },
+    {
+      "cacheVersion": "1",
+      "cacheable": false,
+      "category": "Human Tasks",
+      "comingSoon": false,
+      "description": "Load the latest responses for one assignment group in a later workflow run.",
+      "executionMode": "instant",
+      "id": "WK-002",
+      "implemented": true,
+      "inputs": [],
+      "label": "Load Task Responses",
+      "name": "Load Task Responses",
+      "outputs": [
+        {
+          "id": "responses",
+          "multiple": false,
+          "name": "Responses",
+          "required": true,
+          "type": "json"
+        }
+      ],
+      "params": [
+        {
+          "default": null,
+          "help": "شناسه را از کارتابل وظایف کپی کنید. پاسخ همه مسئولان همان ارجاع خوانده می‌شود.",
+          "label": "شناسه یکی از وظایف ارجاع‌شده",
+          "name": "task_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "priority": "MVP",
+      "settingsSchema": [
+        {
+          "default": null,
+          "help": "شناسه را از کارتابل وظایف کپی کنید. پاسخ همه مسئولان همان ارجاع خوانده می‌شود.",
+          "label": "شناسه یکی از وظایف ارجاع‌شده",
+          "name": "task_id",
+          "options": [],
+          "required": true,
+          "supportsDynamic": false,
+          "type": "integer"
+        }
+      ],
+      "supportsDynamicParameters": true,
+      "type": "WK-002",
+      "validationRules": ""
     }
   ],
-  "version": 4
+  "version": 5
 }

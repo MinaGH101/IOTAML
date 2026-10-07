@@ -16,15 +16,16 @@ ALLOWED_SETTING_TYPES = {
     'multiselect', 'data_file', 'replacement_blocks', 'imputation_blocks',
     'input_dataframe', 'float', 'normalization_blocks', 'scatter_blocks',
     'row_values', 'series_colors', 'interactive_table_state',
+    'artifact_pdf', 'artifact_files', 'case_intake_fields', 'form_fields', 'assignee_users',
 }
 
 
 def _matches_default(setting_type: str, value: Any) -> bool:
     if value is None:
         return True
-    if setting_type in {'text', 'textarea', 'select', 'column', 'dataset', 'code', 'color', 'file', 'password'}:
+    if setting_type in {'text', 'textarea', 'select', 'column', 'dataset', 'code', 'color', 'file', 'password', 'artifact_pdf'}:
         return isinstance(value, (str, int))
-    if setting_type in {'columns', 'multiselect', 'replacement_blocks', 'imputation_blocks', 'normalization_blocks', 'scatter_blocks', 'row_values'}:
+    if setting_type in {'columns', 'multiselect', 'replacement_blocks', 'imputation_blocks', 'normalization_blocks', 'scatter_blocks', 'row_values', 'artifact_files', 'case_intake_fields', 'form_fields', 'assignee_users'}:
         return isinstance(value, (list, str))
     if setting_type in {'series_colors', 'interactive_table_state'}:
         return isinstance(value, dict)

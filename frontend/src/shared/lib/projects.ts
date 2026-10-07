@@ -11,6 +11,7 @@ export function defaultProjectPayload(user?: UserProfile | null): ProjectPayload
     state: 'open',
     priority: 'medium',
     color: getDefaultProjectColor(),
+    project_type: 'personal',
     assignments: [],
   };
 }
@@ -25,6 +26,7 @@ export function payloadFromProject(project: Project): ProjectPayload {
     state: project.state,
     priority: project.priority || 'medium',
     color: project.color || getDefaultProjectColor(),
+    project_type: project.project_type || 'personal',
     assignments: project.assignments.map(({ user_id, access_type }) => ({ user_id, access_type })),
   };
 }

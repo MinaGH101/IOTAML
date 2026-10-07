@@ -5,7 +5,7 @@ import type { ParamEditorProps } from '../ParamEditor';
 import { ParamBasicField } from './ParamBasicField';
 import { ParamComplexField } from './ParamComplexField';
 import type { useParamEditorModel } from './useParamEditorModel';
-const complex = new Set(['data_file', 'file', 'multiselect', 'row_values', 'series_colors', 'replacement_blocks', 'imputation_blocks', 'normalization_blocks', 'scatter_blocks', 'columns']);
+const complex = new Set(['data_file', 'file', 'artifact_pdf', 'artifact_files', 'case_intake_fields', 'form_fields', 'assignee_users', 'multiselect', 'row_values', 'series_colors', 'replacement_blocks', 'imputation_blocks', 'normalization_blocks', 'scatter_blocks', 'columns']);
 export function ParamField({ param, p, m }: {
     param: NodeParam;
     p: ParamEditorProps;

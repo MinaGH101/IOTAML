@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell, Building2, Clock3, Mail, Phone, RefreshCw, Save, ShieldCheck, Upload, User, UserCircle } from 'lucide-react';
 import { authApi } from '../../_service/authApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
@@ -25,6 +25,12 @@ export function ProfilePage({
   const [busy, setBusy] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void authApi.me().then((fresh) => { if (active) { setDraft(fresh); onSaved(fresh); } }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const activity = draft.activity || [];
   const alarms = draft.alarms || [];
@@ -196,6 +202,7 @@ export function ProfilePage({
                     <b>{item.title}</b>
                     <span>{item.message}</span>
                     <small>{item.time}</small>
+                    {item.path && <a href={item.path}>مشاهده وظیفه</a>}
                   </div>
                 ))}
                 {alarms.length === 0 && notifications.length === 0 && <p className="empty-state small">اعلانی وجود ندارد.</p>}

@@ -27,11 +27,17 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.domains.nodes.models import CustomNode
 from app.domains.datasets.models import Dataset
+from app.domains.artifacts.models import Artifact
 from app.domains.runs.models import Run, RunAttempt
 from app.domains.runs.repository import run_repository
 from app.domains.workflows.models import Workflow
 from app.domains.datasets.service import materialize_dataset
-from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths
+from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths, materialize_artifact
+from app.domains.review_tasks.service import persist_task_intents
+from app.domains.review_tasks.models import ReviewTask
+from app.domains.auth.models import User
+from app.domains.projects.models import Project
+from app.domains.cases.service import sync_case_batch_from_run, sync_case_from_run
 from app.workflow.execution.run_state import merge_successful_run_state
 from app.workflow.caching.service import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
 from app.infrastructure.queue.notifications import QUEUE_NAME
@@ -256,6 +262,131 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
             "columns": dataset.columns,
         }
 
+    artifact_paths: dict[str, str] = {}
+    artifact_metadata: dict[str, dict[str, Any]] = {}
+    review_project = db.get(Project, run.project_id) if run.project_id else None
+    review_owner = review_project.owner_username if review_project else run.owner_username
+    review_node_ids: set[str] = set()
+    review_artifact_ids: dict[int, bool] = {}
+    for graph_node in ((run.workflow_graph or {}).get('nodes') or []):
+        if not isinstance(graph_node, dict):
+            continue
+        node_data = graph_node.get('data') or {}
+        node_type = str(node_data.get('registryId') or graph_node.get('type') or '')
+        review_node_ids.add(node_type)
+        params = node_data.get('params') or {}
+        raw_documents = []
+        if node_type == 'RV-001':
+            primary = params.get('proposal_pdf')
+            raw_documents.extend((value, True) for value in primary) if isinstance(primary, list) else raw_documents.append((primary, True))
+            attachments = params.get('supporting_files')
+            if isinstance(attachments, list):
+                raw_documents.extend((value, False) for value in attachments)
+        elif node_type == 'RV-003':
+            selected = params.get('artifact_id')
+            raw_documents.extend((value, True) for value in selected) if isinstance(selected, list) else raw_documents.append((selected, True))
+        for raw_id, materialize in raw_documents:
+            try:
+                artifact_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            review_artifact_ids[artifact_id] = review_artifact_ids.get(artifact_id, False) or materialize
+    for artifact_id, should_materialize in review_artifact_ids.items():
+        artifact = db.get(Artifact, artifact_id)
+        if (artifact and artifact.status == 'available' and artifact.deleted_at is None
+                and artifact.owner_username.lower() == review_owner.lower()
+                and artifact.project_id == run.project_id):
+            artifact_metadata[str(artifact_id)] = {'artifact_id': artifact_id,
+                                                   'filename': artifact.original_filename,
+                                                   'content_type': artifact.content_type,
+                                                   'size_bytes': artifact.size_bytes,
+                                                   'checksum_sha256': artifact.checksum_sha256}
+            if should_materialize and artifact.original_filename.lower().endswith('.pdf'):
+                artifact_paths[str(artifact_id)] = str(materialize_artifact(db, artifact_id, cache_group='review-documents'))
+            external_inputs.setdefault('artifacts', {})[str(artifact_id)] = artifact.checksum_sha256
+
+    ai_enabled = bool(review_node_ids & {'RV-003', 'RV-004', 'RV-005'})
+    if ai_enabled and any(x.startswith('UC-') or x == 'UT-001' for x in review_node_ids):
+        raise ValueError('AI review workflows cannot contain custom code nodes in the same run.')
+
+    review_task_data: dict[str, Any] = {}
+    for graph_node in ((run.workflow_graph or {}).get('nodes') or []):
+        if not isinstance(graph_node, dict):
+            continue
+        node_data = graph_node.get('data') or {}
+        if str(node_data.get('registryId') or graph_node.get('type') or '') != 'RV-010':
+            continue
+        params = node_data.get('params') or {}
+        case_id = str(params.get('case_id') or '').strip()
+        form_id = str(params.get('form_id') or '').strip()
+        if not case_id or not form_id:
+            continue
+        rows = db.execute(select(ReviewTask, User.username).join(User, User.id == ReviewTask.assignee_user_id)
+                          .join(Run, Run.id == ReviewTask.run_id)
+                          .where(Run.owner_username == run.owner_username, ReviewTask.project_id == run.project_id, ReviewTask.case_id == case_id,
+                                 ReviewTask.form_id == form_id)
+                          .order_by(ReviewTask.id.desc()).limit(100)).all()
+        if not rows:
+            continue
+        seen_users: set[int] = set()
+        tasks: list[dict[str, Any]] = []
+        for task, username in rows:
+            if task.assignee_user_id in seen_users:
+                continue
+            seen_users.add(task.assignee_user_id)
+            tasks.append({'task_id': task.id, 'reviewer_id': username, 'status': task.status,
+                          'answers': task.response_json})
+        latest = rows[0][0]
+        summary = latest.case_summary or {}
+        documents = [dict(item) for item in (summary.get('documents') or [])[:20] if isinstance(item, dict)]
+        missing_names = {int(item['artifact_id']) for item in documents
+                         if not item.get('filename') and str(item.get('artifact_id', '')).isdigit()}
+        if missing_names:
+            stored = db.execute(select(Artifact).where(Artifact.id.in_(missing_names),
+                                                        Artifact.project_id == run.project_id,
+                                                        Artifact.owner_username == run.owner_username)).scalars().all()
+            by_id = {item.id: item for item in stored}
+            for item in documents:
+                raw_id = str(item.get('artifact_id') or '')
+                artifact = by_id.get(int(raw_id)) if raw_id.isdigit() else None
+                if artifact:
+                    item['filename'] = artifact.original_filename
+                    item['content_type'] = artifact.content_type
+        if len(documents) == 1 and not any(item.get('primary') for item in documents):
+            documents[0]['primary'] = True
+        review_task_data[f'{case_id}:{form_id}'] = {
+            'form': latest.form_json, 'fields': summary.get('fields') or {},
+            'field_labels': summary.get('field_labels') or {},
+            'documents': documents, 'tasks': tasks,
+        }
+
+    work_task_data: dict[str, Any] = {}
+    for graph_node in ((run.workflow_graph or {}).get('nodes') or []):
+        if not isinstance(graph_node, dict):
+            continue
+        node_data = graph_node.get('data') or {}
+        if str(node_data.get('registryId') or graph_node.get('type') or '') != 'WK-002':
+            continue
+        raw_id = (node_data.get('params') or {}).get('task_id')
+        try:
+            task_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        sample = db.get(ReviewTask, task_id)
+        source_run = db.get(Run, sample.run_id) if sample else None
+        if not sample or not source_run or sample.project_id != run.project_id or source_run.owner_username != run.owner_username:
+            continue
+        rows = db.execute(select(ReviewTask, User.username).join(User, User.id == ReviewTask.assignee_user_id)
+                          .where(ReviewTask.run_id == sample.run_id, ReviewTask.node_id == sample.node_id,
+                                 ReviewTask.subject_id == sample.subject_id)
+                          .order_by(ReviewTask.id).limit(100)).all()
+        work_task_data[str(task_id)] = {
+            'task_kind': sample.task_kind, 'title': sample.form_json.get('title') or sample.form_id,
+            'subject_id': sample.subject_id or sample.case_id, 'fields': sample.form_json.get('fields') or [],
+            'responses': [{'task_id': task.id, 'assignee': username, 'status': task.status,
+                           'answers': task.response_json} for task, username in rows],
+        }
+
     custom_ids = {
         str((node.get('data') or {}).get('registryId') or node.get('type') or '')
         for node in ((run.workflow_graph or {}).get('nodes') or [])
@@ -286,12 +417,16 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         'workflow_revision': run.workflow_revision,
         'dataset_id': run.dataset_id,
         'dataset_path': dataset_path,
+        'artifact_paths': artifact_paths,
+        'artifact_metadata': artifact_metadata,
+        'review_task_data': review_task_data,
+        'work_task_data': work_task_data,
         'project_id': run.project_id,
         'target_column': run.target_column,
         'task_type': run.task_type,
         'selected_node_id': run.selected_node_id,
         'run_path': str(Path(get_settings().storage_dir) / 'runs' / str(run.id)),
-        'network_disabled': get_settings().job_network_disabled,
+        'network_disabled': get_settings().job_network_disabled and not ai_enabled,
         'external_inputs': external_inputs,
         'cache_manifest': cache_manifest,
         'cache_output_dir': str(paths['cache_output']),
@@ -316,6 +451,19 @@ def _child_environment(paths: dict[str, Path]) -> dict[str, str]:
         'MKL_NUM_THREADS': '1',
         'NUMEXPR_NUM_THREADS': '1',
     }
+    try:
+        snapshot = json.loads(paths['snapshot'].read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        snapshot = {}
+    if snapshot.get('network_disabled') is False:
+        config = get_settings()
+        env.update({
+            'JOB_NETWORK_DISABLED': '0',
+            'OPENAI_API_KEY': config.openai_api_key,
+            'OPENAI_BASE_URL': config.openai_base_url,
+            'IOTA_OCR_MODEL': config.iota_ocr_model,
+            'IOTA_REVIEW_MODEL': config.iota_review_model,
+        })
     return env
 
 
@@ -475,7 +623,25 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
             status = 'failed'
             error = f'Required artifact publication failed: {artifact_exc}'
             run.logs = append_log(run.logs, 'error', 'Required run artifacts could not be persisted.', error=str(artifact_exc))
-        run.metrics = {**(result.get('metrics') or {}), 'cache': cache_stats}
+        task_assignments = None
+        if status == 'succeeded' and result.get('review_task_intents'):
+            try:
+                with db.begin_nested():
+                    task_assignments = persist_task_intents(db, run, result['review_task_intents'])
+                run.logs = append_log(
+                    run.logs,
+                    'info',
+                    f'Assigned {task_assignments.created} human tasks; skipped {task_assignments.unchanged} unchanged assignments.',
+                )
+            except ValueError as task_exc:
+                status = 'failed'
+                error = str(task_exc)
+                run.logs = append_log(run.logs, 'error', error)
+        run.metrics = {
+            **(result.get('metrics') or {}),
+            'cache': cache_stats,
+            **({'task_assignments': task_assignments.to_dict()} if task_assignments else {}),
+        }
         successful_workflow = None
         if status == 'succeeded' and run.workflow_id is not None:
             workflow = db.get(Workflow, run.workflow_id)
@@ -486,6 +652,7 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
                     workflow_id=run.workflow_id,
                     owner_username=run.owner_username,
                     exclude_run_id=run.id,
+                    case_record_id=run.case_record_id,
                 )
                 if previous_run:
                     artifacts, merged_statuses, execution_state = merge_successful_run_state(
@@ -546,6 +713,8 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
                 failure_code=str(first_problem.get('cause_code') or first_problem.get('code') or failure_code),
                 retryable=bool(first_problem.get('retryable')) if 'retryable' in first_problem else (True if artifact_failure else inferred_retryable),
             )
+        sync_case_from_run(db, run, run.status, artifacts)
+        sync_case_batch_from_run(db, run, run.status, artifacts)
         db.commit()
 
 

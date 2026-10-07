@@ -9,7 +9,7 @@ import type { WorkflowEditorBase } from './useWorkflowEditorBase';
 export function useWorkflowEditorDocument({ project, user, initialWorkflowId }: WorkflowPageProps, base: WorkflowEditorBase, outputs: Output[]) {
     const { graph, runs, shell } = base;
     const boards = useAnalysisBoards({ outputs, currentRunId: runs.displayRun?.id ?? null, nodes: graph.documentNodes, registry: base.catalog.nodes, aliases: base.catalog.aliases, selectedNodeId: graph.selectedId,
-        readOnly: base.readOnly, boardOpen: shell.analysisBoardOpen, setBoardOpen: shell.setAnalysisBoardOpen, setMessage: base.setMessage });
+        readOnly: base.readOnly, canManageLocks: base.canManageLocks, boardOpen: shell.analysisBoardOpen, setBoardOpen: shell.setAnalysisBoardOpen, setMessage: base.setMessage });
     const refreshRegistry = useCallback(async () => { base.setCatalog(await nodesApi.catalog(base.projectId)); }, [base.projectId, base.setCatalog]);
     const components = useWorkflowComponents({ projectId: base.projectId, user, nodes: graph.documentNodes, setNodes: graph.setNodes, edges: graph.edges, setEdges: graph.setEdges,
         selectedIds: graph.selectedIds, setSelectedId: graph.setSelectedId, setSelectedIds: graph.setSelectedIds, setSelectedEdgeId: graph.setSelectedEdgeId,

@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     openai_api_key: str = ''
     openai_base_url: str = 'https://api.openai.com/v1'
     openai_model: str = 'gpt-4o-mini'
+    iota_ocr_model: str = 'gpt-4o-mini'
+    iota_review_model: str = 'gpt-4o-mini'
+    review_max_pdf_pages: int = Field(default=60, ge=1, le=200)
+    review_max_text_chars: int = Field(default=120000, ge=1000, le=500000)
     assistant_context_message_limit: int = Field(default=5, ge=1, le=50)
 
     upload_preview_max_rows: int = Field(default=100, ge=1, le=5000)

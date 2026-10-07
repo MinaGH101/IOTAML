@@ -1,9 +1,10 @@
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent, SetStateAction } from 'react';
 import type { Edge, Node } from '@xyflow/react';
 import type { AnalysisBoardTab } from '../../../../_model/board';
+import type { BoardCaseFilters } from '../../../board/_hooks/useBoardCaseFilters';
 import type { Output } from '../../../../../features/results/components/ResultsPanel';
 import type { Dataset, RegistryNode, Run, RunSummary, WorkflowComponent, WorkflowVersionSummary } from '../../../../../shared/types';
-export type RightTab = 'results' | 'settings' | 'history' | 'assistant' | 'versions' | 'components';
+export type RightTab = 'filters' | 'results' | 'settings' | 'history' | 'assistant' | 'versions' | 'components';
 export type RightPanelProps = {
     floatingRightStyle: CSSProperties;
     resultsCollapsed: boolean;
@@ -34,6 +35,8 @@ export type RightPanelProps = {
     updateNodeParams: (nodeId: string, params: Record<string, unknown>) => void;
     renameNode: (nodeId: string, label: string) => void;
     deleteSelected: () => void;
+    canManageLocks: boolean;
+    onToggleNodeLock: (nodeId: string) => void;
     onUngroupComponent: (node: Node) => void;
     selectedId: string | null;
     onAddOutputToBoard?: (output: Output, index: number) => void;
@@ -41,6 +44,7 @@ export type RightPanelProps = {
     boardTabs: AnalysisBoardTab[];
     boardTargetId: string;
     onBoardTargetChange: (id: string) => void;
+    boardCaseFilters: BoardCaseFilters;
     workflowId: number | null;
     onAssistantPrepareWorkflow?: () => void | Promise<void>;
     onAssistantWorkflowChanged?: () => void | Promise<void>;

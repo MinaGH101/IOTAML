@@ -12,7 +12,7 @@ function RightPanelComponent(p: RightPanelProps) {
     <div className="right-stack workflow-right-stack workflow-right-tabs-panel">
       <RightPanelToolbar activeTab={state.activeTab} openTab={state.openTab} p={p}/>
       {!p.resultsCollapsed && <div className="workflow-right-tabs-content">
-        <div className="workflow-right-context-line"><b>{rightTabMeta[state.activeTab].label}</b><span>{p.selectedFlow.mode === 'selected' ? 'جریان انتخاب‌شده' : 'کل برد'} · {p.selectedFlow.nodes.length} نود، {p.selectedFlow.edges.length} اتصال</span></div>
+        <div className="workflow-right-context-line"><b>{rightTabMeta[state.activeTab].label}</b><span>{state.activeTab === 'filters' ? 'فیلترهای کارت‌های پرونده‌ای برد فعال' : `${p.selectedFlow.mode === 'selected' ? 'جریان انتخاب‌شده' : 'کل برد'} · ${p.selectedFlow.nodes.length} نود، ${p.selectedFlow.edges.length} اتصال`}</span></div>
         <PrimaryTabs tab={state.activeTab} p={p} inputDataframes={state.inputDataframes} updateInteractiveTable={state.updateInteractiveTable}/>
         <SecondaryTabs tab={state.activeTab} p={p}/>
       </div>}

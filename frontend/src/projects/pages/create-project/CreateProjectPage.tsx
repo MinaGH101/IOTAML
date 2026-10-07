@@ -18,7 +18,7 @@ export function CreateProjectPage(props: CreateProjectPageProps) {
       <ProjectMessage message={c.message} />
       <div className="reference-back-row"><Button leadingIcon={<ArrowRight size={15} />} onClick={props.onBack}>بازگشت به پروژه‌ها</Button></div>
       <section className="project-create-reference-layout">
-        <ProjectInfoCard project={c.project} draft={c.draft} users={c.assignableUsers} saving={c.saving} canManageAssignments={props.user.role === 'manager' || props.user.role === 'admin'} onDraftChange={c.setDraft} onSave={c.save} onOpen={props.onOpenProject} />
+        <ProjectInfoCard project={c.project} draft={c.draft} users={c.assignableUsers} saving={c.saving} canManageAssignments={props.user.role !== 'guest'} onDraftChange={c.setDraft} onSave={c.save} onOpen={props.onOpenProject} />
         <section className="project-create-main-reference">
           <ProjectDataCard projectCreated={Boolean(c.project)} datasets={c.datasets} uploading={c.uploading} onUpload={c.upload} onDelete={c.removeDataset} />
           <ProjectWorkflowCard project={c.project} workflows={c.workflows} name={c.workflowName} creating={c.workflow.creating} importing={c.workflow.importing} onNameChange={c.setWorkflowName} onCreate={c.workflow.create} onImport={c.workflow.importFile} onOpen={(workflow) => c.project && props.onOpenEditor(c.project, workflow.id)} />

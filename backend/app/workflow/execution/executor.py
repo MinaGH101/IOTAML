@@ -64,6 +64,17 @@ def apply_node(
             suggested_fix='Replace the node or install the matching backend implementation.',
         )
     node_runner.validate_settings(resolved)
+    if rid.startswith('RV-') and rid != 'RV-001':
+        from app.nodes.review.contract import case_batch_result, cases_from_batch
+        case_inputs = list(((inputs.get('_by_port') or {}).get('case') or []))
+        batch_cases = cases_from_batch(case_inputs[0]) if len(case_inputs) == 1 else None
+        if batch_cases is not None:
+            children: list[dict[str, Any]] = []
+            for case in batch_cases:
+                child_inputs = dict(inputs)
+                child_inputs['_by_port'] = {**(inputs.get('_by_port') or {}), 'case': [case]}
+                children.append(node_runner.run(node, child_inputs, resolved, ctx))
+            return apply_dataframe_contract(case_batch_result(node, children), inputs)
     return apply_dataframe_contract(node_runner.run(node, inputs, resolved, ctx), inputs)
 
 
@@ -287,6 +298,10 @@ def execute_workflow(
     execution_id: int | str,
     *,
     dataset_path: str | None = None,
+    artifact_paths: dict[str, str] | None = None,
+    artifact_metadata: dict[str, dict[str, Any]] | None = None,
+    review_task_data: dict[str, Any] | None = None,
+    work_task_data: dict[str, Any] | None = None,
     selected_node_id: str | None = None,
     run_path: str | Path | None = None,
     progress_callback: ProgressCallback | None = None,
@@ -314,6 +329,10 @@ def execute_workflow(
         project_id=project_id,
         dataset_id=dataset_id,
         dataset_path=dataset_path,
+        artifact_paths=artifact_paths or {},
+        artifact_metadata=artifact_metadata or {},
+        review_task_data=review_task_data or {},
+        work_task_data=work_task_data or {},
         target_column=target_column,
         task_type=task_type,
         run_path=execution_path,
@@ -390,6 +409,12 @@ def execute_workflow(
         'validation_warnings': [warning.model_dump() for warning in validation.warnings],
         'execution_plan': {'selected_node_id': plan.selected_node_id, 'order': order},
     }
+    review_task_intents = [value[key] for value in node_outputs.values() if isinstance(value, dict)
+                           for key in ('_review_task_intent', '_work_task_intent') if isinstance(value.get(key), dict)]
+    review_task_intents.extend(intent for value in node_outputs.values() if isinstance(value, dict)
+                               for intent in (value.get('_work_task_intents') or []) if isinstance(intent, dict))
+    review_task_intents.extend(intent for value in node_outputs.values() if isinstance(value, dict)
+                               for intent in (value.get('_review_task_intents') or []) if isinstance(intent, dict))
     metrics = {
         'nodes_total': len(nodes),
         'nodes_executed': len(node_outputs),
@@ -402,6 +427,7 @@ def execute_workflow(
         'metrics': safe_json(metrics),
         'artifacts': safe_json(artifacts),
         'error': errors[0]['message'] if errors else None,
+        'review_task_intents': safe_json(review_task_intents),
     }
 
 

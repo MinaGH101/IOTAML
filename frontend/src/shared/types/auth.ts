@@ -14,7 +14,7 @@ export type UserProfile = {
   department: string;
   activity: Array<{ label: string; value: number }>;
   alarms: Array<{ title: string; message: string; level?: string }>;
-  notifications: Array<{ title: string; message: string; time?: string }>;
+  notifications: Array<{ title: string; message: string; time?: string; path?: string }>;
   is_active: boolean;
 };
 

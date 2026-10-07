@@ -33,7 +33,7 @@ export function DataFileInput({ value, onChange, help }: { value: unknown; onCha
     reader.readAsDataURL(file);
   };
   return (
-    <div className="data-file-control workflow-shell-card">
+    <div className="data-file-control">
       <input ref={inputRef} hidden type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { choose(event.target.files?.[0]); event.currentTarget.value = ''; }} />
       {current ? (
         <div className="data-file-summary">

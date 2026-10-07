@@ -149,6 +149,9 @@
   --theme-button-primary-text: #071a19;
   background: #0b0d0f !important;
 }
+.board .ml-node.owner-locked::before { border-color: color-mix(in srgb, var(--theme-warning) 55%, var(--theme-control-border)); }
+.board .ml-node.owner-locked { cursor: default; }
+.board .ml-node .node-lock-mark { flex: 0 0 auto; margin-inline-start: 3px; color: var(--theme-warning); }
 
 .workflow-shell-page::before {
   content: "";
@@ -813,4 +816,46 @@
 
 :root[data-theme="light"] .workflow-shell-page .workflow-topbar-brand .iota-brand-name {
   color: #0f2f3a !important;
+}
+
+/* Modal node navigation stays beside the node identity in RTL layouts. */
+.n8n-node-navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--node-accent, var(--theme-primary)) 22%, var(--theme-divider));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--node-accent, var(--theme-primary)) 7%, var(--theme-panel-muted));
+  direction: rtl;
+}
+
+.n8n-node-navigation-button {
+  width: 27px;
+  height: 27px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: background var(--theme-transition-fast), color var(--theme-transition-fast), transform var(--theme-transition-fast);
+}
+
+.n8n-node-navigation-button:hover:not(:disabled) {
+  background: var(--node-accent, var(--theme-primary));
+  color: var(--theme-button-primary-text);
+  transform: translateY(-1px);
+}
+
+.n8n-node-navigation-button:focus-visible {
+  outline: 2px solid var(--node-accent, var(--theme-primary));
+  outline-offset: 1px;
+}
+
+.n8n-node-navigation-button:disabled {
+  opacity: .34;
+  cursor: not-allowed;
 }

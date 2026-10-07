@@ -1,4 +1,4 @@
-import { Download, Layers3, LayoutDashboard, LogOut, RefreshCw, Save, ShieldCheck, UserCircle } from 'lucide-react';
+import { ClipboardList, Download, Layers3, LayoutDashboard, LogOut, RefreshCw, Save, ShieldCheck, UserCircle } from 'lucide-react';
 import { ThemeToggle } from '../../../../../shared/components/ThemeToggle';
 import type { WorkflowHeaderProps } from './types';
 export function HeaderLeft({ p }: { p: WorkflowHeaderProps }) {
@@ -7,6 +7,7 @@ export function HeaderLeft({ p }: { p: WorkflowHeaderProps }) {
       <button className="icon-button icon-only" type="button" onClick={p.onProfile} title="پروفایل"><UserCircle size={17}/></button>
       {p.showAdmin && <button className="icon-button icon-only" type="button" onClick={p.onAdmin} title="پنل مدیریت"><ShieldCheck size={17}/></button>}
       <ThemeToggle />
+      <a className="icon-button icon-only" href="/tasks" title="کارتابل وظایف"><ClipboardList size={17}/></a>
       <button className="icon-button icon-only" type="button" onClick={p.onProjects} title="پنل پروژه‌ها"><LayoutDashboard size={17}/></button>
       {!p.boardOpen && <>
         <button className="icon-button icon-only" type="button" onClick={p.onExport} title="Export workflow JSON"><Download size={17}/></button>

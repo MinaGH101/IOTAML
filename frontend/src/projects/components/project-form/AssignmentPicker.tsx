@@ -1,7 +1,7 @@
 import { Check, ChevronDown, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AssignableUser } from '../../../shared/types';
-import { Input } from '../../../shared/ui';
+import { SearchField } from '../../../shared/ui';
 import { roleLabel, type AssignmentMode } from './constants';
 
 type Props = { mode: AssignmentMode; users: AssignableUser[]; selectedIds: number[]; onChange: (ids: number[]) => void };
@@ -34,7 +34,7 @@ export function AssignmentPicker({ mode, users, selectedIds, onChange }: Props) 
     </button>
     {mode === 'view' && selectedUsers.length > 0 && <div className="assignment-selected-chips">{selectedUsers.map((user) => <button key={user.id} type="button" onClick={() => toggle(user.id)}>{user.display_name}<X size={12} /></button>)}</div>}
     {open && <div className="assignment-picker-menu">
-      <div className="assignment-picker-search"><Search size={14} /><Input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جستجوی نام یا نقش..." /></div>
+      <SearchField containerClassName="assignment-picker-search" leading={<Search size={14} />} autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جستجوی نام یا نقش..." aria-label="جستجوی نام یا نقش" />
       <div className="assignment-picker-options">{filteredUsers.map((user) => <PickerOption key={user.id} user={user} selected={selectedSet.has(user.id)} onSelect={() => toggle(user.id)} />)}{filteredUsers.length === 0 && <div className="assignment-picker-empty">کاربری پیدا نشد.</div>}</div>
     </div>}
   </div>;

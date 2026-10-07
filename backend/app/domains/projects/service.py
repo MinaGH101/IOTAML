@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.domains.auth.models import ROLE_ADMIN, ROLE_EXPERT, ROLE_GUEST, ROLE_MANAGER, User
+from app.domains.auth.models import ROLE_GUEST, User
 from app.domains.auth.service import normalize_role
 from app.domains.projects.access import permission_for_project, require_project_delete, require_project_edit, require_project_view
 from app.domains.projects.models import ACCESS_EDIT, ACCESS_VIEW, Project, ProjectAssignment
@@ -57,6 +57,7 @@ def to_output(project: Project, db: Session, user: User, counts: tuple[int, int]
         state=project.state or 'open',
         priority=project.priority or 'medium',
         color=project.color,
+        project_type=project.project_type or 'personal',
         owner_username=project.owner_username,
         owner_display_name=_display_name(owner, project.owner_username),
         assignments=assignment_outputs(db, project.id),
@@ -66,7 +67,8 @@ def to_output(project: Project, db: Session, user: User, counts: tuple[int, int]
         can_edit=permission.can_edit,
         can_run=permission.can_run,
         can_delete=permission.can_delete,
-        can_manage_assignments=permission.can_manage_assignments and normalize_role(user.role) in {ROLE_ADMIN, ROLE_MANAGER},
+        can_manage_assignments=permission.can_manage_assignments,
+        can_manage_locks=project.owner_username.lower() == user.username.lower(),
         workflow_count=counts[0],
         dataset_count=counts[1],
         created_at=project.created_at,
@@ -83,15 +85,9 @@ def list_projects(db: Session, user: User, *, limit: int, offset: int) -> list[P
     return outputs
 
 
-def _can_assign(user: User) -> bool:
-    return normalize_role(user.role) in {ROLE_ADMIN, ROLE_MANAGER}
-
-
 def _validate_and_apply_assignments(db: Session, project: Project, assignments: list, acting_user: User) -> None:
-    if not _can_assign(acting_user):
-        if assignments:
-            raise HTTPException(status_code=403, detail='Only managers and admins can assign projects.')
-        return
+    if project.project_type != 'team' and assignments:
+        raise HTTPException(status_code=400, detail='Choose a team project before adding members.')
     target_ids = {item.user_id for item in assignments}
     users = {item.id: item for item in db.scalars(select(User).where(User.id.in_(target_ids))).all()} if target_ids else {}
     if len(users) != len(target_ids):
@@ -102,8 +98,8 @@ def _validate_and_apply_assignments(db: Session, project: Project, assignments: 
             raise HTTPException(status_code=400, detail=f'{target.username} is disabled.')
         if target.username.lower() == project.owner_username.lower():
             raise HTTPException(status_code=400, detail='The project owner cannot also be assigned.')
-        if item.access_type == ACCESS_EDIT and normalize_role(target.role) != ROLE_EXPERT:
-            raise HTTPException(status_code=400, detail='Edit access can only be assigned to expert users.')
+        if item.access_type == ACCESS_EDIT and normalize_role(target.role) == ROLE_GUEST:
+            raise HTTPException(status_code=400, detail='Guest users can only receive view access.')
     existing = {item.user_id: item for item in project_repository.assignments(db, project.id)}
     for user_id, row in existing.items():
         if user_id not in target_ids:
@@ -127,7 +123,7 @@ def create_project(db: Session, payload: ProjectCreate, user: User) -> ProjectOu
     project = Project(
         name=payload.name.strip(), description=payload.description or '', start_date=payload.start_date, due_date=payload.due_date,
         project_manager=payload.project_manager or _display_name(user), state=payload.state, priority=payload.priority, color=payload.color,
-        owner_username=user.username,
+        owner_username=user.username, project_type=payload.project_type,
     )
     db.add(project); db.flush()
     _validate_and_apply_assignments(db, project, payload.assignments, user)
@@ -152,11 +148,12 @@ def update_project(db: Session, project_id: int, payload: ProjectUpdate, user: U
     project.start_date = payload.start_date; project.due_date = payload.due_date
     project.project_manager = payload.project_manager or ''; project.state = payload.state
     project.priority = payload.priority; project.color = payload.color
-    if _can_assign(user):
-        if not permission.can_manage_assignments:
-            raise HTTPException(status_code=403, detail='Only the project owner or an admin can change project assignments.')
+    if permission.can_manage_assignments:
+        project.project_type = payload.project_type
         _validate_and_apply_assignments(db, project, payload.assignments, user)
     else:
+        if payload.project_type != project.project_type:
+            raise HTTPException(status_code=403, detail='Only the project owner can change the project type.')
         existing_assignments = {(item.user_id, item.access_type) for item in project_repository.assignments(db, project.id)}
         submitted_assignments = {(item.user_id, item.access_type) for item in payload.assignments}
         if submitted_assignments != existing_assignments:

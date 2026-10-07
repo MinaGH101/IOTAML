@@ -10,6 +10,7 @@ export type AnalysisBoardsOptions = {
     aliases: LegacyNodeAliases;
     selectedNodeId: string | null;
     readOnly: boolean;
+    canManageLocks: boolean;
     boardOpen: boolean;
     setBoardOpen: (open: boolean) => void;
     setMessage: (message: string) => void;

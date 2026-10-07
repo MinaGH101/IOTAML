@@ -10,7 +10,7 @@ from app.workflow.contracts.errors import NodeContractError
 PortType = Literal[
     'dataframe', 'json', 'json_items', 'series', 'columns', 'model', 'metrics',
     'plot', 'file', 'report', 'artifact', 'artifact_ref', 'text', 'schema',
-    'trigger', 'stream', 'any'
+    'trigger', 'stream', 'case', 'any'
 ]
 ExecutionMode = Literal['instant', 'queued', 'sandboxed']
 

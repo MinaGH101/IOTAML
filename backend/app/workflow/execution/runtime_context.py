@@ -15,6 +15,10 @@ class RuntimeContext:
     target_column: str | None = None
     task_type: str = 'auto'
     run_path: Path | None = None
+    artifact_paths: dict[str, str] = field(default_factory=dict)
+    artifact_metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
+    review_task_data: dict[str, Any] = field(default_factory=dict)
+    work_task_data: dict[str, Any] = field(default_factory=dict)
     node_outputs: dict[str, Any] = field(default_factory=dict)
 
     def expression_context(self, json_item: dict[str, Any] | None = None) -> dict[str, Any]:

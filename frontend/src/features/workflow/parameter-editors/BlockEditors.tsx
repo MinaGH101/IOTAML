@@ -1,6 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { CustomSelect } from '../../../shared/_components/CustomSelect';
-import { SelectionToggleButton } from '../../../workspace/_components/SelectionToggleButton';
 import { PillPicker } from './Pickers';
 
 type ReplacementBlock = {
@@ -46,7 +45,6 @@ export function ReplacementBlocksEditor({ value, columns, onChange }: { value: u
             </div>
             <div className="field compact-field">
               <span>ستون‌ها</span>
-              <SelectionToggleButton items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} />
               <PillPicker items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} empty="ابتدا نود را به داده وصل کنید." />
             </div>
             <div className="replacement-grid">
@@ -104,7 +102,7 @@ export function ImputationBlocksEditor({ value, columns, onChange }: { value: un
         return (
           <div className="replacement-block workflow-shell-card" key={index}>
             <div className="replacement-block-head"><b>بلوک {index + 1}</b><button type="button" className="tiny-action icon-only" title="حذف" aria-label="حذف" onClick={() => removeBlock(index)}><Trash2 size={12} /></button></div>
-            <div className="field compact-field"><span>ستون‌ها</span><SelectionToggleButton items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} /><PillPicker items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} empty="ابتدا نود را به داده وصل کنید." /></div>
+            <div className="field compact-field"><span>ستون‌ها</span><PillPicker items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} empty="ابتدا نود را به داده وصل کنید." /></div>
             <div className="replacement-grid">
               <label className="field"><span>روش</span><CustomSelect value={method} options={[{value:'mean',label:'میانگین'}, {value:'median',label:'میانه'}, {value:'constant',label:'مقدار ثابت'}, {value:'interpolate',label:'درون‌یابی'}, {value:'knn',label:'KNN'}]} onChange={(next) => updateBlock(index, { method: next })} /></label>
               {method === 'constant' && <label className="field"><span>مقدار ثابت</span><input dir="ltr" value={String(block.constant_value ?? '')} onChange={(event) => updateBlock(index, { constant_value: event.target.value })} /></label>}
@@ -150,7 +148,7 @@ export function NormalizationBlocksEditor({ value, columns, onChange }: { value:
         return (
           <div className="replacement-block workflow-shell-card" key={index}>
             <div className="replacement-block-head"><b>بلوک {index + 1}</b><button type="button" className="tiny-action icon-only" title="حذف" aria-label="حذف" onClick={() => removeBlock(index)}><Trash2 size={12} /></button></div>
-            <div className="field compact-field"><span>ستون‌ها</span><SelectionToggleButton items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} /><PillPicker items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} empty="ابتدا نود را به داده وصل کنید." /></div>
+            <div className="field compact-field"><span>ستون‌ها</span><PillPicker items={columns} selected={(block.columns || []).map(String)} onChange={(next) => updateBlock(index, { columns: next })} empty="ابتدا نود را به داده وصل کنید." /></div>
             <div className="replacement-grid">
               <label className="field"><span>روش</span><CustomSelect value={method} options={[{value:'ln',label:'Ln'}, {value:'log10',label:'Log10'}, {value:'sqrt',label:'Sqrt'}, {value:'boxcox',label:'Box-Cox'}, {value:'yeo_johnson',label:'Yeo-Johnson'}, {value:'quantile_normal',label:'نرمال‌سازی چندکی'}, {value:'l1',label:'L1'}, {value:'l2',label:'L2'}, {value:'max',label:'بیشینه'}]} onChange={(next) => updateBlock(index, { method: next })} /></label>
               {['ln','log10','sqrt','boxcox'].includes(method) && <label className="field"><span>مقدار انتقال</span><input type="number" step="any" value={Number(block.offset || 0)} onChange={(event) => updateBlock(index, { offset: Number(event.target.value) })} /></label>}

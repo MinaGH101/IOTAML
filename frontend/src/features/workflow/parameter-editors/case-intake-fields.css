@@ -1,0 +1,12 @@
+.case-intake-fields { display: grid; gap: 10px; min-width: 0; }
+.case-intake-fields > p { margin: 0; color: var(--theme-text-muted); font-size: 12px; line-height: 1.6; }
+.case-intake-field { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--theme-control-border); border-radius: var(--theme-radius-control); background: var(--theme-panel-bg); }
+.case-intake-field-open { border-color: color-mix(in srgb, var(--theme-primary) 42%, var(--theme-control-border)); }
+.case-intake-field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.case-intake-field-toggle { display: grid; gap: 2px; flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--theme-text); text-align: right; cursor: pointer; }
+.case-intake-field-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.case-intake-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) 105px; gap: 8px; }
+.case-intake-field-grid .field { min-width: 0; }
+.case-intake-field-value { grid-column: 1 / -1; }
+.case-intake-field small { color: var(--theme-text-muted); font-size: 10px; }
+.case-intake-field code { direction: ltr; unicode-bidi: isolate; }

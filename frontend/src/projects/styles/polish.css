@@ -518,7 +518,6 @@
 }
 
 .iota-reference-shell.project-detail-shell > .project-detail-reference-page {
-  --project-detail-page-gutter: 32px;
   display: flex;
   flex-direction: column;
   min-height: 0 !important;
@@ -528,9 +527,9 @@
 .project-detail-shell .project-detail-form-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  width: calc(100% + var(--project-detail-page-gutter) + var(--project-detail-page-gutter));
-  margin-inline: calc(0px - var(--project-detail-page-gutter));
-  padding: 0 var(--project-detail-page-gutter) 24px;
+  width: calc(100% + 64px);
+  margin-inline: -32px;
+  padding: 0 32px 24px;
   overflow-y: auto;
   direction: rtl;
   overscroll-behavior-y: contain;
@@ -577,6 +576,37 @@
   background: #2dd4bf !important;
   color: #071a19 !important;
   box-shadow: 0 0 16px rgb(45 212 191 / 13%);
+}
+
+.project-tasks-link {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid var(--theme-control-border);
+  border-radius: 6px;
+  background: var(--theme-panel-bg);
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color var(--theme-transition-fast), background var(--theme-transition-fast), color var(--theme-transition-fast);
+}
+
+.project-tasks-link svg {
+  color: var(--theme-primary);
+}
+
+.project-tasks-link:hover {
+  border-color: color-mix(in srgb, var(--theme-primary) 46%, var(--theme-control-border));
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+
+.project-tasks-link:focus-visible {
+  outline: 2px solid var(--theme-primary-soft);
+  outline-offset: 2px;
 }
 
 .iota-reference-shell .project-detail-reference-layout {
@@ -805,8 +835,10 @@
     padding: 22px 16px !important;
   }
 
-  .iota-reference-shell.project-detail-shell > .project-detail-reference-page {
-    --project-detail-page-gutter: 16px;
+  .project-detail-shell .project-detail-form-scroll {
+    width: calc(100% + 32px);
+    margin-inline: -16px;
+    padding-inline: 16px;
   }
 
   .projects-page-heading,

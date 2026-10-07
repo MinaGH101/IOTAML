@@ -2,11 +2,14 @@ import { AssistantPanel } from '../../../../_components/AssistantPanel';
 import { ComponentLibraryPanel } from '../../../../_components/ComponentLibraryPanel';
 import { RunHistoryPanel } from '../RunHistoryPanel';
 import { WorkflowVersionsPanel } from '../WorkflowVersionsPanel';
+import { BoardFiltersPanel } from './BoardFiltersPanel';
 import type { RightPanelProps, RightTab } from './types';
 export function SecondaryTabs({ tab, p }: {
     tab: RightTab;
     p: RightPanelProps;
 }) {
+    if (tab === 'filters')
+        return <BoardFiltersPanel filters={p.boardCaseFilters}/>;
     if (tab === 'history')
         return <div className="workflow-right-tab-body workflow-history-tab"><RunHistoryPanel runs={p.runHistory} currentRunId={p.currentRun?.id} busy={p.busy} onSelect={(run) => { void p.selectHistoricalRun(run); }} onRetry={p.retryRun} onCancel={p.cancelRun} onRefresh={() => p.refreshRunHistory().catch(() => undefined)}/></div>;
     if (tab === 'assistant')

@@ -18,6 +18,10 @@ export function useRunProgress(currentRun: Run | null, setCurrentRun: Dispatch<S
         if (done.status === 'succeeded') {
             setWorkflowLastRunId(done.id);
             setNodeStateRun((p) => mergePersistentNodeState(p, done));
+            const taskAssignments = done.metrics?.task_assignments;
+            if (taskAssignments && typeof taskAssignments === 'object'
+                && Number((taskAssignments as Record<string, unknown>).unchanged || 0) > 0)
+                setMessage('این تسک قبلا ارسال شده است.');
         }
         else {
             // A failed run is still authoritative for canvas status: otherwise

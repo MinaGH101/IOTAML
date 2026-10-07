@@ -7,7 +7,7 @@ type Entry = {
     rename: (id: string, label: string) => void;
     rendered: Node;
 };
-export function useCanvasRendering(nodes: Node[], currentRun: Run | null, renameNode: (id: string, label: string) => void) {
+export function useCanvasRendering(nodes: Node[], currentRun: Run | null, renameNode: (id: string, label: string) => void, canManageLocks: boolean) {
     const cacheRef = useRef(new Map<string, Entry>());
     return useMemo(() => {
         const previous = cacheRef.current;
@@ -19,11 +19,14 @@ export function useCanvasRendering(nodes: Node[], currentRun: Run | null, rename
                 next.set(node.id, cached);
                 return cached.rendered;
             }
-            const item = { ...node, data: { ...node.data, onRename: renameNode, runtimeStatus: runtimeInfo?.status || null, runtimeInfo } };
+            const locked = node.data?.ownerLocked === true;
+            const item = { ...node, draggable: !locked || canManageLocks, deletable: !locked || canManageLocks,
+                connectable: !locked || canManageLocks, data: { ...node.data, onRename: renameNode,
+                canEditNode: !locked || canManageLocks, runtimeStatus: runtimeInfo?.status || null, runtimeInfo } };
             next.set(node.id, { source: node, runtimeInfo, rename: renameNode, rendered: item });
             return item;
         });
         cacheRef.current = next;
         return rendered;
-    }, [currentRun?.node_statuses, nodes, renameNode]);
+    }, [canManageLocks, currentRun?.node_statuses, nodes, renameNode]);
 }

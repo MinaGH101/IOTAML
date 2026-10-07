@@ -8,9 +8,12 @@ from app.domains.components.models import WorkflowComponent, WorkflowComponentVe
 from app.domains.runs.models import Run, RunAttempt, RunEvent
 from app.domains.nodes.models import CustomNode
 from app.domains.artifacts.models import Artifact, ArtifactLineage, ArtifactQuotaReservation, NodeCacheEntry, NodeExecution
+from app.domains.review_tasks.models import ReviewTask
+from app.domains.cases.models import CaseRecord
 
 __all__ = [
     'User', 'Project', 'ProjectAssignment', 'Dataset', 'Workflow', 'WorkflowVersion', 'AssistantMessage', 'WorkflowComponent',
     'WorkflowComponentVersion', 'Run', 'RunAttempt', 'RunEvent', 'CustomNode',
     'Artifact', 'ArtifactLineage', 'ArtifactQuotaReservation', 'NodeCacheEntry', 'NodeExecution',
+    'ReviewTask', 'CaseRecord',
 ]

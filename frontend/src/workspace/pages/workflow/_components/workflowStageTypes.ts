@@ -10,6 +10,7 @@ import type { useWorkflowDocument } from '../_hooks/useWorkflowDocument';
 import type { useWorkflowExecution } from '../_hooks/useWorkflowExecution';
 import type { useWorkflowGraph } from '../_hooks/useWorkflowGraph';
 export type WorkflowStageProps = {
+    projectId: number;
     layout: ReturnType<typeof useWorkflowLayout>;
     graph: ReturnType<typeof useWorkflowGraph>;
     boards: ReturnType<typeof useAnalysisBoards>;
@@ -37,6 +38,7 @@ export type WorkflowStageProps = {
     setResultsCollapsed: (value: SetStateAction<boolean>) => void;
     workflowDirtyForBoard: boolean;
     readOnly: boolean;
+    canManageLocks: boolean;
     onCreateCustomNode: () => void;
     onEditCustomNode: (node: RegistryNode) => void;
     onRefreshVersions: () => void;

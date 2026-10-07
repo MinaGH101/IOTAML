@@ -23,13 +23,14 @@ export function useWorkflowEditorBase({ project, user, initialWorkflowId }: Work
     const [resultsWidth, setResultsWidth] = useState(380);
     const [versionPreview, setVersionPreview] = useState<WorkflowVersion | null>(null);
     const readOnly = !project.can_edit || Boolean(versionPreview);
+    const canManageLocks = project.can_manage_locks && !versionPreview;
     const shell = useWorkflowShellState();
-    const graph = useWorkflowGraph({ readOnly });
+    const graph = useWorkflowGraph({ readOnly, canManageLocks });
     const viewportStorageScope = `user:${user.username}:project:${projectId}:workflow:${initialWorkflowId ?? 'draft'}`;
     const workflowCanvas = usePersistentWorkflowViewport({ storageScope: viewportStorageScope, setViewport: flow.setViewport });
     const datasets = useProjectDatasets({ projectId, setNodes: graph.setNodes, setMessage });
     const runs = useRunHistory({ projectId, setMessage });
     return { projectId, catalog, setCatalog, targetColumn, setTargetColumn, taskType, setTaskType, message, setMessage, resultsWidth, setResultsWidth,
-        versionPreview, setVersionPreview, readOnly, shell, graph, workflowCanvas, viewportStorageScope, datasets, runs, flow };
+        versionPreview, setVersionPreview, readOnly, canManageLocks, shell, graph, workflowCanvas, viewportStorageScope, datasets, runs, flow };
 }
 export type WorkflowEditorBase = ReturnType<typeof useWorkflowEditorBase>;

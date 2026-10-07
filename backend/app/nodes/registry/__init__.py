@@ -69,6 +69,11 @@ from app.nodes.utilities.python_code_node import PythonCodeNode
 from app.nodes.utilities.passthrough_node import PassThroughNode
 from app.nodes.utilities.merge_dataframes_node import MergeDataFramesNode
 from app.nodes.utilities.interactive_table_node import InteractiveTableNode
+from app.nodes.review.nodes import (
+    CaseIntakeNode, ReviewFormNode, DocumentExtractNode, CaseValidationNode,
+    AIReviewNode, RecordReviewNode, ScoreAggregationNode, DecisionNode, AssignReviewNode, LoadReviewResponsesNode,
+)
+from app.nodes.tasks.nodes import AssignWorkTaskNode, LoadWorkResponsesNode
 
 EXACT_CATEGORIES = [
     'Data Input',
@@ -85,6 +90,8 @@ EXACT_CATEGORIES = [
     'Utilities / Advanced',
     'User Nodes',
     'Components',
+    'Review Workflows',
+    'Human Tasks',
 ]
 
 NODE_CLASSES: list[type[BaseNode]] = [
@@ -114,6 +121,10 @@ NODE_CLASSES: list[type[BaseNode]] = [
     ExportCsvNode, ExportJsonNode, SimpleReportNode,
     # Utilities / Advanced
     PythonCodeNode, PassThroughNode, MergeDataFramesNode, InteractiveTableNode,
+    # Reusable case review
+    CaseIntakeNode, ReviewFormNode, DocumentExtractNode, CaseValidationNode,
+    AIReviewNode, RecordReviewNode, ScoreAggregationNode, DecisionNode, AssignReviewNode, LoadReviewResponsesNode,
+    AssignWorkTaskNode, LoadWorkResponsesNode,
 ]
 
 _REGISTRY: list[BaseNode] = [cls() for cls in NODE_CLASSES]
@@ -184,7 +195,8 @@ LEGACY_SOURCE_NODE_TYPES = {'data_csv', 'data_demo', 'data_demo_iris', 'data_dem
 
 
 PORT_COMPATIBILITY: dict[str, set[str]] = {
-    'any': {'any', 'dataframe', 'json', 'json_items', 'series', 'columns', 'model', 'metrics', 'plot', 'file', 'report', 'artifact', 'artifact_ref', 'text', 'schema', 'trigger', 'stream'},
+    'any': {'any', 'dataframe', 'json', 'json_items', 'series', 'columns', 'model', 'metrics', 'plot', 'file', 'report', 'artifact', 'artifact_ref', 'text', 'schema', 'trigger', 'stream', 'case'},
+    'case': {'case'},
     'dataframe': {'dataframe', 'any', 'json', 'artifact_ref', 'report'},
     'json_items': {'json_items', 'json', 'any', 'artifact_ref', 'report', 'dataframe'},
     'json': {'json', 'json_items', 'any', 'metrics', 'report'},
@@ -207,7 +219,7 @@ VALID_PORT_TYPES = frozenset(PORT_COMPATIBILITY) | frozenset().union(*PORT_COMPA
 # Bump whenever built-in ports/nodes change so clients can invalidate a stale
 # catalog. Version 4 links the interactive editor/result contract; version 3
 # moved dataframe-combination/editor nodes into Data Cleaning.
-CATALOG_VERSION = 4
+CATALOG_VERSION = 5
 
 
 def validate_registry_integrity() -> None:

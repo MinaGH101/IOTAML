@@ -1,6 +1,22 @@
-import { ArrowRight, LayoutDashboard, LogOut, ShieldCheck, UserCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, ClipboardList, LayoutDashboard, LogOut, ShieldCheck, UserCircle } from 'lucide-react';
 import type { UserProfile } from '../types';
+import { request } from '../api/httpClient';
 import { ThemeToggle } from './ThemeToggle';
+
+function TaskInboxLink() {
+  const [openCount, setOpenCount] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void request<unknown[]>('/api/tasks?mine=true&status=open&limit=200')
+      .then((tasks) => { if (active) setOpenCount(tasks.length); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  return <a className="icon-button profile-button task-inbox-link" href="/tasks" title="کارتابل وظایف">
+    <ClipboardList size={16} /><span>وظایف</span>{openCount > 0 && <b>{openCount.toLocaleString('fa-IR')}</b>}
+  </a>;
+}
 
 export function AppTopNav({
   user,
@@ -45,6 +61,7 @@ export function AppTopNav({
       </div>
 
       <div className="run-controls profile-controls iota-nav-actions">
+        <TaskInboxLink />
         {onProjects && (
           <button className="icon-button profile-button" type="button" onClick={onProjects} title="پنل پروژه‌ها">
             <LayoutDashboard size={16} />

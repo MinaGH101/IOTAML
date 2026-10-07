@@ -12,7 +12,7 @@ export function useCreateProjectController(props: CreateProjectPageProps) {
   const [project, setProject] = useState<Project | null>(null);
   const [datasets, setDatasets] = useState<Dataset[]>([]); const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowName, setWorkflowName] = useState('جریان IOTA ML'); const [message, setMessage] = useState<UiMessage>(null);
-  const assignableUsers = useAssignableUsers(props.user.role === 'manager' || props.user.role === 'admin');
+  const assignableUsers = useAssignableUsers(props.user.role !== 'guest');
   const activateProject = useCallback((next: Project) => { setProject(next); setDraft(payloadFromProject(next)); props.onCreated(next); }, [props.onCreated]);
   const actions = useCreateProjectActions({ draft, project, activateProject, setDatasets, setWorkflows, setMessage });
   const workflow = useCreateWorkflowActions({ project, datasets, workflowName, ensureProject: actions.ensureProject, refresh: actions.refresh, setMessage, onOpenEditor: props.onOpenEditor });

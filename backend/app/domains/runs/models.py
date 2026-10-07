@@ -23,6 +23,8 @@ class Run(Base):
     workflow_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     dataset_id: Mapped[int | None] = mapped_column(ForeignKey('datasets.id', ondelete='SET NULL'), nullable=True, index=True)
     project_id: Mapped[int | None] = mapped_column(ForeignKey('projects.id', ondelete='SET NULL'), nullable=True, index=True)
+    case_record_id: Mapped[int | None] = mapped_column(ForeignKey('case_records.id', ondelete='SET NULL'), nullable=True, index=True)
+    case_stage: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     owner_username: Mapped[str] = mapped_column(String(255), nullable=False, default='admin', index=True)
     target_column: Mapped[str | None] = mapped_column(String(255), nullable=True)
     task_type: Mapped[str] = mapped_column(String(32), nullable=False, default='auto')

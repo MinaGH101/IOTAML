@@ -1,4 +1,4 @@
-import { Check, Pencil, Plus } from 'lucide-react';
+import { Check, LockKeyhole, LockKeyholeOpen, Pencil, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeAnalysisBoardZoom, type AnalysisBoardItem, type AnalysisBoardTab, type BoardViewport } from '../../_model/board';
 import type { Output } from '../../_model/output';
@@ -12,10 +12,12 @@ import { ZoomControls } from './_components/ZoomControls';
 import { FocusedOutputModal } from './_components/board-page/FocusedOutputModal';
 import { useBoardOutputSync } from './_components/board-page/useBoardOutputSync';
 import { useBoardCardInteractions } from './_hooks/useBoardCardInteractions';
+import type { BoardCaseFilters } from './_hooks/useBoardCaseFilters';
 import { useBoardScrollPersistence } from './_hooks/useBoardScrollPersistence';
 import { BOARD_BASE_WIDTH, arrangeBoardRows, boardDisplayWidth, boardLayoutWidth, boardOuterWidthLimit, boardUnitWidth, clampBoardHeight, clampBoardWidth, resizeBoardPair, type BoardItemPlacement } from './_utils/boardGrid';
 
 type Props = {
+    caseExtractNodeIds: string[];
     tabs: AnalysisBoardTab[];
     activeBoardId: string;
     items: AnalysisBoardItem[];
@@ -36,9 +38,14 @@ type Props = {
     nodesOpen: boolean;
     onToggleNodes: () => void;
     readOnly?: boolean;
+    canManageLocks?: boolean;
+    onToggleBoardLock?: (id: string) => void;
+    caseFilters: BoardCaseFilters;
 };
 
-export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSelectBoard, onCreateBoard, onRenameBoard, onRemoveBoard, onUpdateItem, onRemoveItem, onMoveItem, onAddOutputAt, onUpdateViewport, onOpenOutputs, onSave, active, nodesOpen, onToggleNodes, readOnly = false }: Props) {
+const objectValue = (value: unknown) => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+export function BoardPage({ caseExtractNodeIds, tabs, activeBoardId, items, run, workflowDirty, onSelectBoard, onCreateBoard, onRenameBoard, onRemoveBoard, onUpdateItem, onRemoveItem, onMoveItem, onAddOutputAt, onUpdateViewport, onOpenOutputs, onSave, active, nodesOpen, onToggleNodes, readOnly = false, canManageLocks = false, onToggleBoardLock, caseFilters }: Props) {
     const [focused, setFocused] = useState<FocusedOutput | null>(null);
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -47,6 +54,8 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
     const [columns, setColumns] = useState(4);
     const [availableWidth, setAvailableWidth] = useState(1280);
     const activeTab = tabs.find((tab) => tab.id === activeBoardId);
+    const boardLocked = activeTab?.locked === true;
+    const boardReadOnly = readOnly || (boardLocked && !canManageLocks);
     const viewport = activeTab?.viewport || { x: 0, y: 0, scale: 1 };
     const boardZoom = viewport.scale;
     const layoutWidth = boardLayoutWidth(availableWidth, boardZoom);
@@ -55,8 +64,27 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
     const gridRef = useRef<HTMLDivElement | null>(null);
     const knownIds = useRef(new Set(tabs.flatMap((tab) => tab.items.map((item) => item.id))));
     const resolved = useBoardOutputSync({ items, run, workflowDirty, active, onUpdateItem });
-    const byId = useMemo(() => new Map(resolved.map((value) => [value.item.id, value])), [resolved]);
-    const interaction = useBoardCardInteractions({ items, columns, unitWidth, layoutWidth, movable: editing && !readOnly, resizable: editing && !readOnly, boardZoom, canvasRef, gridRef, onMoveItem, onUpdateItem });
+    const extractIds = useMemo(() => new Set(caseExtractNodeIds), [caseExtractNodeIds]);
+    const byId = useMemo(() => new Map(resolved.map((value) => {
+        if (!value.item.nodeId || !['review_form', 'review_stage', 'review_score', 'review_batch'].includes(value.item.outputKind)) return [value.item.id, value] as const;
+        const caseValues = caseFilters.filteredCases.reduce<Record<string, unknown>[]>((collected, item) => {
+            const results = objectValue(item.results);
+            const stages = objectValue(results.stages);
+            const saved = objectValue(stages[String(value.item.nodeId)]);
+            if (Object.keys(saved).length) collected.push({ ...saved, case_id: saved.case_id || item.case_id });
+            else if (extractIds.has(String(value.item.nodeId))) {
+                const fields = objectValue(results.fields);
+                collected.push({ schema_version: 1, case_id: item.case_id, status: item.status, stage: 'RV-003',
+                    fields: Object.keys(fields).length ? fields : objectValue(item.fields), field_labels: objectValue(results.field_labels),
+                    documents: Array.isArray(results.documents) ? results.documents : [] });
+            }
+            return collected;
+        }, []);
+        const output: Output = { kind: 'review_batch', title: value.item.outputTitle, node_id: value.item.nodeId,
+            case_count: caseValues.length, cases: caseValues };
+        return [value.item.id, { ...value, output, stale: false }] as const;
+    })), [caseFilters.filteredCases, extractIds, resolved]);
+    const interaction = useBoardCardInteractions({ items, columns, unitWidth, layoutWidth, movable: editing && !boardReadOnly, resizable: editing && !boardReadOnly, boardZoom, canvasRef, gridRef, onMoveItem, onUpdateItem });
     const layoutItems = useMemo(() => items.map((item) => {
         const preview = interaction.resizePreview;
         if (item.id === preview?.id) return { ...item, w: preview.w, h: preview.h };
@@ -84,11 +112,11 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
         observer.observe(canvas);
         return () => observer.disconnect();
     }, []);
-    useEffect(() => { if (readOnly) setEditing(false); }, [readOnly]);
+    useEffect(() => { if (boardReadOnly) setEditing(false); }, [boardReadOnly]);
     useEffect(() => {
-        if (active && !readOnly && items.some((item) => !knownIds.current.has(item.id))) setEditing(true);
+        if (active && !boardReadOnly && items.some((item) => !knownIds.current.has(item.id))) setEditing(true);
         for (const tab of tabs) for (const item of tab.items) knownIds.current.add(item.id);
-    }, [active, items, readOnly, tabs]);
+    }, [active, boardReadOnly, items, tabs]);
 
     const save = async () => {
         if (saving) return;
@@ -104,7 +132,7 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
         if (target) onMoveItem(id, { targetId: target.id, after: direction === 1 });
     }, [items, onMoveItem]);
     const resizeByKeyboard = useCallback((id: string, key: string, side: 'left' | 'right') => {
-        if (!editing || readOnly) return;
+        if (!editing || boardReadOnly) return;
         const item = items.find((entry) => entry.id === id);
         if (!item) return;
         if (key === 'ArrowLeft' || key === 'ArrowRight') {
@@ -123,25 +151,27 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
                 if (width !== item.w) onUpdateItem(id, { w: width });
             }
         } else onUpdateItem(id, { h: clampBoardHeight(item.h + (key === 'ArrowDown' ? 10 : -10)) });
-    }, [boardZoom, columns, editing, items, layoutWidth, onUpdateItem, readOnly, unitWidth]);
+    }, [boardReadOnly, boardZoom, columns, editing, items, layoutWidth, onUpdateItem, unitWidth]);
 
-    return <div className={`analysis-board ${editing ? 'is-editing' : ''} ${boardZoom < 1 ? 'is-zoomed-out' : ''} ${editing && !readOnly ? 'is-resizable' : ''} ${interaction.draggingId ? 'is-dragging' : ''}`} dir="rtl">
+    return <div className={`analysis-board ${editing ? 'is-editing' : ''} ${boardLocked ? 'is-owner-locked' : ''} ${boardZoom < 1 ? 'is-zoomed-out' : ''} ${editing && !boardReadOnly ? 'is-resizable' : ''} ${interaction.draggingId ? 'is-dragging' : ''}`} dir="rtl">
       <div className="analysis-board-chrome">
         <div className="analysis-board-heading">
-          <div className="analysis-board-title"><h2>{activeTab?.name || 'برد تحلیل'}</h2></div>
-          {!readOnly && <button className={`analysis-board-edit-button ${editing ? 'primary' : ''}`} type="button" disabled={saving} title={editing ? 'ذخیره و پایان ویرایش' : 'ویرایش'} aria-label={editing ? (saving ? 'در حال ذخیره' : 'ذخیره و پایان ویرایش') : 'ویرایش'} onClick={editing ? () => { void save(); } : () => setEditing(true)}>{editing ? <Check size={16}/> : <Pencil size={16}/>}</button>}
-          <ZoomControls value={boardZoom} onChange={setBoardZoom} label="بزرگ‌نمایی کل برد"/>
+          <div className="analysis-board-title"><h2>{activeTab?.name || 'برد تحلیل'}</h2>{boardLocked && <span className="analysis-board-lock-badge"><LockKeyhole size={13}/>قفل مالک</span>}</div>
+          {canManageLocks && activeTab && <button className={`analysis-board-lock-button ${boardLocked ? 'is-locked' : ''}`} type="button" title={boardLocked ? 'باز کردن قفل برد' : 'قفل کردن برد برای اعضای تیم'} aria-label={boardLocked ? 'باز کردن قفل برد' : 'قفل کردن برد'} onClick={() => onToggleBoardLock?.(activeTab.id)}>{boardLocked ? <LockKeyhole size={16}/> : <LockKeyholeOpen size={16}/>}</button>}
+          {!boardReadOnly && <button className={`analysis-board-edit-button ${editing ? 'primary' : ''}`} type="button" disabled={saving} title={editing ? 'ذخیره و پایان ویرایش' : 'ویرایش'} aria-label={editing ? (saving ? 'در حال ذخیره' : 'ذخیره و پایان ویرایش') : 'ویرایش'} onClick={editing ? () => { void save(); } : () => setEditing(true)}>{editing ? <Check size={16}/> : <Pencil size={16}/>}</button>}
+          <ZoomControls value={boardZoom} onChange={setBoardZoom} label="بزرگ‌نمایی کل برد" disabled={boardReadOnly}/>
         </div>
-        <BoardTabs tabs={tabs} activeBoardId={activeBoardId} editing={editing} readOnly={readOnly} nodesOpen={nodesOpen} onToggleNodes={onToggleNodes} onSelectBoard={onSelectBoard} onCreateBoard={() => { setEditing(true); onCreateBoard(); }} onRenameBoard={onRenameBoard} onRemoveBoard={setPendingDeleteId}/>
+        <BoardTabs tabs={tabs} activeBoardId={activeBoardId} editing={editing} readOnly={boardReadOnly} nodesOpen={nodesOpen} onToggleNodes={onToggleNodes} onSelectBoard={onSelectBoard} onCreateBoard={() => { setEditing(true); onCreateBoard(); }} onRenameBoard={onRenameBoard} onRemoveBoard={setPendingDeleteId}/>
       </div>
+      {boardLocked && !canManageLocks && <div className="analysis-board-locked-note"><LockKeyhole size={15}/><span>این برد توسط مالک پروژه قفل شده و فقط قابل مشاهده است.</span></div>}
       {saveError && <div className="analysis-board-save-error" role="alert">{saveError}</div>}
       <div className="analysis-board-body" onDragOver={(event) => {
-          if (readOnly || !editing || !getBoardOutputDrag()) return;
+          if (boardReadOnly || !editing || !getBoardOutputDrag()) return;
           event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'copy';
           interaction.setDropTarget(interaction.targetAt(event.clientX, event.clientY));
       }} onDragLeave={(event) => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) interaction.setDropTarget(null); }} onDrop={(event) => {
           const dragged = getBoardOutputDrag();
-          if (!dragged || readOnly || !editing) return;
+          if (!dragged || boardReadOnly || !editing) return;
           event.preventDefault(); event.stopPropagation();
           const target = interaction.targetAt(event.clientX, event.clientY);
           onAddOutputAt(dragged.output, dragged.index, target);
@@ -158,7 +188,7 @@ export function BoardPage({ tabs, activeBoardId, items, run, workflowDirty, onSe
                     const target = interaction.dropTarget?.targetId === item.id ? interaction.dropTarget : null;
                     const dropSide = target && !target.newRow ? (target.after ? 'drop-after' : 'drop-before') : '';
                     return <div key={item.id} data-board-item-id={item.id} className={`analysis-board-grid-cell ${dropSide}`} style={{ width: boardDisplayWidth(item.w, unitWidth, layoutWidth), height: item.h }}>
-                      <BoardCard item={item} output={entry?.output} stale={entry?.stale ?? false} runId={run?.id} editing={editing} movable={editing && !readOnly} resizable={editing && !readOnly} active={active} dragging={interaction.draggingId === item.id} resizing={interaction.resizePreview?.id === item.id || interaction.resizePreview?.neighborId === item.id} zoom={item.contentZoom ?? 1} onZoomChange={setCardZoom} onRemoveItem={onRemoveItem} onFocus={setFocused} onStartMove={interaction.startMove} onStartResize={interaction.startResize} onMoveKey={moveByKeyboard} onResizeKey={resizeByKeyboard}/>
+                      <BoardCard item={item} output={entry?.output} stale={entry?.stale ?? false} runId={run?.id} editing={editing} movable={editing && !boardReadOnly} resizable={editing && !boardReadOnly} active={active} dragging={interaction.draggingId === item.id} resizing={interaction.resizePreview?.id === item.id || interaction.resizePreview?.neighborId === item.id} zoom={item.contentZoom ?? 1} onZoomChange={setCardZoom} onRemoveItem={onRemoveItem} onFocus={setFocused} onStartMove={interaction.startMove} onStartResize={interaction.startResize} onMoveKey={moveByKeyboard} onResizeKey={resizeByKeyboard}/>
                     </div>;
                 })}
               </div>;

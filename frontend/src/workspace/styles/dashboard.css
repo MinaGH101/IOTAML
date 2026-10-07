@@ -113,6 +113,23 @@
 }
 .workflow-shell-page.dashboard-open .analysis-board-edit-button.primary { color: var(--theme-primary); }
 .workflow-shell-page.dashboard-open .analysis-board-edit-button:disabled { opacity: .6; cursor: wait; }
+.workflow-shell-page.dashboard-open .analysis-board-lock-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--theme-radius-control);
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+.workflow-shell-page.dashboard-open .analysis-board-lock-button:hover { background: var(--theme-panel-muted); color: var(--theme-text); }
+.workflow-shell-page.dashboard-open .analysis-board-lock-button.is-locked { border-color: color-mix(in srgb, var(--theme-warning) 35%, transparent); background: var(--theme-warning-soft); color: var(--theme-warning); }
+.workflow-shell-page.dashboard-open .analysis-board-lock-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: var(--theme-radius-pill); background: var(--theme-warning-soft); color: var(--theme-warning); font-weight: 700; }
+.workflow-shell-page.dashboard-open .analysis-board-locked-note { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 6px 14px; border-bottom: 1px solid color-mix(in srgb, var(--theme-warning) 28%, var(--theme-divider)); background: var(--theme-warning-soft); color: var(--theme-warning); font-size: 11px; font-weight: 600; }
 .workflow-shell-page.dashboard-open .analysis-board-tabs-row { flex: 0 1 auto; width: auto; max-width: 60%; height: 36px; align-items: end; justify-content: flex-start; gap: 6px; direction: ltr; }
 .workflow-shell-page.dashboard-open .analysis-board-nodes-toggle {
   display: inline-grid;

@@ -57,6 +57,7 @@ export function normalizeBoardViewport(value: unknown, fallback: BoardViewport =
 export type AnalysisBoardTab = {
     id: string;
     name: string;
+    locked?: boolean;
     items: AnalysisBoardItem[];
     viewport: BoardViewport;
     createdAt: string;

@@ -159,6 +159,41 @@
   border-color: var(--theme-secondary);
 }
 
+.bareControl {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.searchField {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: var(--theme-border-width) solid var(--theme-control-border);
+  border-radius: var(--ui-radius-control);
+  background: var(--theme-control-bg);
+  color: var(--theme-text-muted);
+}
+
+.searchLeading {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--theme-icon);
+}
+
+.searchInput {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
 .textarea {
   min-height: 84px;
   resize: vertical;

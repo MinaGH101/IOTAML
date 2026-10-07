@@ -1,6 +1,7 @@
 export type ProjectState = 'open' | 'closed';
 export type ProjectPriority = 'low' | 'medium' | 'high';
 export type ProjectAssignmentAccess = 'edit' | 'view';
+export type ProjectType = 'personal' | 'team';
 export type EffectiveProjectAccess = 'owner' | 'edit' | 'view' | 'admin';
 
 export type ProjectAssignment = {
@@ -36,6 +37,7 @@ export type Project = {
   state: ProjectState;
   priority: ProjectPriority;
   color: string;
+  project_type: ProjectType;
   owner_username: string;
   owner_display_name: string;
   assignments: ProjectAssignment[];
@@ -46,6 +48,7 @@ export type Project = {
   can_run: boolean;
   can_delete: boolean;
   can_manage_assignments: boolean;
+  can_manage_locks: boolean;
   workflow_count: number;
   dataset_count: number;
   created_at: string;
@@ -61,5 +64,6 @@ export type ProjectPayload = {
   state: ProjectState;
   priority: ProjectPriority;
   color: string;
+  project_type: ProjectType;
   assignments: ProjectAssignmentPayload[];
 };

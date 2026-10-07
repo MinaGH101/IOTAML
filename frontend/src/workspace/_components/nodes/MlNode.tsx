@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { CheckCircle2, CircleDashed, CircleX, Clock3, Database, LoaderCircle } from 'lucide-react';
+import { CheckCircle2, CircleDashed, CircleX, Clock3, Database, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { categoryClassName, nodeIcon } from '../NodePalette';
 import type { PortDefinition, RegistryNode, RunNodeStatus } from '../../../shared/types';
@@ -14,6 +14,8 @@ type EditableNodeData = Record<string, unknown> & {
     executionMode?: string;
     onRename?: (nodeId: string, label: string) => void;
     runtimeStatus?: RunNodeStatus['status'] | null;
+    ownerLocked?: boolean;
+    canEditNode?: boolean;
 };
 function shapeClass(category: string) {
     if (category === 'Visualizations' || category === 'ML Regression Models' || category === 'ML Classification Models')
@@ -52,11 +54,11 @@ function MlNodeComponent({ id, data, selected }: NodeProps) {
     const visualRuntimeStatus = runtimeStatus === 'skipped' ? null : runtimeStatus;
     const statusLabel = { queued: 'در صف', running: 'در حال اجرا', cached: 'ذخیره‌شده', succeeded: 'اجرا شد', failed: 'خطا', cancelled: 'متوقف شد' };
     const StatusIcon = runtimeStatus === 'running' ? LoaderCircle : runtimeStatus === 'succeeded' ? CheckCircle2 : runtimeStatus === 'failed' ? CircleX : runtimeStatus === 'cached' ? Database : runtimeStatus === 'queued' ? Clock3 : CircleDashed;
-    return (<div className={`ml-node ${categoryClassName(category)} ${shapeClass(category)} ${selected ? 'selected' : ''} ${nodeData.comingSoon ? 'node-coming-soon' : ''} ${visualRuntimeStatus ? `runtime-${visualRuntimeStatus}` : ''}`}>
+    return (<div className={`ml-node ${categoryClassName(category)} ${shapeClass(category)} ${selected ? 'selected' : ''} ${nodeData.ownerLocked ? 'owner-locked' : ''} ${nodeData.comingSoon ? 'node-coming-soon' : ''} ${visualRuntimeStatus ? `runtime-${visualRuntimeStatus}` : ''}`}>
       <PortHandles ports={(nodeData.inputs as PortDefinition[]) || []} type="target"/>
       <div className="node-content">
-        <div className="node-topline"><span className="node-icon">{nodeIcon(iconNode)}</span><span className="node-type-label">{typeLabel}</span></div>
-        {selected ? (<input className="node-title-input nodrag nopan" dir="ltr" value={label} aria-label="نام نود" onChange={(event) => nodeData.onRename?.(id, event.target.value)} onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}/>) : <div className="node-title">{label}</div>}
+        <div className="node-topline"><span className="node-icon">{nodeIcon(iconNode)}</span><span className="node-type-label">{typeLabel}</span>{nodeData.ownerLocked && <LockKeyhole className="node-lock-mark" size={13} aria-label="قفل‌شده توسط مالک" />}</div>
+        {selected && nodeData.canEditNode !== false ? (<input className="node-title-input nodrag nopan" dir="ltr" value={label} aria-label="نام نود" onChange={(event) => nodeData.onRename?.(id, event.target.value)} onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}/>) : <div className="node-title">{label}</div>}
         {nodeData.comingSoon && <div className="node-port-summary">به‌زودی</div>}
         {visualRuntimeStatus && (<div className={`node-runtime-state ${visualRuntimeStatus}`} role="status" aria-live="polite">
             <StatusIcon size={12} className={runtimeStatus === 'running' ? 'spin' : undefined}/>

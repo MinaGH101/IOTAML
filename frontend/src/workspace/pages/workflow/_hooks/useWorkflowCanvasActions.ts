@@ -5,6 +5,6 @@ import type { WorkflowCanvasOptions } from './workflow-canvas/types';
 export function useWorkflowCanvasActions(options: WorkflowCanvasOptions) {
     const connections = useCanvasConnections(options);
     const actions = useCanvasNodeActions(options);
-    const flowNodes = useCanvasRendering(options.nodes, options.currentRun, actions.renameNode);
+    const flowNodes = useCanvasRendering(options.nodes, options.currentRun, actions.renameNode, options.canManageLocks);
     return { ...connections, ...actions, flowNodes };
 }

@@ -22,13 +22,14 @@ type Props = {
 };
 
 export function NodeInputsPanel({ groups, portCompatibility, onInputSourceHandleChange, onAddOutputToBoard }: Props) {
+  const hasSingleInput = groups.length === 1 && groups[0].sourceHasRun && groups[0].visibleOutputs.length === 1;
   return (
     <section className="node-modal-section workflow-shell-card n8n-node-panel n8n-io-panel n8n-input-panel">
       <div className="section-title n8n-panel-title">ورودی</div>
-      <div className="n8n-panel-body">
+      <div className={`n8n-panel-body${hasSingleInput ? ' has-single-input' : ''}`}>
         {groups.length === 0 && <div className="empty-state n8n-empty-state">داده ورودی وجود ندارد<br /><small>نود را به یک خروجی قبلی وصل کنید.</small></div>}
         {groups.map(({ edge, sourceNode, sourceDefinition, sourcePorts, targetPort, selectedHandle, sourceHasRun, visibleOutputs }) => (
-          <div className="node-input-source workflow-shell-card" key={edge.id}>
+          <div className="node-input-source" key={edge.id}>
             <div className="node-input-source-head">
               <span><b>{String(sourceNode?.data?.label || sourceDefinition?.label || edge.source)}</b><small>{String(edge.targetHandle || 'input')}</small></span>
               {sourcePorts.length > 1 && <em>انتخاب خروجی ورودی</em>}

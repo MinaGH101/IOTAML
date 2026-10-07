@@ -702,6 +702,7 @@ class AssistantService:
                     db=db,
                     workflow_id=workflow_id,
                     owner_username=owner_username,
+                    actor_username=current_user.username,
                     operations=[
                         item for item in operations
                         if isinstance(item, dict)

@@ -12,6 +12,7 @@ from app.core.time import utcnow_naive
 ACCESS_EDIT = 'edit'
 ACCESS_VIEW = 'view'
 PROJECT_ACCESS_TYPES = {ACCESS_EDIT, ACCESS_VIEW}
+PROJECT_TYPES = {'personal', 'team'}
 
 
 class Project(Base):
@@ -27,6 +28,7 @@ class Project(Base):
     priority: Mapped[str] = mapped_column(String(32), nullable=False, default='medium')
     color: Mapped[str] = mapped_column(String(32), nullable=False, default='#31cde3')
     owner_username: Mapped[str] = mapped_column(String(320), nullable=False, default='admin', index=True)
+    project_type: Mapped[str] = mapped_column(String(16), nullable=False, default='personal', index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
 

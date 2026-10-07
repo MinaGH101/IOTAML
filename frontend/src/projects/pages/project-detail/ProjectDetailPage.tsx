@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Trash2 } from 'lucide-react';
+import { ClipboardList, Save, Trash2 } from 'lucide-react';
 import { AppTopNav } from '../../../shared/components';
 import { Button, ConfirmDialog } from '../../../shared/ui';
 import { ProjectMessage } from '../../components/ProjectMessage';
@@ -27,10 +27,13 @@ export function ProjectDetailPage(props: ProjectDetailPageProps) {
             {/* <p>ویرایش اطلاعات، داده‌ها و جریان‌های پروژه</p> */}
           </div>
         </div>
-        {props.project.can_edit && <div className="project-heading-actions">
-          <Button variant="primary" loading={c.saving} leadingIcon={<Save size={15} />} onClick={c.save}>ذخیره تغییرات</Button>
-          {props.project.can_delete && <Button variant="danger" disabled={c.saving} leadingIcon={<Trash2 size={15} />} onClick={() => c.setDeleteOpen(true)}>حذف پروژه</Button>}
-        </div>}
+        <div className="project-heading-actions">
+          <a className="project-tasks-link" href={`/review-dashboard?project_id=${props.project.id}`} aria-label="مدیریت پرونده‌ها و نتایج این پروژه"><ClipboardList size={16} aria-hidden="true" /><span>پرونده‌ها و نتایج</span></a>
+          {props.project.can_edit && <>
+            <Button variant="primary" loading={c.saving} leadingIcon={<Save size={15} />} onClick={c.save}>ذخیره تغییرات</Button>
+            {props.project.can_delete && <Button variant="danger" disabled={c.saving} leadingIcon={<Trash2 size={15} />} onClick={() => c.setDeleteOpen(true)}>حذف پروژه</Button>}
+          </>}
+        </div>
       </header>
       <div className="project-detail-form-scroll">
         <section className="project-detail-reference-layout">

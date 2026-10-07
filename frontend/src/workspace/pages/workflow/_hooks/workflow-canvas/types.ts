@@ -17,6 +17,7 @@ export type WorkflowCanvasOptions = {
     datasets: Dataset[];
     datasetId: number | null;
     readOnly: boolean;
+    canManageLocks: boolean;
     currentRun: Run | null;
     resultsWidth: number;
     paletteCollapsed: boolean;

@@ -44,7 +44,7 @@ def _disable_network() -> None:
 
 
 def _sanitize_environment(work_dir: Path) -> None:
-    allowed = {'PATH', 'PYTHONPATH', 'LANG', 'LC_ALL', 'TZ', 'STORAGE_DIR', 'JOB_NETWORK_DISABLED', 'IOTA_CUSTOM_NODE_SNAPSHOT', 'OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'NUMEXPR_NUM_THREADS'}
+    allowed = {'PATH', 'PYTHONPATH', 'LANG', 'LC_ALL', 'TZ', 'STORAGE_DIR', 'JOB_NETWORK_DISABLED', 'IOTA_CUSTOM_NODE_SNAPSHOT', 'OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'NUMEXPR_NUM_THREADS', 'OPENAI_API_KEY', 'OPENAI_BASE_URL', 'IOTA_OCR_MODEL', 'IOTA_REVIEW_MODEL'}
     for key in list(os.environ):
         if key not in allowed:
             os.environ.pop(key, None)
@@ -129,6 +129,10 @@ def execute(snapshot_path: Path, result_path: Path, progress_path: Path, cancel_
             snapshot.get('project_id'),
             snapshot.get('run_id'),
             dataset_path=snapshot.get('dataset_path'),
+            artifact_paths=snapshot.get('artifact_paths') or {},
+            artifact_metadata=snapshot.get('artifact_metadata') or {},
+            review_task_data=snapshot.get('review_task_data') or {},
+            work_task_data=snapshot.get('work_task_data') or {},
             selected_node_id=snapshot.get('selected_node_id'),
             run_path=snapshot.get('run_path'),
             progress_callback=progress_callback,

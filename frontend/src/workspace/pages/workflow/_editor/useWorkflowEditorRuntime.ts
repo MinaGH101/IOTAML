@@ -28,7 +28,7 @@ export function useWorkflowEditorRuntime({ initialWorkflowId }: WorkflowPageProp
         datasetId: base.datasets.datasetId, aliases: base.catalog.aliases, selectedNodeId: graph.selectedId, modalNodeId: graph.modalNodeId, outputs: persistedOutputSignature === data.document.currentOutputSignature ? outputs : [] });
     const boardDialogs = useBoardDialogs({ activeBoard: data.boards.activeBoard, readOnly: base.readOnly, renameBoard: data.boards.renameBoard, removeBoard: data.boards.removeBoard });
     const canvas = useWorkflowCanvasActions({ nodes: graph.nodes, setNodes: graph.setNodes, edges: graph.edges, setEdges: graph.setEdges, registry: base.catalog.nodes,
-        catalog: base.catalog, datasets: base.datasets.datasets, datasetId: base.datasets.datasetId, readOnly: base.readOnly, currentRun: runs.displayRun, resultsWidth: base.resultsWidth, paletteCollapsed: shell.paletteCollapsed,
+        catalog: base.catalog, datasets: base.datasets.datasets, datasetId: base.datasets.datasetId, readOnly: base.readOnly, canManageLocks: base.canManageLocks, currentRun: runs.displayRun, resultsWidth: base.resultsWidth, paletteCollapsed: shell.paletteCollapsed,
         resultsCollapsed: shell.resultsCollapsed, screenToFlowPosition: base.flow.screenToFlowPosition, fitView: base.flow.fitView, setMessage: base.setMessage,
         setResultsCollapsed: shell.setResultsCollapsed, setSelectedId: graph.setSelectedId, setSelectedIds: graph.setSelectedIds, setSelectedEdgeId: graph.setSelectedEdgeId,
         setSelectedEdgeIds: graph.setSelectedEdgeIds, setModalNodeId: graph.setModalNodeId, selectNode: graph.selectNode, enterComponentNode: data.components.enterNode,

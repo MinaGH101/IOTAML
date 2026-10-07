@@ -15,6 +15,8 @@ const CreateProjectPage = lazy(() => import('../projects/pages/create-project/Cr
 const ProjectManagementPage = lazy(() => import('../projects/pages/project-management/ProjectManagementPage').then((module) => ({ default: module.ProjectManagementPage })));
 const ProjectDetailPage = lazy(() => import('../projects/pages/project-detail/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
 const WorkflowPage = lazy(() => import('../workspace/pages/workflow/WorkflowPage').then((module) => ({ default: module.WorkflowPage })));
+const TaskInboxPage = lazy(() => import('../review-tasks/TaskInboxPage').then((module) => ({ default: module.TaskInboxPage })));
+const ReviewDashboardPage = lazy(() => import('../review-tasks/ReviewDashboardPage').then((module) => ({ default: module.ReviewDashboardPage })));
 
 function LoadingPage({ message = 'در حال بارگذاری...' }: { message?: string }) {
   return <div className="app-shell loading-page" dir="rtl"><RefreshCw className="spin" size={22} /> {message}</div>;
@@ -56,6 +58,8 @@ function RoutedApplication() {
   if (routeProjectId && !project) return <LoadingPage message="در حال دریافت پروژه..." />;
 
   const content = (() => {
+    if (route.name === 'review-tasks') return <TaskInboxPage />;
+    if (route.name === 'review-dashboard') return <ReviewDashboardPage />;
     if (route.name === 'admin') {
       if (user.role !== 'admin') return <ProjectManagementPage user={user} onOpenProject={(nextProject) => { setProjectOverride(nextProject); navigate({ name: 'project', projectId: nextProject.id }); }} onCreateProject={() => navigate({ name: 'create-project' })} onProfile={() => navigate({ name: 'profile' })} onAdmin={() => navigate({ name: 'admin' })} onLogout={logout} />;
       return <AdminPage user={user} onBack={() => back({ name: 'projects' })} onProjects={() => navigate({ name: 'projects' })} onProfile={() => navigate({ name: 'profile' })} onLogout={logout} />;

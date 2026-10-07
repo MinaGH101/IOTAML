@@ -1,21 +1,35 @@
 """Project API routes."""
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.domains.auth.models import ROLE_ADMIN, ROLE_MANAGER, User
+from app.domains.auth.models import ROLE_GUEST, User
 from app.domains.auth.service import get_current_user_model, normalize_role
 from app.domains.projects.schemas import ProjectCreate, ProjectOut, ProjectUpdate
 from app.domains.projects.service import acknowledge_assignment, create_project, delete_project, get_project, list_projects, to_output, update_project
+from app.domains.projects.access import require_project_edit
+from app.domains.projects.models import ProjectAssignment
 
 router = APIRouter(prefix='/projects', tags=['projects'])
 
 
+@router.get('/{project_id}/review-assignees')
+def review_assignees(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
+    project, _ = require_project_edit(db, project_id, current_user)
+    assigned = select(ProjectAssignment.user_id).where(ProjectAssignment.project_id == project_id)
+    users = db.scalars(select(User).where(User.is_active.is_(True), or_(
+        func.lower(User.username) == project.owner_username.lower(),
+        User.id.in_(assigned),
+    )).order_by(User.first_name, User.last_name, User.username).limit(200)).all()
+    return [{'username': user.username, 'display_name': f'{user.first_name} {user.last_name}'.strip() or user.username,
+             'role': normalize_role(user.role)} for user in users]
+
+
 @router.get('/assignable-users')
 def assignable_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user_model)):
-    if normalize_role(current_user.role) not in {ROLE_ADMIN, ROLE_MANAGER}:
+    if normalize_role(current_user.role) == ROLE_GUEST:
         return []
     users = db.scalars(select(User).where(User.is_active.is_(True), User.id != current_user.id).order_by(User.first_name, User.last_name, User.username)).all()
     return [{'id': user.id, 'username': user.username, 'display_name': f'{user.first_name} {user.last_name}'.strip() or user.username, 'role': normalize_role(user.role)} for user in users]

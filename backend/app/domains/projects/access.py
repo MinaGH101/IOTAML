@@ -45,15 +45,15 @@ def permission_for_project(db: Session, project: Project, user: User) -> Project
         return ProjectPermission('owner', 'owned')
     if role == ROLE_ADMIN:
         return ProjectPermission('admin', 'admin')
-    # Managers have organization-wide read-only visibility outside projects they own.
-    # Project assignments must never elevate that global manager policy.
-    if role == ROLE_MANAGER:
-        return ProjectPermission('view', 'manager_visibility')
     assignment = db.scalar(select(ProjectAssignment).where(ProjectAssignment.project_id == project.id, ProjectAssignment.user_id == user.id))
     if assignment:
         # A stale or manually edited assignment must never elevate a guest.
         access = ACCESS_VIEW if role == ROLE_GUEST else assignment.access_type
         return ProjectPermission(access, 'assigned', assignment.is_new)
+    # Managers retain organization-wide visibility, while an explicit team
+    # assignment above can grant edit access to a specific project.
+    if role == ROLE_MANAGER:
+        return ProjectPermission('view', 'manager_visibility')
     return None
 
 

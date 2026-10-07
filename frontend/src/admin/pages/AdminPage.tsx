@@ -3,6 +3,7 @@ import { FolderKanban, Plus, RefreshCw, Save, Search, ShieldCheck, Trash2, UserR
 import type { AdminUser, AdminUserPayload, UserProfile, UserRole } from '../../shared/_types';
 import { AppTopNav } from '../../shared/_components/AppTopNav';
 import { formatDate, messageFromError, type UiMessage } from '../../shared/_utils/appShared';
+import { SearchField } from '../../shared/ui';
 import { adminApi, type AdminUserDetail } from '../_service/adminApi';
 
 const emptyDraft: AdminUserPayload = { username: '', email: '', password: '', first_name: '', last_name: '', phone_number: '', title: '', department: '', role: 'expert', is_active: true };
@@ -66,7 +67,7 @@ export function AdminPage({ user, onBack, onProjects, onProfile, onLogout }: { u
       <section className="admin-layout">
         <aside className="manager-panel admin-users-panel">
           <div className="admin-panel-head"><div><ShieldCheck size={18} /><span><b>کاربران</b><small>{users.length.toLocaleString('fa-IR')} حساب</small></span></div><button className="primary" type="button" onClick={beginCreate}><Plus size={15} /> کاربر جدید</button></div>
-          <div className="project-filter-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جستجوی نام، ایمیل یا نقش" /></div>
+          <SearchField containerClassName="project-filter-search" leading={<Search size={16} />} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جستجوی نام، ایمیل یا نقش" aria-label="جستجوی کاربران" />
           <div className="admin-user-list">{filtered.map((item) => <button key={item.id} className={`admin-user-row ${selected?.user.id === item.id ? 'active' : ''}`} type="button" onClick={() => void openUser(item)}><span className="admin-user-avatar"><UserRound size={16} /></span><span><b>{`${item.first_name} ${item.last_name}`.trim() || item.username}</b><small>{item.username}</small></span><span className={`role-badge role-${item.role}`}>{roleLabel(item.role)}</span><small>{item.owned_project_count + item.assigned_project_count} پروژه</small></button>)}</div>
         </aside>
         <section className="manager-panel admin-editor-panel">

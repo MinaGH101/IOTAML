@@ -34,12 +34,16 @@ export type NodeModalProps = {
         enabled?: boolean;
         sample?: string;
     }) => void;
+    onNavigateToNode: (nodeId: string) => void;
     onAddOutputToBoard?: (output: Output, index: number) => void;
     onInputSourceHandleChange: (edgeId: string, sourceHandle: string) => void;
     onClose: () => void;
 };
-export function NodeModal({ node, workflowNodes, edges, registry, aliases, portCompatibility, datasets, availableColumns, availableIdColumns = [], inheritedIdColumn = null, availableRows = [], run, busy, onRunNode, onCancelRun, onParamsChange, onRename, onPinnedChange, onAddOutputToBoard, onInputSourceHandleChange, onClose }: NodeModalProps) {
+export function NodeModal({ node, workflowNodes, edges, registry, aliases, portCompatibility, datasets, availableColumns, availableIdColumns = [], inheritedIdColumn = null, availableRows = [], run, busy, onRunNode, onCancelRun, onParamsChange, onRename, onPinnedChange, onNavigateToNode, onAddOutputToBoard, onInputSourceHandleChange, onClose }: NodeModalProps) {
     const { gridRef, columns, beginResize } = useResizableColumns();
+    const currentNodeIndex = workflowNodes.findIndex((item) => item.id === node.id);
+    const previousNode = currentNodeIndex > 0 ? workflowNodes[currentNodeIndex - 1] : null;
+    const nextNode = currentNodeIndex >= 0 && currentNodeIndex < workflowNodes.length - 1 ? workflowNodes[currentNodeIndex + 1] : null;
     const incoming = edges.filter((edge) => edge.target === node.id);
     const inputDataframes = incoming.map((edge) => {
         const sourceNode = workflowNodes.find((item) => item.id === edge.source);
@@ -84,7 +88,7 @@ export function NodeModal({ node, workflowNodes, edges, registry, aliases, portC
     };
     return (<div className="node-modal-backdrop workflow-shell-backdrop n8n-node-backdrop" onClick={onClose}>
       <div className={`node-modal workflow-shell-popup n8n-node-modal ${categoryClassName(String(node.data.category || 'Data Input'))}`} role="dialog" aria-modal="true" aria-label={`تنظیمات ${String(node.data.label || '')}`} onClick={(event) => event.stopPropagation()}>
-        <NodeDialogHeader node={node} typeLabel={String(node.data.typeLabel || node.data.label || '')} category={String(node.data.category || 'Data Input')} busy={busy} onRunNode={onRunNode} onCancelRun={onCancelRun} onRename={onRename} onClose={onClose}/>
+        <NodeDialogHeader node={node} typeLabel={String(node.data.typeLabel || node.data.label || '')} category={String(node.data.category || 'Data Input')} busy={busy} onRunNode={onRunNode} onCancelRun={onCancelRun} onRename={onRename} onPreviousNode={previousNode ? () => onNavigateToNode(previousNode.id) : undefined} onNextNode={nextNode ? () => onNavigateToNode(nextNode.id) : undefined} onClose={onClose}/>
         <div ref={gridRef} className="node-modal-grid n8n-node-grid n8n-node-grid-resizable" style={{ '--output-fr': `${columns.output}fr`, '--settings-fr': `${columns.settings}fr`, '--input-fr': `${columns.input}fr` } as CSSProperties}>
           <NodeOutputsPanel hasRun={currentHasRun} outputs={currentOutputs} onAddToBoard={onAddOutputToBoard} onInteractiveTableChange={updateInteractiveTable}/>
           <div className="n8n-column-resizer" role="separator" aria-label="تغییر عرض خروجی و تنظیمات" onPointerDown={(event) => beginResize('output', 'settings', event)}/>

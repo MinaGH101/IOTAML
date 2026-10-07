@@ -32,7 +32,8 @@ def test_assistant_uses_configured_base_url() -> None:
 
 
 def test_assistant_defaults_to_openai_base_url(monkeypatch) -> None:
-    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.setattr("app.domains.assistant.service.get_settings", lambda: SimpleNamespace(
+        openai_model="gpt-4o-mini", openai_base_url="", openai_api_key=""))
     service = AssistantService(api_key="test-key")
 
     assert service.base_url == "https://api.openai.com/v1"

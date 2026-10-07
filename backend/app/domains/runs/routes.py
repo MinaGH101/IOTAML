@@ -42,9 +42,11 @@ from app.domains.workflows.models import Workflow
 from app.domains.projects.access import require_project_run, require_project_view
 from app.domains.projects.models import Project, ProjectAssignment
 from app.domains.datasets.models import Dataset
+from app.domains.cases.models import CaseRecord
 from app.domains.runs.schemas import RunCreate, RunOut, RunSummaryOut
 from app.workflow.compatibility import normalize_graph
 from app.workflow.planning import build_execution_plan
+from app.domains.workflows.locks import enforce_locked_execution
 from app.domains.runs.service import (
     TERMINAL_STATUSES, append_log, enqueue_run, enforce_run_quotas, find_idempotent_run,
     initial_node_statuses, progress_payload, queue_retry,
@@ -199,6 +201,11 @@ def create_run(
         project, _ = require_project_run(db, payload.project_id, current_user)
         resource_owner = project.owner_username
 
+    if payload.case_record_id is not None:
+        case_record = db.get(CaseRecord, payload.case_record_id)
+        if not case_record or case_record.project_id != payload.project_id:
+            raise HTTPException(status_code=404, detail='Case not found in this project.')
+
     if payload.dataset_id is not None:
         dataset = db.get(Dataset, payload.dataset_id)
         if not dataset:
@@ -245,6 +252,10 @@ def create_run(
         # structured validation-error format.
         raise ValidationAppError('WORKFLOW_PLAN_INVALID', str(exc), {}) from exc
 
+    if payload.project_id is not None:
+        enforce_locked_execution(execution_plan.graph, owner_username=resource_owner,
+                                 actor_username=current_user.username)
+
     # Validate the graph that will actually execute, not merely the original
     # submitted graph. This matters for selected-node execution plans.
     validation = validate_workflow_graph(execution_plan.graph)
@@ -277,6 +288,8 @@ def create_run(
         workflow_revision=workflow_revision,
         dataset_id=payload.dataset_id,
         project_id=payload.project_id,
+        case_record_id=payload.case_record_id,
+        case_stage=payload.case_stage,
         owner_username=resource_owner,
         target_column=payload.target_column,
         task_type=payload.task_type,

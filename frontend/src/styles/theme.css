@@ -762,6 +762,29 @@ background: none !important;
   font-size: 13px !important;
   line-height: 1.5;
 }
+:root input[data-ui-bare="true"] {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+:root input[data-ui-bare="true"]:hover,
+:root input[data-ui-bare="true"]:focus,
+:root input[data-ui-bare="true"]:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+:root [data-ui-search-field="true"]:focus-within {
+  border-color: var(--theme-primary) !important;
+  outline: 1px solid var(--theme-primary-soft);
+  outline-offset: 1px;
+}
 :root :is(.project-filter-search, .assignment-picker-search, .node-palette .palette-search):focus-within {
   border-color: var(--theme-primary) !important;
   outline: 1px solid var(--theme-primary-soft);

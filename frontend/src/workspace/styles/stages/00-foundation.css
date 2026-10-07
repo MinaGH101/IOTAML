@@ -753,28 +753,183 @@ transform:rotate(-45deg)
 direction:rtl;
 color:var(--theme-text-secondary)
 }
-.pill-picker {
-max-height:170px;
-overflow:auto;
+.multi-select {
+position:relative;
+min-width:0;
+z-index:1
+}
+.multi-select.is-open {
+z-index:30
+}
+.multi-select-control {
+min-height:38px;
 display:flex;
+align-items:stretch;
+gap:5px;
+padding:4px;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-control);
+background:var(--theme-control-bg)
+}
+.multi-select.is-open .multi-select-control,
+.multi-select-control:focus-within {
+border-color:var(--theme-primary);
+box-shadow:0 0 0 3px var(--theme-primary-soft)
+}
+.multi-select-values {
+min-width:0;
+flex:1;
+display:flex;
+align-items:center;
+align-content:center;
 flex-wrap:wrap;
+gap:4px
+}
+.multi-select-placeholder {
+padding:0 7px;
+color:var(--theme-placeholder);
+font-size:12px
+}
+.multi-select-pill {
+min-width:0;
+min-height:26px;
+display:inline-flex;
+align-items:center;
+gap:4px;
+padding:3px 7px;
+border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-primary) 30%,var(--theme-control-border));
+border-radius:var(--theme-radius-pill);
+background:var(--theme-primary-soft);
+color:var(--theme-primary);
+font-size:11px
+}
+.multi-select-pill > span {
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+.multi-select-pill svg {
+flex:0 0 auto
+}
+.multi-select-toggle {
+width:30px;
+min-width:30px;
+display:grid;
+place-items:center;
+padding:0;
+border:0;
+border-radius:var(--theme-radius-control);
+background:transparent;
+color:var(--theme-icon)
+}
+.multi-select-toggle:hover {
+background:var(--theme-hover-bg);
+color:var(--theme-primary)
+}
+.multi-select.is-open .multi-select-toggle svg {
+transform:rotate(180deg)
+}
+.multi-select-menu {
+position:absolute;
+z-index:40;
+inset-inline:0;
+top:calc(100% + 6px);
+display:grid;
 gap:7px;
 padding:8px;
-border:var(--theme-border-width) solid var(--theme-divider);
+border:var(--theme-border-width) solid var(--theme-control-border);
 border-radius:var(--theme-radius-panel);
-background:color-mix(in srgb,var(--theme-control-bg) 64%,var(--theme-transparent))
+background:var(--theme-popup-bg);
+box-shadow:0 12px 30px color-mix(in srgb,var(--theme-black) 16%,transparent)
 }
-.choice-pill {
-min-height:29px;
-border:var(--theme-border-width) solid color-mix(in srgb,var(--theme-control-border) 75%,var(--theme-transparent));
-background:color-mix(in srgb,var(--theme-popup-bg) 76%,var(--theme-transparent));
-color:var(--theme-text-secondary);
-border-radius:var(--theme-radius-pill);
-padding:6px 10px;
-font-size:10.5px;
-font-weight:400;
-direction:ltr;
-max-width:100%
+.multi-select-menu-head {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+padding:0 2px
+}
+.multi-select-menu-head small {
+color:var(--theme-text-muted)
+}
+.multi-select-menu-head button {
+padding:2px 4px;
+border:0;
+background:transparent;
+color:var(--theme-primary);
+font-size:11px
+}
+.multi-select-search {
+min-height:34px!important
+}
+.multi-select-options {
+max-height:210px;
+display:grid;
+gap:2px;
+overflow:auto
+}
+.multi-select-options > button {
+width:100%;
+min-height:34px;
+display:flex;
+align-items:center;
+gap:8px;
+padding:6px 7px;
+border:0;
+border-radius:var(--theme-radius-control);
+background:transparent;
+color:var(--theme-text);
+font-size:12px;
+text-align:start
+}
+.multi-select-options > button:hover,
+.multi-select-options > button.is-selected {
+background:var(--theme-primary-soft);
+color:var(--theme-primary)
+}
+.multi-select-options > button:disabled {
+cursor:not-allowed;
+opacity:.48
+}
+.multi-select-check {
+width:17px;
+height:17px;
+flex:0 0 17px;
+display:grid;
+place-items:center;
+border:var(--theme-border-width) solid var(--theme-control-border);
+border-radius:var(--theme-radius-compact)
+}
+.multi-select-options > button.is-selected .multi-select-check {
+border-color:var(--theme-primary);
+background:var(--theme-primary);
+color:var(--theme-white)
+}
+.multi-select-option-text {
+min-width:0;
+display:grid;
+gap:1px;
+text-align:start
+}
+.multi-select-option-text b,
+.multi-select-option-text small {
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+.multi-select-option-text small {
+color:var(--theme-text-muted);
+font-size:10px;
+font-weight:400
+}
+.multi-select-empty {
+margin:4px 0;
+padding:8px;
+color:var(--theme-text-muted);
+font-size:12px;
+text-align:center
 }
 .results-title {
 display:flex;
