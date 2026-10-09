@@ -15,6 +15,7 @@ import { useBoardCardInteractions } from './_hooks/useBoardCardInteractions';
 import type { BoardCaseFilters } from './_hooks/useBoardCaseFilters';
 import { useBoardScrollPersistence } from './_hooks/useBoardScrollPersistence';
 import { BOARD_BASE_WIDTH, arrangeBoardRows, boardDisplayWidth, boardLayoutWidth, boardOuterWidthLimit, boardUnitWidth, clampBoardHeight, clampBoardWidth, resizeBoardPair, type BoardItemPlacement } from './_utils/boardGrid';
+import { reviewBatchStage } from './_utils/reviewBatchOutput';
 
 type Props = {
     caseExtractNodeIds: string[];
@@ -66,6 +67,23 @@ export function BoardPage({ caseExtractNodeIds, tabs, activeBoardId, items, run,
     const resolved = useBoardOutputSync({ items, run, workflowDirty, active, onUpdateItem });
     const extractIds = useMemo(() => new Set(caseExtractNodeIds), [caseExtractNodeIds]);
     const byId = useMemo(() => new Map(resolved.map((value) => {
+        const hasActiveCaseFilters = caseFilters.selectedCaseId !== null || Boolean(caseFilters.caseSearch) || Boolean(caseFilters.caseStatus) || Boolean(caseFilters.caseMinScore);
+        if (value.item.outputKind === 'work_task_result') {
+            if (!hasActiveCaseFilters) return [value.item.id, value] as const;
+            const allowedCaseIds = new Set(caseFilters.filteredCases.map((item) => item.case_id));
+            const responses = Array.isArray(value.output.responses)
+                ? value.output.responses.filter((response): response is Record<string, unknown> => Boolean(response) && typeof response === 'object' && !Array.isArray(response))
+                : [];
+            const filteredResponses = responses.filter((response) => allowedCaseIds.has(String(response.subject_id || value.output.subject_id || '')));
+            const output: Output = {
+                ...value.output,
+                responses: filteredResponses,
+                subject_ids: filteredResponses.map((response) => String(response.subject_id || '')).filter(Boolean),
+                assigned: filteredResponses.length,
+                completed: filteredResponses.filter((response) => response.status === 'completed').length,
+            };
+            return [value.item.id, { ...value, output, stale: false }] as const;
+        }
         if (!value.item.nodeId || !['review_form', 'review_stage', 'review_score', 'review_batch'].includes(value.item.outputKind)) return [value.item.id, value] as const;
         const caseValues = caseFilters.filteredCases.reduce<Record<string, unknown>[]>((collected, item) => {
             const results = objectValue(item.results);
@@ -81,6 +99,7 @@ export function BoardPage({ caseExtractNodeIds, tabs, activeBoardId, items, run,
             return collected;
         }, []);
         const output: Output = { kind: 'review_batch', title: value.item.outputTitle, node_id: value.item.nodeId,
+            stage: reviewBatchStage(caseValues, value.output),
             case_count: caseValues.length, cases: caseValues };
         return [value.item.id, { ...value, output, stale: false }] as const;
     })), [caseFilters.filteredCases, extractIds, resolved]);

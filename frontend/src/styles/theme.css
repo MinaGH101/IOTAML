@@ -252,6 +252,7 @@ color-scheme: light;
   --category-model-analysis: var(--theme-success);
   --category-export: var(--theme-warning);
   --category-user-nodes: var(--theme-secondary);
+  --category-ai-tools: #ec4899;
 }
 .cat-data-entry,
 .cat-data-input {
@@ -280,6 +281,9 @@ color-scheme: light;
 .cat-model-design-train,
 .cat-ml-model-design-and-training {
 --node-category-color: var(--category-model-training); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
+}
+.cat-ai-tools {
+--node-category-color: var(--category-ai-tools); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);
 }
 .cat-ml-regression-models {
 --node-category-color: var(--category-model-regression); --node-category-soft: color-mix(in srgb, var(--node-category-color) 12%, transparent);

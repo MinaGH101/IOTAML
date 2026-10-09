@@ -28,6 +28,7 @@ from app.domains.projects.models import Project
 from app.domains.runs.models import Run
 from app.domains.workflows.models import Workflow, WorkflowVersion
 from app.workflow.caching.keys import sha256_json
+from app.workflow.compatibility import upgrade_editable_graph
 from app.infrastructure.queue.state import utcnow
 from app.workflow.validation.service import validate_workflow_graph
 
@@ -212,10 +213,11 @@ def create_workflow(db: Session, payload: WorkflowCreate, owner_username: str) -
         PermissionDeniedError:
             When the selected project belongs to another user.
     """
-    _assert_valid_draft(payload.graph)
+    graph = upgrade_editable_graph(payload.graph)
+    _assert_valid_draft(graph)
     _assert_project_access(db, payload.project_id, owner_username)
 
-    graph_hash = sha256_json(payload.graph)
+    graph_hash = sha256_json(graph)
     last_run_id = _validated_last_run_id(
         db,
         run_id=payload.last_run_id,
@@ -225,7 +227,7 @@ def create_workflow(db: Session, payload: WorkflowCreate, owner_username: str) -
 
     workflow = Workflow(
         name=payload.name.strip(),
-        graph=payload.graph,
+        graph=graph,
         project_id=payload.project_id,
         owner_username=owner_username,
         revision=1,
@@ -302,7 +304,8 @@ def update_workflow(
         PermissionDeniedError:
             When the selected project is not owned by the user.
     """
-    _assert_valid_draft(payload.graph)
+    graph = upgrade_editable_graph(payload.graph)
+    _assert_valid_draft(graph)
     _assert_project_access(db, payload.project_id, owner_username)
 
     workflow = get_workflow(db, workflow_id, owner_username)
@@ -316,7 +319,7 @@ def update_workflow(
                 "server_graph_hash": workflow.graph_hash,
             },
         )
-    graph_hash = sha256_json(payload.graph)
+    graph_hash = sha256_json(graph)
     last_run_id = _validated_last_run_id(
         db,
         run_id=payload.last_run_id,
@@ -335,7 +338,7 @@ def update_workflow(
     if changed:
         workflow.revision += 1
         workflow.name = payload.name.strip()
-        workflow.graph = payload.graph
+        workflow.graph = graph
         workflow.project_id = payload.project_id
         workflow.graph_hash = graph_hash
         workflow.last_run_id = last_run_id
@@ -488,16 +491,18 @@ def autosave_workflow(
         PermissionDeniedError:
             When project access is invalid.
     """
-    _assert_valid_draft(payload.graph)
+    submitted_graph_hash = sha256_json(payload.graph)
+    graph = upgrade_editable_graph(payload.graph)
+    _assert_valid_draft(graph)
     _assert_project_access(db, payload.project_id, owner_username)
 
     workflow = get_workflow(db, workflow_id, owner_username)
-    graph_hash = sha256_json(payload.graph)
+    graph_hash = sha256_json(graph)
     # The latest successful run is execution state owned by the server. Draft
     # autosave must never clear or roll it back with a stale browser snapshot.
 
     # The client's claimed hash must describe the exact submitted graph.
-    if payload.client_graph_hash and payload.client_graph_hash != graph_hash:
+    if payload.client_graph_hash and payload.client_graph_hash != submitted_graph_hash:
         raise ValidationAppError(
             "GRAPH_HASH_MISMATCH",
             "Client workflow hash does not match the submitted graph.",
@@ -528,7 +533,7 @@ def autosave_workflow(
 
     workflow.revision += 1
     workflow.name = payload.name.strip()
-    workflow.graph = payload.graph
+    workflow.graph = graph
     workflow.project_id = payload.project_id
     workflow.graph_hash = graph_hash
     workflow.last_autosaved_at = utcnow()
@@ -735,10 +740,11 @@ def restore_version(
     version = get_version(db, workflow_id, version_id, owner_username)
 
     # Defensive validation protects against restoring legacy/corrupt snapshots.
-    _assert_valid_draft(version.graph)
+    graph = upgrade_editable_graph(version.graph)
+    _assert_valid_draft(graph)
 
-    workflow.graph = version.graph
-    workflow.graph_hash = version.graph_hash
+    workflow.graph = graph
+    workflow.graph_hash = sha256_json(graph)
     workflow.last_run_id = version.run_id
     workflow.revision += 1
     workflow.last_autosaved_at = utcnow()

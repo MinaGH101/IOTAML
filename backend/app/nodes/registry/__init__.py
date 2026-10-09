@@ -70,10 +70,13 @@ from app.nodes.utilities.passthrough_node import PassThroughNode
 from app.nodes.utilities.merge_dataframes_node import MergeDataFramesNode
 from app.nodes.utilities.interactive_table_node import InteractiveTableNode
 from app.nodes.review.nodes import (
-    CaseIntakeNode, ReviewFormNode, DocumentExtractNode, CaseValidationNode,
+    CaseIntakeNode, DocumentOcrNode, DocumentExtractNode, ReviewFormNode, CaseValidationNode,
     AIReviewNode, RecordReviewNode, ScoreAggregationNode, DecisionNode, AssignReviewNode, LoadReviewResponsesNode,
 )
-from app.nodes.tasks.nodes import AssignWorkTaskNode, LoadWorkResponsesNode
+from app.nodes.tasks.nodes import (
+    AssignWorkTaskNode, LoadWorkResponsesNode, GeneralAssignmentNode,
+    ApprovalAssignmentNode, FormAssignmentNode,
+)
 
 EXACT_CATEGORIES = [
     'Data Input',
@@ -92,6 +95,7 @@ EXACT_CATEGORIES = [
     'Components',
     'Review Workflows',
     'Human Tasks',
+    'AI Tools',
 ]
 
 NODE_CLASSES: list[type[BaseNode]] = [
@@ -122,9 +126,9 @@ NODE_CLASSES: list[type[BaseNode]] = [
     # Utilities / Advanced
     PythonCodeNode, PassThroughNode, MergeDataFramesNode, InteractiveTableNode,
     # Reusable case review
-    CaseIntakeNode, ReviewFormNode, DocumentExtractNode, CaseValidationNode,
+    CaseIntakeNode, DocumentOcrNode, DocumentExtractNode, ReviewFormNode, CaseValidationNode,
     AIReviewNode, RecordReviewNode, ScoreAggregationNode, DecisionNode, AssignReviewNode, LoadReviewResponsesNode,
-    AssignWorkTaskNode, LoadWorkResponsesNode,
+    AssignWorkTaskNode, GeneralAssignmentNode, ApprovalAssignmentNode, FormAssignmentNode, LoadWorkResponsesNode,
 ]
 
 _REGISTRY: list[BaseNode] = [cls() for cls in NODE_CLASSES]
@@ -217,9 +221,8 @@ PORT_COMPATIBILITY: dict[str, set[str]] = {
 
 VALID_PORT_TYPES = frozenset(PORT_COMPATIBILITY) | frozenset().union(*PORT_COMPATIBILITY.values())
 # Bump whenever built-in ports/nodes change so clients can invalidate a stale
-# catalog. Version 4 links the interactive editor/result contract; version 3
-# moved dataframe-combination/editor nodes into Data Cleaning.
-CATALOG_VERSION = 5
+# Catalog version 7 adds independently selectable OCR PDFs and review palette categories.
+CATALOG_VERSION = 8
 
 
 def validate_registry_integrity() -> None:

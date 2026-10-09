@@ -71,34 +71,38 @@ def main() -> None:
             'proposal_pdf': artifact['id'], 'supporting_files': [],
             'intake_fields': intake_fields, 'id_prefix': 'SNR',
         }),
-        node('extract', 'RV-003', 'استخراج سند', 320, {
-            'artifact_id': None, 'max_pages': 46, 'ocr_mode': 'missing_text',
-            'max_ocr_pages': 4,
+        node('ocr', 'RV-011', 'OCR کامل اسناد', 320, {
+            'max_pages': 60,
+        }),
+        node('extract', 'RV-003', 'استخراج اطلاعات طرح', 640, {
+            'input_mode': 'static', 'max_document_chars': 120000,
             'extraction_fields': [
                 {'id': 'project_title', 'label': 'عنوان طرح', 'type': 'text', 'required': False},
                 {'id': 'proposer', 'label': 'مجری یا پیشنهاددهنده', 'type': 'text', 'required': False},
             ],
             'user_prompt': 'عنوان رسمی طرح و نام مجری را فقط از شواهد موجود در سند استخراج کن. اگر نامشخص است مقدار null بده.',
         }),
-        node('form', 'RV-002', 'فرم داوری هشت‌معیاره', 640, {
+        node('form', 'RV-002', 'فرم داوری هشت‌معیاره', 960, {
             'form_id': 'expert_review', 'title': 'ارزیابی تخصصی طرح پژوهشی', 'fields': fields, 'due_days': 7,
         }),
-        node('validate', 'RV-004', 'کنترل کامل بودن', 960, {
+        node('validate', 'RV-004', 'کنترل کامل بودن', 1280, {
             'required_field_ids': 'project_title',
             'user_prompt': 'ناهماهنگی‌های مهم، ابهام در بودجه یا برنامه اجرا و ادعاهای بدون شواهد را کوتاه و مستند گزارش کن. تصمیم نهایی نگیر.',
         }),
-        node('ai', 'RV-005', 'نظر کمکی هوش مصنوعی', 1280, {
+        node('ai', 'RV-005', 'نظر کمکی هوش مصنوعی', 1600, {
             'form_id': 'expert_review', 'max_document_chars': 30000,
             'user_prompt': 'بر اساس هشت معیار فرم و فقط شواهد همین پیشنهاد، امتیاز پیشنهادی و شواهد صفحه‌دار بده. نبود شواهد را صریح بگو. تصمیم نهایی با انسان است.',
         }),
-        node('assign', 'RV-009', 'ارجاع به داور', 1600, {
+        node('assign', 'RV-009', 'ارجاع به داور', 1920, {
             'form_id': 'expert_review', 'assignees': env['ADMIN_EMAIL'],
         }),
         ]
-        order = ['intake', 'extract', 'form', 'validate', 'ai', 'assign']
-        graph = {'nodes': nodes, 'edges': [{'id': f'{left}-{right}', 'source': left, 'sourceHandle': 'case',
-                                           'target': right, 'targetHandle': 'case'}
-                                          for left, right in zip(order, order[1:])]}
+        order = ['intake', 'ocr', 'extract', 'form', 'validate', 'ai', 'assign']
+        edges = [{'id': f'{left}-{right}', 'source': left, 'sourceHandle': 'case',
+                  'target': right, 'targetHandle': 'case'}
+                 for left, right in zip(order, order[1:])]
+        edges[1].update({'sourceHandle': 'ocr_text', 'targetHandle': 'ocr_text'})
+        graph = {'nodes': nodes, 'edges': edges}
         validation = api(args.base, '/api/workflows/validate', token=token, method='POST', payload={'graph': graph})
         if validation.get('errors'):
             raise RuntimeError(f'Workflow validation failed: {validation["errors"]}')

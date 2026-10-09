@@ -12,6 +12,7 @@ import { NodeOutputsPanel } from '../../features/workflow/node-dialog/NodeOutput
 import { NodeSettingsPanel } from '../../features/workflow/node-dialog/NodeSettingsPanel';
 import { translateRegistryLabels } from '../../features/workflow/node-dialog/registryTranslation';
 import { useResizableColumns } from '../../features/workflow/node-dialog/useResizableColumns';
+import { workflowNodeOrder } from '../_model/workflowNodeOrder';
 export type NodeModalProps = {
     node: Node;
     workflowNodes: Node[];
@@ -41,9 +42,10 @@ export type NodeModalProps = {
 };
 export function NodeModal({ node, workflowNodes, edges, registry, aliases, portCompatibility, datasets, availableColumns, availableIdColumns = [], inheritedIdColumn = null, availableRows = [], run, busy, onRunNode, onCancelRun, onParamsChange, onRename, onPinnedChange, onNavigateToNode, onAddOutputToBoard, onInputSourceHandleChange, onClose }: NodeModalProps) {
     const { gridRef, columns, beginResize } = useResizableColumns();
-    const currentNodeIndex = workflowNodes.findIndex((item) => item.id === node.id);
-    const previousNode = currentNodeIndex > 0 ? workflowNodes[currentNodeIndex - 1] : null;
-    const nextNode = currentNodeIndex >= 0 && currentNodeIndex < workflowNodes.length - 1 ? workflowNodes[currentNodeIndex + 1] : null;
+    const navigableNodes = useMemo(() => workflowNodeOrder(workflowNodes, edges), [workflowNodes, edges]);
+    const currentNodeIndex = navigableNodes.findIndex((item) => item.id === node.id);
+    const previousNode = currentNodeIndex > 0 ? navigableNodes[currentNodeIndex - 1] : null;
+    const nextNode = currentNodeIndex >= 0 && currentNodeIndex < navigableNodes.length - 1 ? navigableNodes[currentNodeIndex + 1] : null;
     const incoming = edges.filter((edge) => edge.target === node.id);
     const inputDataframes = incoming.map((edge) => {
         const sourceNode = workflowNodes.find((item) => item.id === edge.source);

@@ -40,5 +40,5 @@ export function outputIndexForRun(run: Run | null): OutputIndex {
 }
 export function outputsForNode(run: Run | null, nodeId: string | null): Output[] {
     const index = outputIndexForRun(run);
-    return nodeId ? index.byNode.get(nodeId) || EMPTY_OUTPUT_INDEX.all : index.all;
+    return nodeId ? index.byNode.get(nodeId) || [] : index.all;
 }

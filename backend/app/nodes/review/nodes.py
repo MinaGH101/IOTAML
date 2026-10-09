@@ -1,20 +1,22 @@
 """Typed, reusable building blocks for proposal and other case reviews."""
 from __future__ import annotations
 
-import base64
+import copy
 import json
 import math
 import re
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from app.core.config import get_settings
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import input_by_port, node_label, output
+from app.nodes.io import dataframe_result, input_by_port, json_output, node_label, output, table_output
 from app.workflow.contracts.errors import NodeContractError
 
-from .ai import ask_json, ocr_image
-from .contract import case_batch_result, case_result, invalid, make_case, parse_object, require_case, validate_fields, validate_response
+from .ai import ask_json, ocr_pdf
+from .contract import cases_from_batch, case_batch_result, case_result, invalid, make_case, parse_object, require_case, validate_fields, validate_response
 
 
 def _text(value: Any, limit: int = 3000) -> str:
@@ -166,11 +168,12 @@ def _static_form_values(raw_fields: Any, fields: list[dict[str, Any]], *, settin
 class CaseIntakeNode(BaseNode):
     id = 'RV-001'
     name = 'Case Intake'
-    category = 'Review Workflows'
+    category = 'Data Input'
     description = 'Start a case with proposal details and uploaded documents; JSON input remains optional for integrations.'
     inputs = [port('submission', 'Submission', 'json', required=False)]
     outputs = [port('case', 'Case', 'case')]
-    cacheable = False
+    cacheable = True
+    cache_version = '2'
     settings_schema = [
         setting('proposal_pdf', 'فایل اصلی طرح (PDF)', 'artifact_pdf', None, supports_dynamic=False),
         setting('supporting_files', 'فایل‌های پیوست', 'artifact_files', [], supports_dynamic=False),
@@ -181,6 +184,9 @@ class CaseIntakeNode(BaseNode):
                 supports_dynamic=False),
         setting('id_prefix', 'پیشوند کد خودکار', 'text', 'RDI', supports_dynamic=False),
     ]
+
+    def cacheable_for(self, params: dict[str, Any]) -> bool:
+        return str(params.get('input_mode') or 'static') != 'dynamic'
 
     def run(self, node, inputs, settings, context):
         selected_pdfs = settings.get('proposal_pdf')
@@ -317,10 +323,11 @@ class CaseIntakeNode(BaseNode):
 class ReviewFormNode(BaseNode):
     id = 'RV-002'
     name = 'Form Definition'
-    category = 'Review Workflows'
+    category = 'Utilities / Advanced'
     description = 'Define typed submission or reviewer fields once; downstream nodes use the same field IDs.'
     inputs = [port('case', 'Case', 'case')]
     outputs = [port('case', 'Case', 'case')]
+    cacheable = False
     settings_schema = [
         setting('input_mode', 'روش تکمیل فرم', 'select', 'dynamic', options=['static', 'dynamic'], supports_dynamic=False,
                 help='ثابت: پاسخ‌ها همین‌جا ثبت می‌شوند. پویا: فرم برای ارجاع به کاربران ساخته می‌شود.'),
@@ -352,167 +359,340 @@ class ReviewFormNode(BaseNode):
             case['fields'].update(values)
             case['field_labels'].update({field['id']: field['label'] for field in fields})
             return case_result(node, case, extra={'form_id': form_id, 'form_title': definition['title'],
+                                                  'form_fields': fields, 'form_values': values,
                                                   'field_count': len(fields), 'input_mode': mode})
         return _field_form_result(node, case, definition, context)
 
 
+class DocumentOcrNode(BaseNode):
+    id = 'RV-011'
+    name = 'OCR Documents'
+    category = 'Utilities / Advanced'
+    description = 'OCR selected PDFs independently and return one structured JSON text object per document.'
+    inputs = [port('case', 'Case', 'case')]
+    outputs = [port('ocr_text', 'OCR Text', 'json')]
+    cacheable = True
+    cache_version = '2'
+    cache_persistent = True
+    cache_model_key = 'ocr'
+    settings_schema = [
+        setting('pdf_files', 'فایل‌های PDF برای OCR', 'artifact_pdf', [], supports_dynamic=False,
+                help='چند PDF انتخاب کنید. هر فایل به‌صورت یک پرونده و JSON مستقل پردازش می‌شود.'),
+        setting('max_pages', 'حداکثر صفحه برای هر PDF', 'integer', 60, supports_dynamic=False,
+                help='همه صفحه‌های هر PDF خوانده می‌شوند. اگر سند از این حد بیشتر باشد، اجرا متوقف می‌شود و هیچ صفحه‌ای نادیده گرفته نمی‌شود.'),
+    ]
+
+    @staticmethod
+    def _pdf_documents(case: dict[str, Any]) -> list[dict[str, Any]]:
+        return [document for document in case['documents']
+                if str(document.get('filename') or '').lower().endswith('.pdf')
+                or str(document.get('content_type') or '').lower() == 'application/pdf']
+
+    @staticmethod
+    def _selected_documents(settings: dict[str, Any], context: Any) -> list[dict[str, Any]]:
+        selected = settings.get('pdf_files')
+        if selected in (None, '', []):
+            return []
+        if not isinstance(selected, list) or not 1 <= len(selected) <= 100:
+            raise invalid('REVIEW_PDF_BATCH_INVALID', 'Select between 1 and 100 PDFs for OCR.', setting='pdf_files')
+        metadata = getattr(context, 'artifact_metadata', {}) or {}
+        documents: list[dict[str, Any]] = []
+        seen: set[int] = set()
+        for raw_id in selected:
+            try:
+                artifact_id = int(raw_id)
+            except (TypeError, ValueError) as exc:
+                raise invalid('REVIEW_ARTIFACT_ID_INVALID', 'Select uploaded PDFs from the picker.', setting='pdf_files') from exc
+            if artifact_id in seen:
+                raise invalid('REVIEW_DOCUMENT_DUPLICATE', 'A PDF was selected more than once.', setting='pdf_files')
+            seen.add(artifact_id)
+            item = metadata.get(str(artifact_id))
+            if not item:
+                raise invalid('REVIEW_ARTIFACT_UNAVAILABLE', f'PDF {artifact_id} is unavailable or outside this project.',
+                              setting='pdf_files', fix='Upload or select a PDF from this project and retry.')
+            if (not str(item.get('filename') or '').lower().endswith('.pdf')
+                    and str(item.get('content_type') or '').lower() != 'application/pdf'):
+                raise invalid('REVIEW_PRIMARY_PDF_REQUIRED', 'OCR Documents accepts PDF files only.', setting='pdf_files')
+            documents.append({'artifact_id': artifact_id,
+                              'filename': item.get('filename') or f'{artifact_id}.pdf',
+                              'content_type': item.get('content_type') or 'application/pdf',
+                              'checksum_sha256': item.get('checksum_sha256'), 'primary': True})
+        return documents
+
+    @staticmethod
+    def _case_for_document(case: dict[str, Any], document: dict[str, Any], *, independent_id: bool) -> dict[str, Any]:
+        current = require_case({'_by_port': {'case': [case]}})
+        current['documents'] = [document]
+        if independent_id:
+            stem = Path(str(document.get('filename') or f"case-{document.get('artifact_id')}")).stem
+            current['case_id'] = re.sub(r'[^A-Za-z0-9_-]+', '-', stem).strip('-') or f"CASE-{document.get('artifact_id')}"
+            if 'project_code' in current.get('fields', {}):
+                current['fields']['project_code'] = current['case_id']
+        return current
+
+    def _run_case(self, node, case: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
+        maximum = settings.get('max_pages', get_settings().review_max_pdf_pages)
+        if isinstance(maximum, bool) or not isinstance(maximum, int) or not 1 <= maximum <= get_settings().review_max_pdf_pages:
+            raise invalid('REVIEW_PAGE_SETTING_INVALID', 'Maximum pages is outside the allowed range.', setting='max_pages',
+                          expected=f'1–{get_settings().review_max_pdf_pages}', actual=maximum)
+        documents = self._pdf_documents(case)
+        if not documents:
+            raise invalid('REVIEW_PDF_REQUIRED', 'OCR Documents needs at least one PDF in the case.', port='case',
+                          fix='Select a proposal PDF in Case Intake, then connect its Case output to OCR Documents.')
+
+        artifact_paths = getattr(context, 'artifact_paths', {}) or {}
+        ocr_documents: list[dict[str, Any]] = []
+        total_characters = 0
+        for document in documents:
+            try:
+                artifact_id = int(document.get('artifact_id'))
+            except (TypeError, ValueError) as exc:
+                raise invalid('REVIEW_ARTIFACT_ID_INVALID', 'A case PDF has an invalid artifact ID.', port='case') from exc
+            raw_path = artifact_paths.get(str(artifact_id))
+            if not raw_path or not Path(raw_path).is_file():
+                raise invalid('REVIEW_ARTIFACT_UNAVAILABLE', f'PDF artifact {artifact_id} is not available to OCR.', port='case',
+                              fix='Upload the PDF again and rerun Case Intake.')
+            pdf_path = Path(raw_path)
+            try:
+                from pypdf import PdfReader
+                page_count = len(PdfReader(str(pdf_path), strict=False).pages)
+            except Exception as exc:
+                raise NodeContractError('REVIEW_PDF_UNREADABLE', f"{document.get('filename') or pdf_path.name} could not be opened.",
+                                        category='data', suggested_fix='Upload a valid, unlocked PDF and retry.') from exc
+            if not page_count:
+                raise NodeContractError('REVIEW_PDF_TEXT_EMPTY', 'The selected PDF contains no pages.', category='data',
+                                        suggested_fix='Upload a valid PDF and retry.')
+            if page_count > maximum:
+                raise NodeContractError('REVIEW_PDF_PAGE_LIMIT',
+                                        f"{document.get('filename') or pdf_path.name} has {page_count} pages; the configured limit is {maximum}.",
+                                        category='setting', setting='max_pages',
+                                        suggested_fix='Increase Maximum pages or split the PDF. OCR never silently skips pages.')
+
+            response = ocr_pdf(pdf_path, pages=list(range(page_count)))
+            raw_pages = response.get('pages')
+            page_text: list[dict[str, Any]] = []
+            seen_pages: set[int] = set()
+            for fallback_index, raw_page in enumerate(raw_pages if isinstance(raw_pages, list) else []):
+                if not isinstance(raw_page, dict):
+                    continue
+                text = str(raw_page.get('markdown') or '').strip()
+                raw_index = raw_page.get('index', fallback_index)
+                page_index = raw_index if isinstance(raw_index, int) and raw_index >= 0 else fallback_index
+                if page_index >= page_count or page_index in seen_pages:
+                    continue
+                seen_pages.add(page_index)
+                item: dict[str, Any] = {'page': page_index + 1, 'text': text, 'source': 'ocr'}
+                confidence = raw_page.get('confidence_scores')
+                if isinstance(confidence, dict):
+                    item['confidence'] = confidence
+                page_text.append(item)
+                total_characters += len(text)
+            missing_pages = sorted(set(range(page_count)) - seen_pages)
+            if missing_pages:
+                raise NodeContractError('REVIEW_OCR_OUTPUT_INCOMPLETE',
+                                        f"OCR did not return every page of {document.get('filename') or pdf_path.name}.",
+                                        category='execution', suggested_fix='Retry OCR; if the problem continues, check the provider.',
+                                        details={'missing_pages': [page + 1 for page in missing_pages]})
+            if not any(item['text'] for item in page_text):
+                raise NodeContractError('REVIEW_PDF_TEXT_EMPTY',
+                                        f"OCR found no readable text in {document.get('filename') or pdf_path.name}.",
+                                        category='data', suggested_fix='Check the scan quality or upload another PDF.')
+            if total_characters > get_settings().review_max_text_chars:
+                raise NodeContractError('REVIEW_OCR_TEXT_LIMIT',
+                                        'OCR text exceeds the configured review text limit.', category='setting',
+                                        suggested_fix='Split the proposal or ask an administrator to raise REVIEW_MAX_TEXT_CHARS.',
+                                        details={'characters': total_characters,
+                                                 'maximum': get_settings().review_max_text_chars})
+            ocr_documents.append({
+                **document,
+                'artifact_id': artifact_id,
+                'pages': page_count,
+                'pages_read': len(page_text),
+                'ocr_pages': page_count,
+                'ocr_model': str(response.get('model') or get_settings().iota_ocr_model),
+                'page_text': sorted(page_text, key=lambda item: item['page']),
+            })
+
+        case['history'].append({'event': 'documents_ocr_completed', 'node_id': str(node['id']),
+                                'document_count': len(ocr_documents),
+                                'page_count': sum(item['pages_read'] for item in ocr_documents)})
+        return {
+            'schema_version': 1,
+            'kind': 'ocr_text',
+            'case': case,
+            'model': get_settings().iota_ocr_model,
+            'document_count': len(ocr_documents),
+            'page_count': sum(item['pages_read'] for item in ocr_documents),
+            'character_count': total_characters,
+            'documents': ocr_documents,
+        }
+
+    def run(self, node, inputs, settings, context):
+        values = input_by_port(inputs, 'case')
+        raw_case = values[0] if values else None
+        batch = cases_from_batch(raw_case)
+        cases = [require_case({'_by_port': {'case': [case]}}) for case in batch] if batch is not None else [require_case(inputs)]
+        selected = self._selected_documents(settings, context)
+        if selected:
+            work = []
+            for document in selected:
+                artifact_id = str(document.get('artifact_id'))
+                source = next((case for case in cases if any(
+                    str(item.get('artifact_id')) == artifact_id for item in self._pdf_documents(case)
+                )), cases[0])
+                work.append((source, document))
+        else:
+            work = [(case, document) for case in cases for document in self._pdf_documents(case)]
+        if not work:
+            raise invalid('REVIEW_PDF_REQUIRED', 'OCR Documents needs at least one selected or incoming PDF.', port='case',
+                          fix='Select PDFs in OCR Documents or connect Case Intake with proposal PDFs.')
+        independent = len(work) > 1
+        items = [self._run_case(node, self._case_for_document(case, document, independent_id=independent), settings, context)
+                 for case, document in work]
+        result = items[0] if len(items) == 1 else {
+            'schema_version': 1, 'kind': 'ocr_batch', 'items': items,
+            'case_count': len(items), 'model': get_settings().iota_ocr_model,
+        }
+        visible = [json_output(str(node['id']), f"{node_label(node)} · {item['documents'][0]['filename']}", item)
+                   for item in items]
+        return {'ocr_text': result, 'outputs': visible, 'visible_outputs_only': True}
+
+
 class DocumentExtractNode(BaseNode):
     id = 'RV-003'
-    name = 'Document Extract'
-    category = 'Review Workflows'
-    description = 'Extract PDF text page by page, OCR only unreadable pages, then optionally extract named fields with AI.'
-    inputs = [port('case', 'Case', 'case')]
+    name = 'Extract Proposal Information'
+    category = 'AI Tools'
+    description = 'Extract configured proposal fields from structured OCR text using the dedicated extraction model.'
+    inputs = [port('ocr_text', 'OCR Text', 'json')]
     outputs = [port('case', 'Case', 'case')]
-    cacheable = False
+    cacheable = True
+    cache_version = '3'
+    cache_persistent = True
+    cache_model_key = 'extract'
     settings_schema = [
-        setting('artifact_id', 'فایل PDF جایگزین (اختیاری)', 'artifact_pdf', None, supports_dynamic=False),
         setting('input_mode', 'روش تکمیل فیلدها', 'select', 'static', options=['static', 'dynamic'], supports_dynamic=False,
-                help='ثابت: مقدارهای واردشده استفاده می‌شوند و فیلدهای خالی از PDF استخراج می‌شوند. پویا: فرم اصلاح استخراج ساخته می‌شود.'),
+                help='ثابت: فیلدها با AI استخراج می‌شوند. پویا: پس از استخراج، فرم اصلاح اطلاعات ساخته می‌شود.'),
         setting('form_id', 'شناسه فرم اصلاح استخراج', 'text', 'extraction_review', supports_dynamic=False),
-        setting('max_pages', 'حداکثر صفحه‌های خواندنی', 'integer', 60, supports_dynamic=False),
-        setting('ocr_mode', 'خواندن صفحه‌های تصویری (OCR)', 'select', 'missing_text', options=['missing_text', 'off'], supports_dynamic=False),
-        setting('max_ocr_pages', 'حداکثر صفحه‌های OCR', 'integer', 4, supports_dynamic=False),
-        setting('extraction_fields', 'فیلدهای استخراج و بازبینی', 'form_fields', [], supports_dynamic=False),
+        setting('extraction_fields', 'فیلدهای استخراج و بازبینی', 'form_fields', [], required=True, supports_dynamic=False),
+        setting('max_document_chars', 'حداکثر نویسه‌های متن OCR', 'integer', 120000, supports_dynamic=False),
         setting('user_prompt', 'راهنمای استخراج برای AI (اختیاری)', 'textarea', '', supports_dynamic=False),
     ]
 
-    def run(self, node, inputs, settings, context):
-        case = require_case(inputs)
-        selected_batch = settings.get('artifact_id')
-        if isinstance(selected_batch, list):
-            if not selected_batch or len(selected_batch) > 100:
-                raise invalid('REVIEW_PDF_BATCH_INVALID', 'Select between 1 and 100 PDFs.', setting='artifact_id')
-            metadata = getattr(context, 'artifact_metadata', {}) or {}
-            results = []
-            for raw_id in selected_batch:
-                child_case = json.loads(json.dumps(case))
-                item = metadata.get(str(raw_id)) or {}
-                stem = Path(str(item.get('filename') or f'case-{raw_id}')).stem
-                case_id = re.sub(r'[^A-Za-z0-9_-]+', '-', stem).strip('-') or f'CASE-{raw_id}'
-                child_case['case_id'] = case_id
-                child_case['fields'] = {**child_case.get('fields', {}), 'project_code': case_id,
-                                        'project_title': child_case.get('fields', {}).get('project_title') or stem}
-                if not any(str(doc.get('artifact_id')) == str(raw_id) for doc in child_case.get('documents', [])):
-                    child_case.setdefault('documents', []).append({
-                        'artifact_id': int(raw_id), 'filename': item.get('filename') or f'{stem}.pdf',
-                        'content_type': item.get('content_type') or 'application/pdf',
-                        'checksum_sha256': item.get('checksum_sha256'), 'primary': True,
-                    })
-                child_settings = {**settings, 'artifact_id': raw_id}
-                results.append(self.run(node, {'_by_port': {'case': [child_case]}}, child_settings, context))
-            return case_batch_result(node, results)
+    def cacheable_for(self, params: dict[str, Any]) -> bool:
+        return True
+
+    def restore_cached_result(self, result: Any, context: Any) -> Any:
+        restored = copy.deepcopy(result)
+        run_id = getattr(context, 'execution_id', None)
+        visible = restored.get('output') if isinstance(restored, dict) else None
+        if isinstance(visible, dict):
+            if visible.get('kind') == 'review_batch':
+                for item in visible.get('cases') or []:
+                    if isinstance(item, dict) and 'run_id' in item:
+                        item['run_id'] = run_id
+            elif 'run_id' in visible:
+                visible['run_id'] = run_id
+        return restored
+
+    @staticmethod
+    def _payload(value: Any) -> dict[str, Any]:
+        if not isinstance(value, dict) or value.get('kind') != 'ocr_text' or value.get('schema_version') != 1:
+            raise invalid('REVIEW_OCR_TEXT_REQUIRED', 'Extract Proposal Information needs JSON from OCR Documents.',
+                          port='ocr_text', expected='ocr_text schema_version=1', actual=type(value).__name__,
+                          fix='Connect OCR Text from OCR Documents to this node.')
+        if not isinstance(value.get('case'), dict) or not isinstance(value.get('documents'), list):
+            raise invalid('REVIEW_OCR_TEXT_INVALID', 'OCR JSON is missing its case or documents.', port='ocr_text',
+                          fix='Rerun OCR Documents and reconnect its OCR Text output.')
+        return value
+
+    def _run_payload(self, node, payload: dict[str, Any], settings: dict[str, Any], context: Any) -> dict[str, Any]:
+        case = require_case({'_by_port': {'case': [payload['case']]}})
         mode = _input_mode(settings)
-        selected_id = settings.get('artifact_id')
-        if selected_id in (None, ''):
-            selected_id = next((item.get('artifact_id') for item in case['documents'] if item.get('primary')), None)
-        try:
-            artifact_id = int(selected_id)
-        except (TypeError, ValueError) as exc:
-            raise invalid('REVIEW_ARTIFACT_ID_INVALID', 'Choose a PDF in Case Intake or in this node.', setting='artifact_id',
-                          fix='Upload/select a PDF in Case Intake, or choose a PDF override here.') from exc
-        path = (getattr(context, 'artifact_paths', {}) or {}).get(str(artifact_id))
-        if not path or not Path(path).is_file():
-            raise invalid('REVIEW_ARTIFACT_UNAVAILABLE', f'PDF artifact {artifact_id} is not available to this run.',
-                          setting='artifact_id', fix='Upload the PDF to this project and select its artifact ID.')
-        pdf_path = Path(path)
-        if pdf_path.suffix.lower() != '.pdf':
-            raise invalid('REVIEW_DOCUMENT_TYPE_INVALID', 'Document Extract accepts PDF files only.', setting='artifact_id')
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(str(pdf_path), strict=False)
-            page_count = len(reader.pages)
-        except Exception as exc:
-            raise NodeContractError('REVIEW_PDF_UNREADABLE', 'The PDF could not be opened.', category='data',
-                                    suggested_fix='Upload a valid, unlocked PDF and retry.') from exc
-        if not page_count or page_count > get_settings().review_max_pdf_pages:
-            raise NodeContractError('REVIEW_PDF_PAGE_LIMIT', f'PDF has {page_count} pages; the limit is {get_settings().review_max_pdf_pages}.',
-                                    category='data', suggested_fix='Split the PDF or ask an administrator to raise the page limit.')
-        max_pages = settings.get('max_pages', 60)
-        max_ocr = settings.get('max_ocr_pages', 4)
-        if not isinstance(max_pages, int) or not 1 <= max_pages <= get_settings().review_max_pdf_pages:
-            raise invalid('REVIEW_PAGE_SETTING_INVALID', 'Maximum pages is outside the allowed range.', setting='max_pages')
-        if not isinstance(max_ocr, int) or not 0 <= max_ocr <= 20:
-            raise invalid('REVIEW_OCR_SETTING_INVALID', 'Maximum OCR pages must be between 0 and 20.', setting='max_ocr_pages')
-        page_text: list[dict[str, Any]] = []
-        ocr_count = 0
-        total_chars = 0
-        for page_index in range(min(page_count, max_pages)):
-            try:
-                extracted = (reader.pages[page_index].extract_text() or '').strip()
-            except Exception as exc:
-                raise NodeContractError('REVIEW_PDF_PAGE_UNREADABLE', f'PDF page {page_index + 1} could not be read.',
-                                        category='data', suggested_fix='Repair or replace the PDF page and retry.') from exc
-            source = 'embedded_text'
-            if len(extracted) < 30 and settings.get('ocr_mode', 'missing_text') == 'missing_text':
-                if ocr_count >= max_ocr:
-                    raise NodeContractError('REVIEW_OCR_PAGE_LIMIT', 'More pages need OCR than the configured maximum.',
-                                            category='setting', setting='max_ocr_pages',
-                                            suggested_fix='Increase Maximum OCR pages or upload a searchable PDF.')
-                try:
-                    import pymupdf as fitz
-                    with fitz.open(str(pdf_path)) as doc:
-                        pix = doc[page_index].get_pixmap(matrix=fitz.Matrix(1.3, 1.3), alpha=False)
-                        image_data = base64.b64encode(pix.tobytes('jpeg', jpg_quality=72)).decode('ascii')
-                except ImportError as exc:
-                    raise NodeContractError('REVIEW_OCR_DEPENDENCY_MISSING', 'PDF OCR renderer is unavailable.',
-                                            category='application', responsibility='application',
-                                            suggested_fix='Install PyMuPDF in the backend image.') from exc
-                extracted = ocr_image(image_data, page=page_index + 1, prompt=_text(settings.get('user_prompt'), 1000))
-                source = 'ocr'
-                ocr_count += 1
-            if not extracted:
-                continue
-            room = get_settings().review_max_text_chars - total_chars
-            if room <= 0:
-                break
-            excerpt = extracted[:room]
-            page_text.append({'page': page_index + 1, 'text': excerpt, 'source': source})
-            total_chars += len(excerpt)
-        if not page_text:
-            raise NodeContractError('REVIEW_PDF_TEXT_EMPTY', 'No readable text was found in the selected PDF pages.',
-                                    category='data', suggested_fix='Enable OCR or upload a searchable PDF.')
-        previous = next((item for item in case['documents'] if item.get('artifact_id') == artifact_id), {})
-        document = {**previous, 'artifact_id': artifact_id, 'pages': page_count, 'pages_read': len(page_text),
-                    'ocr_pages': ocr_count, 'page_text': page_text}
-        if settings.get('extraction_fields'):
-            fields = validate_fields(settings['extraction_fields'], setting_name='extraction_fields')
-            case['field_labels'].update({field['id']: field['label'] for field in fields})
-            manual_values = _static_form_values(settings['extraction_fields'], fields, setting_name='extraction_fields') if mode == 'static' else {}
-            missing = [field for field in fields if field['id'] not in manual_values]
-            result: dict[str, Any] = {}
-            extracted_fields: dict[str, Any] = {}
-            if missing:
-                requested = [{'id': x['id'], 'label': x['label'], 'type': x['type']} for x in missing]
-                excerpts = '\n'.join(f"[page {x['page']}] {x['text']}" for x in page_text)[:42000]
-                result = ask_json(model=get_settings().iota_review_model,
-                                  system='Extract only facts supported by the document. Return JSON with fields (object keyed by requested IDs) and evidence (object keyed by IDs, each with page and short quote). Unknown values must be null.',
-                                  user=f"Requested fields: {json.dumps(requested, ensure_ascii=False)}\nInstructions: {_text(settings.get('user_prompt'), 3000)}\nDocument:\n{excerpts}",
-                                  max_tokens=1600)
-                extracted_fields = _requested_extraction_values(result, {x['id'] for x in missing})
-                type_errors = validate_response([{**field, 'required': False} for field in missing], extracted_fields)
-                if type_errors:
-                    raise NodeContractError('REVIEW_EXTRACTION_TYPE_INVALID', 'AI extracted a value with the wrong field type.',
-                                            category='execution', suggested_fix='Adjust the requested field type or extraction instructions and retry.',
-                                            details={'errors': type_errors[:10]})
-            for field in fields:
-                value = manual_values.get(field['id'], extracted_fields.get(field['id']))
-                if value is not None:
-                    case['fields'][field['id']] = value
-            document['extraction_evidence'] = result.get('evidence') if isinstance(result.get('evidence'), dict) else {}
-            document['extraction_model'] = get_settings().iota_review_model if missing else None
-        case['documents'] = [item for item in case['documents'] if item.get('artifact_id') != artifact_id] + [document]
-        case['history'].append({'event': 'document_extracted', 'artifact_id': artifact_id, 'node_id': str(node['id'])})
+        fields = validate_fields(settings.get('extraction_fields'), setting_name='extraction_fields')
+        limit = settings.get('max_document_chars', get_settings().review_max_text_chars)
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1000 <= limit <= get_settings().review_max_text_chars:
+            raise invalid('REVIEW_DOCUMENT_LIMIT_INVALID',
+                          f'Maximum OCR characters must be 1,000–{get_settings().review_max_text_chars:,}.',
+                          setting='max_document_chars', actual=limit)
+        ocr_documents = [document for document in payload['documents'] if isinstance(document, dict)]
+        excerpts = '\n'.join(
+            f"[document {document.get('filename') or document.get('artifact_id')}; page {page.get('page')}] {page.get('text')}"
+            for document in ocr_documents
+            for page in document.get('page_text', []) if isinstance(page, dict) and page.get('text')
+        )
+        if not excerpts.strip():
+            raise invalid('REVIEW_OCR_TEXT_EMPTY', 'OCR JSON contains no readable page text.', port='ocr_text',
+                          fix='Rerun OCR Documents and inspect its JSON output.')
+        if len(excerpts) > limit:
+            raise NodeContractError('REVIEW_EXTRACTION_TEXT_LIMIT',
+                                    f'OCR text has {len(excerpts):,} characters; this node allows {limit:,}.',
+                                    category='setting', setting='max_document_chars',
+                                    suggested_fix='Increase Maximum OCR characters or split the proposal.')
+
+        case['field_labels'].update({field['id']: field['label'] for field in fields})
+        manual_values = _static_form_values(settings['extraction_fields'], fields, setting_name='extraction_fields') if mode == 'static' else {}
+        missing = [field for field in fields if field['id'] not in manual_values]
+        result: dict[str, Any] = {}
+        extracted_fields: dict[str, Any] = {}
+        if missing:
+            requested = [{'id': field['id'], 'label': field['label'], 'type': field['type']} for field in missing]
+            result = ask_json(
+                model=get_settings().iota_extract_model,
+                system=(
+                    'Extract only facts explicitly supported by the OCR document. Preserve Persian text in normal logical '
+                    'Unicode order and copy titles exactly; never reverse Persian letters or return presentation-form glyphs. '
+                    'Return JSON with fields (object keyed only by requested IDs) and evidence (object keyed by IDs, each with '
+                    'artifact_id, page, and a short quote). Use null when a value is unknown. '
+                    'Example JSON: {"fields":{"project_title":"نمونه","project_code":null},'
+                    '"evidence":{"project_title":{"artifact_id":"artifact-1","page":1,"quote":"نمونه"},'
+                    '"project_code":null}}.'
+                ),
+                user=(f"Requested fields: {json.dumps(requested, ensure_ascii=False)}\n"
+                      f"Instructions: {_text(settings.get('user_prompt'), 3000)}\nOCR document:\n{excerpts}"),
+                max_tokens=2200,
+            )
+            extracted_fields = _requested_extraction_values(result, {field['id'] for field in missing})
+            type_errors = validate_response([{**field, 'required': False} for field in missing], extracted_fields)
+            if type_errors:
+                raise NodeContractError('REVIEW_EXTRACTION_TYPE_INVALID', 'AI extracted a value with the wrong field type.',
+                                        category='execution', suggested_fix='Adjust the field type or extraction instructions and retry.',
+                                        details={'errors': type_errors[:10]})
+        for field in fields:
+            value = manual_values.get(field['id'], extracted_fields.get(field['id']))
+            if value is not None:
+                case['fields'][field['id']] = value
+
+        by_artifact = {str(document.get('artifact_id')): document for document in ocr_documents}
+        case['documents'] = [by_artifact.get(str(document.get('artifact_id')), document) for document in case['documents']]
+        known_ids = {str(document.get('artifact_id')) for document in case['documents']}
+        case['documents'].extend(document for document in ocr_documents
+                                 if str(document.get('artifact_id')) not in known_ids)
+        evidence = result.get('evidence') if isinstance(result.get('evidence'), dict) else {}
+        case['extraction'] = {'model': get_settings().iota_extract_model, 'evidence': evidence,
+                              'field_ids': [field['id'] for field in fields]}
+        case['history'].append({'event': 'proposal_information_extracted', 'node_id': str(node['id']),
+                                'model': get_settings().iota_extract_model,
+                                'field_count': len(extracted_fields) + len(manual_values)})
         if mode == 'dynamic':
-            if not settings.get('extraction_fields'):
-                raise invalid('REVIEW_DYNAMIC_EXTRACTION_FIELDS_REQUIRED', 'Dynamic extraction needs at least one field.',
-                              setting='extraction_fields', fix='Add fields that a user should check or correct.')
             form = {'form_id': _form_id(settings.get('form_id') or 'extraction_review'),
                     'title': 'بازبینی و اصلاح اطلاعات سند', 'fields': fields,
                     'due_days': 7, 'input_mode': 'dynamic', 'prefill_from_case': True}
             _publish_form(case, form, setting_name='extraction_fields')
             return _field_form_result(node, case, form, context)
-        return case_result(node, case, extra={'pages': page_count, 'pages_read': len(page_text),
-                                              'ocr_pages': ocr_count, 'input_mode': 'static'})
+        return case_result(node, case, extra={'extraction_model': get_settings().iota_extract_model,
+                                              'extracted_field_count': len(extracted_fields) + len(manual_values),
+                                              'input_mode': 'static'})
+
+    def run(self, node, inputs, settings, context):
+        values = input_by_port(inputs, 'ocr_text')
+        value = values[0] if values else None
+        if isinstance(value, dict) and value.get('kind') == 'ocr_batch':
+            items = value.get('items')
+            if not isinstance(items, list) or not items:
+                raise invalid('REVIEW_OCR_TEXT_INVALID', 'OCR batch contains no cases.', port='ocr_text')
+            return case_batch_result(node, [self._run_payload(node, self._payload(item), settings, context)
+                                            for item in items])
+        return self._run_payload(node, self._payload(value), settings, context)
 
 
 class CaseValidationNode(BaseNode):
@@ -522,7 +702,10 @@ class CaseValidationNode(BaseNode):
     description = 'Check required fields deterministically and optionally ask AI for advisory concerns.'
     inputs = [port('case', 'Case', 'case')]
     outputs = [port('case', 'Case', 'case')]
-    cacheable = False
+    cacheable = True
+    cache_version = '2'
+    cache_persistent = True
+    cache_model_key = 'review'
     settings_schema = [
         setting('required_field_ids', 'Required field IDs (comma separated)', 'textarea', 'project_title', supports_dynamic=False),
         setting('user_prompt', 'Additional validation instructions for AI (optional)', 'textarea', '', supports_dynamic=False),
@@ -534,9 +717,19 @@ class CaseValidationNode(BaseNode):
         from .contract import FIELD_ID
         if any(not FIELD_ID.fullmatch(x) for x in ids) or len(ids) != len(set(ids)):
             raise invalid('REVIEW_REQUIRED_FIELDS_INVALID', 'Required field IDs must be unique snake_case names.',
-                          setting='required_field_ids', fix='Use the stable field IDs from Case Intake or Document Extract.')
-        findings = [{'field': key, 'code': 'missing_required', 'message': f'{key} is missing.'}
-                    for key in ids if case['fields'].get(key) in (None, '', [])]
+                          setting='required_field_ids', fix='Use the stable field IDs from Case Intake or Extract Proposal Information.')
+        findings = [
+            {
+                'field': key,
+                # Keep both the stable ID and the human label.  Results cards
+                # can now explain the problem without needing to guess which
+                # field an opaque ID refers to.
+                'label': _text((case.get('field_labels') or {}).get(key), 120) or key,
+                'code': 'missing_required',
+                'message': f'فیلد «{_text((case.get("field_labels") or {}).get(key), 120) or key}» تکمیل نشده است.',
+            }
+            for key in ids if case['fields'].get(key) in (None, '', [])
+        ]
         prompt = _text(settings.get('user_prompt'), 3000)
         advisory: list[dict[str, Any]] = []
         if prompt:
@@ -560,11 +753,14 @@ class CaseValidationNode(BaseNode):
 class AIReviewNode(BaseNode):
     id = 'RV-005'
     name = 'AI Review'
-    category = 'Review Workflows'
+    category = 'AI Tools'
     description = 'Suggest rubric scores with evidence; human scores remain separate.'
     inputs = [port('case', 'Case', 'case')]
-    outputs = [port('case', 'Case', 'case')]
-    cacheable = False
+    outputs = [port('case', 'Case', 'case'), port('table', 'AI Score Table', 'dataframe')]
+    cacheable = True
+    cache_version = '2'
+    cache_persistent = True
+    cache_model_key = 'review'
     settings_schema = [
         setting('form_id', 'Scoring form ID', 'text', 'expert_review', required=True, supports_dynamic=False),
         setting('user_prompt', 'Review instructions for AI', 'textarea', '', required=True, supports_dynamic=False),
@@ -589,7 +785,7 @@ class AIReviewNode(BaseNode):
         excerpts = '\n'.join(f"[page {page['page']}] {page['text']}" for doc in case['documents'] for page in doc.get('page_text', []))[:limit]
         if not excerpts:
             raise invalid('REVIEW_DOCUMENT_MISSING', 'AI Review needs extracted document text.', port='case',
-                          fix='Connect Document Extract before AI Review.')
+                          fix='Connect Extract Proposal Information before AI Review.')
         result = ask_json(model=get_settings().iota_review_model,
                           system='You assist a human reviewer. Return JSON {"scores": {field_id: number}, "evidence": {field_id: {"page": number, "quote": string}}, "summary": string, "concerns": [string]}. Score only requested IDs and stay inside each range. Evidence must refer to the provided document. Do not decide approval. Write every human-readable string in Persian (Farsi).',
                           user=f"Criteria: {json.dumps(rubric, ensure_ascii=False)}\nInstructions: {_text(settings.get('user_prompt'), 3500)}\nCase fields: {json.dumps(case['fields'], ensure_ascii=False)[:8000]}\nDocument:\n{excerpts}",
@@ -610,12 +806,19 @@ class AIReviewNode(BaseNode):
                                    if isinstance(result.get('concerns'), list) else [],
                                    'model': get_settings().iota_review_model, 'node_id': str(node['id'])})
         case['history'].append({'event': 'ai_reviewed', 'node_id': str(node['id']), 'form_id': form_id})
-        return case_result(node, case, extra={'ai_review': {'form_id': form_id, 'scores': scores, 'maxima': maxima,
-                                                          'labels': {field['id']: field['label'] for field in rubric},
-                                                          'evidence': evidence,
-                                                          'summary': _text(result.get('summary'), 800),
-                                                          'concerns': [_text(x, 500) for x in result.get('concerns', [])[:20] if isinstance(x, str)]
-                                                          if isinstance(result.get('concerns'), list) else []}})
+        response = case_result(node, case, extra={'ai_review': {'form_id': form_id, 'scores': scores, 'maxima': maxima,
+                                                                'labels': {field['id']: field['label'] for field in rubric},
+                                                                'evidence': evidence,
+                                                                'summary': _text(result.get('summary'), 800),
+                                                                'concerns': [_text(x, 500) for x in result.get('concerns', [])[:20] if isinstance(x, str)]
+                                                                if isinstance(result.get('concerns'), list) else []}})
+        score_table = dataframe_result(pd.DataFrame([scores], columns=[field['id'] for field in rubric]))
+        response['table'] = score_table
+        response['outputs_by_port'] = {'case': case, 'table': score_table}
+        visible_table = table_output(str(node['id']), f'{node_label(node)} · AI Score Table', score_table['_df'])
+        visible_table.update(source_handle='table', source_port_name='AI Score Table')
+        response['outputs'] = [response['output'], visible_table]
+        return response
 
 
 class RecordReviewNode(BaseNode):
@@ -663,7 +866,7 @@ class RecordReviewNode(BaseNode):
 class ScoreAggregationNode(BaseNode):
     id = 'RV-007'
     name = 'Score Aggregation'
-    category = 'Review Workflows'
+    category = 'Utilities / Advanced'
     description = 'Average human reviewers per criterion, then sum the criterion averages.'
     inputs = [port('case', 'Case', 'case')]
     outputs = [port('case', 'Case', 'case'), port('metrics', 'Scores', 'metrics')]
@@ -804,7 +1007,7 @@ class AssignReviewNode(BaseNode):
 class LoadReviewResponsesNode(BaseNode):
     id = 'RV-010'
     name = 'Load Review Responses'
-    category = 'Review Workflows'
+    category = 'Utilities / Advanced'
     description = 'Load submitted forms for one case so scoring can continue in a later run.'
     inputs = []
     outputs = [port('case', 'Case', 'case')]

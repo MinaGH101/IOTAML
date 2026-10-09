@@ -32,6 +32,10 @@ Nodes are cacheable by default only when their registered implementation is avai
 
 A future node with time-based, external API, random, or mutable behavior must either set `cacheable = False` or include a fixed seed and all external state in its version/input fingerprint.
 
+Pure nodes that call paid OCR or LLM providers use the durable-cache policy. Their entries have no automatic expiry and are protected from ordinary project LRU eviction. The policy is declared on the node implementation, while the shared cache runtime supplies the persistence behavior; it is not implemented as an OCR-only shortcut. Currently this covers OCR Documents, Extract Proposal Information, AI-assisted Case Validation, and AI Review.
+
+Declared artifact-picker settings contribute the selected artifact IDs and content checksums to the cache key. Provider model names also contribute through each node's declared model context. Consequently, changing a file, setting, prompt, upstream result, implementation/cache version, or configured model produces a new key.
+
 ## Artifact format and trust boundary
 
 Cached node values are serialized as compressed internal Joblib artifacts. They are never accepted through the public artifact upload API as cache entries.
@@ -74,7 +78,9 @@ The workflow canvas receives live node status snapshots while a run is active. C
 
 ## Partial reruns
 
-Partial reruns use the existing connected-graph execution mode. Cache keys allow unchanged upstream and branch-local nodes to be reused. A changed node parameter invalidates that node and naturally invalidates downstream nodes through the changed output digest, while unaffected branches remain reusable.
+Partial reruns use the existing connected-graph execution mode. Running a selected node explicitly refreshes that node only; its unchanged upstream closure is restored from cache. The refreshed output atomically becomes the reusable value for its canonical cache key, so later downstream runs consume the refreshed result rather than an older value.
+
+Cache keys allow unchanged upstream and branch-local nodes to be reused. A changed node parameter invalidates that node and naturally invalidates downstream nodes through the changed output digest, while unaffected branches remain reusable. Cached nodes may rehydrate run-local presentation references after loading without changing their computational output digest.
 
 ## Retention and eviction
 
@@ -84,6 +90,8 @@ The worker runs cache cleanup periodically:
 - project cache size is capped with least-recently-used eviction
 - pinned entries are protected
 - cache entries track last access and hit count
+
+Durable paid-model entries are pinned in both PostgreSQL cache metadata and artifact storage, have no expiration timestamp, and are not truncated by the ordinary per-fingerprint candidate window. They survive browser refreshes, authentication sessions, service restarts, and Docker image rebuilds because metadata and bytes live in the persistent PostgreSQL and object-storage volumes. Deleting those named volumes is destructive and removes this guarantee.
 
 Configuration:
 

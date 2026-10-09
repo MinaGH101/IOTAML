@@ -4,8 +4,8 @@ import { readThemeColor } from '../../../shared/_utils/appShared';
 import { SearchField } from '../../../shared/ui';
 import { friendlyOptionLabel } from './parameterModel';
 
-export function PillPicker({ items, selected, onChange, empty }: { items: string[]; selected: string[]; onChange: (items: string[]) => void; empty?: string }) {
-  return <MultiSelect options={items.map((item) => ({ value: item, label: friendlyOptionLabel(item, item) }))} selected={selected} onChange={onChange} empty={empty} />;
+export function PillPicker({ items, selected, onChange, empty, maxSelected }: { items: string[]; selected: string[]; onChange: (items: string[]) => void; empty?: string; maxSelected?: number }) {
+  return <MultiSelect options={items.map((item) => ({ value: item, label: friendlyOptionLabel(item, item) }))} selected={selected} onChange={onChange} empty={empty} maxSelected={maxSelected} />;
 }
 
 export type MultiSelectOption = { value: string; label: string; description?: string };

@@ -11,7 +11,7 @@ import { downloadOutput } from '../lib/outputDownload';
 import { ChartOutput } from './ChartOutput';
 import { OutputErrorBoundary } from './OutputErrorBoundary';
 import { WorkflowErrorCard } from './WorkflowErrorCard';
-import { isReviewOutput, ReviewOutput } from './ReviewOutput';
+import { isReviewOutput, ReviewOutput, ScoreRadarPanel } from './ReviewOutput';
 
 export const CHART_KINDS = new Set(['scatter', 'histogram', 'bar', 'line', 'heatmap', 'matrix', 'boxplot', 'bar_plot', 'pp_plot', 'stair_outlier', 'dendrogram']);
 
@@ -56,12 +56,27 @@ function ImmediateOutput({ output, onAddToBoard, onInteractiveTableChange, colle
   const anomalyRole = String(output.output_role || '');
   if (['thresholds', 'anomalies', 'counts'].includes(anomalyRole) && kind !== 'table') return <WorkflowErrorCard problem={{ code: 'ANOMALY_OUTPUT_CONTRACT_MISMATCH', message: `خروجی ${anomalyRole} باید جدول باشد، اما ${kind} دریافت شد.`, responsibility: 'application', node_id: output.node_id, port: output.source_handle, expected: 'table', actual: kind, suggested_fix: 'بک‌اند و فرانت‌اند را از همین نسخه اجرا کنید و سرویس‌ها را دوباره بسازید.' }} />;
   if (isReviewOutput(output)) return <ReviewOutput output={output} />;
-  if (kind === 'work_task') return <div className="review-output" dir="rtl"><div className="review-output-head"><div><span className="review-output-eyebrow">وظیفه ارجاع‌شده</span><strong>{String(output.task_title || output.title || 'وظیفه')}</strong><small>{output.item_count ? `${Number(output.item_count).toLocaleString('fa-IR')} مورد` : String(output.subject_id || '')}</small></div><span className="review-output-pill">{Number(output.assignee_count || 0).toLocaleString('fa-IR')} ارجاع</span></div><div className="review-output-section"><p>نوع: {String(output.task_kind || '')}</p><a href="/tasks">مشاهده کارتابل وظایف</a></div></div>;
+  if (kind === 'work_task') return <div className="review-output" dir="rtl"><header><div><span className="review-output-eyebrow">وظیفه ارجاع‌شده</span><strong>{String(output.task_title || output.title || 'وظیفه')}</strong><small>{output.item_count ? `${Number(output.item_count).toLocaleString('fa-IR')} مورد` : String(output.subject_id || '')}</small></div><span className="review-output-pill">{Number(output.assignee_count || 0).toLocaleString('fa-IR')} ارجاع</span></header><div className="review-output-section"><p>نوع: {String(output.task_kind || '')}</p><a href="/tasks">مشاهده کارتابل وظایف</a></div></div>;
   if (kind === 'work_task_result') {
-    const responses = Array.isArray(output.responses) ? output.responses as Array<{ task_id: number; assignee: string; status: string; answers?: Record<string, unknown> }> : [];
-    const labels = new Map((Array.isArray(output.fields) ? output.fields as Array<{ id: string; label: string }> : []).map((field) => [field.id, field.label]));
+    const responses = Array.isArray(output.responses) ? output.responses as Array<{ task_id: number; assignee: string; subject_id?: string; status: string; answers?: Record<string, unknown> }> : [];
+    const fields = Array.isArray(output.fields) ? output.fields as Array<{ id: string; label: string; type?: string; max?: number }> : [];
+    const labels = new Map(fields.map((field) => [field.id, field.label]));
+    const scoreFields = fields.filter((field) => field.type === 'score' && Number.isFinite(Number(field.max)) && Number(field.max) > 0);
+    const commentFields = fields.filter((field) => field.type === 'long_text' || /comment|نظر/i.test(`${field.id} ${field.label}`));
+    const scoreLabels = Object.fromEntries(scoreFields.map((field) => [field.id, field.label]));
+    const scoreMaxima = Object.fromEntries(scoreFields.map((field) => [field.id, Number(field.max)]));
     const displayAnswer = (value: unknown) => ({ approve: 'تأیید', reject: 'رد', revise: 'درخواست اصلاح' }[String(value)] || String(value ?? ''));
-    return <div className="review-output" dir="rtl"><div className="review-output-head"><div><span className="review-output-eyebrow">پاسخ‌های وظیفه</span><strong>{String(output.task_title || 'وظیفه')}</strong><small>{String(output.subject_id || '')}</small></div><span className="review-output-pill">{Number(output.completed || 0).toLocaleString('fa-IR')} از {Number(output.assigned || 0).toLocaleString('fa-IR')} تکمیل</span></div><div className="review-output-fields">{responses.map((item) => <div key={item.task_id}><span>{item.assignee} · {item.status === 'completed' ? 'تکمیل‌شده' : 'در انتظار'}</span><b>{item.answers ? Object.entries(item.answers).map(([key, value]) => `${labels.get(key) || key}: ${displayAnswer(value)}`).join(' · ') : '—'}</b></div>)}</div></div>;
+    return <div className="review-output" dir="rtl"><div className="review-output-task-responses">{responses.map((item) => {
+      const scores = Object.fromEntries(scoreFields.flatMap((field) => {
+        const value = item.answers?.[field.id];
+        return Number.isFinite(Number(value)) ? [[field.id, Number(value)]] : [];
+      }));
+      const comments = commentFields.flatMap((field) => {
+        const value = item.answers?.[field.id];
+        return value === undefined || value === null || String(value).trim() === '' ? [] : [[field, value] as const];
+      });
+      return <article key={item.task_id}><span>{item.assignee}{item.subject_id ? ` · ${item.subject_id}` : ''} · {item.status === 'completed' ? 'تکمیل‌شده' : 'در انتظار'}</span>{Object.keys(scores).length > 0 && <ScoreRadarPanel scores={scores} labels={scoreLabels} maxima={scoreMaxima} />}{comments.map(([field, value]) => <section className="review-output-task-comment" key={field.id}><span>{field.label}</span><p>{displayAnswer(value)}</p></section>)}</article>;
+    })}</div></div>;
   }
   if (kind === 'interactive_table') return <InteractiveTableOutput output={output} onStateChange={(state) => onInteractiveTableChange?.(String(output.node_id || ''), state)} />;
   if (kind === 'table' && output.interactive_table_result === true) return <LinkedInteractiveResultTable output={output} />;

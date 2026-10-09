@@ -78,6 +78,54 @@ def test_selected_execution_skips_downstream_siblings_and_unconnected_invalid_no
     assert result['error'] is None
 
 
+def test_statistical_report_group_by_reaches_visible_workflow_output() -> None:
+    graph = {
+        'nodes': [
+            {
+                'id': 'input',
+                'data': {
+                    'registryId': 'DI-002',
+                    'label': 'Iris',
+                    'compatibilityDataset': 'iris',
+                    'params': {},
+                },
+            },
+            {
+                'id': 'stats',
+                'data': {
+                    'registryId': 'IN-007',
+                    'label': 'Grouped Stats',
+                    'params': {
+                        'columns': ['sepal length (cm)'],
+                        'group_by': ['target'],
+                        'metrics': ['count', 'mean'],
+                    },
+                },
+            },
+        ],
+        'edges': [{
+            'id': 'input-stats',
+            'source': 'input',
+            'sourceHandle': 'dataframe',
+            'target': 'stats',
+            'targetHandle': 'data',
+        }],
+    }
+
+    result = execute_workflow(
+        graph, None, None, 'auto', None, 'grouped-report-test', selected_node_id='stats',
+    )
+    visible = result['artifacts']['node_outputs']['stats']
+
+    assert result['error'] is None
+    assert visible['source_handle'] == 'report'
+    assert visible['columns'] == ['column', 'statistic', '0', '1', '2']
+    assert visible['rows'] == [
+        {'column': 'sepal length (cm)', 'statistic': 'count', '0': 50.0, '1': 50.0, '2': 50.0},
+        {'column': 'sepal length (cm)', 'statistic': 'mean', '0': 5.006, '1': 5.936, '2': 6.588},
+    ]
+
+
 def test_ports_do_not_fall_back_to_sibling_data():
     value = {'dataframe': dataframe_result(pd.DataFrame({'x': [1]}))['dataframe'], 'report': {'value': 1}}
     inputs = upstream_outputs('child', [{'source': 'parent', 'target': 'child', 'sourceHandle': 'report', 'targetHandle': 'data'}], {'parent': value})

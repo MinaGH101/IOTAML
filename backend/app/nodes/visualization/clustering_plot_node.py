@@ -19,6 +19,7 @@ from app.nodes.io import (
     first_upstream_df,
     node_label,
     output,
+    plot_result,
     selected_columns,
 )
 
@@ -168,7 +169,7 @@ class ClusteringPlotNode(BaseNode):
     category = 'Visualizations'
     description = 'Creates horizontal hierarchical-clustering dendrograms for dataframe columns or rows.'
     inputs = [port('data', 'DataFrame', 'dataframe')]
-    outputs = [port('plot', 'Clustering Dendrogram', 'plot')]
+    outputs = [port('plot', 'Clustering Dendrogram', 'plot'), port('table', 'Raw Data', 'dataframe')]
     settings_schema = [
         setting(
             'cluster_target',
@@ -289,7 +290,7 @@ class ClusteringPlotNode(BaseNode):
             for method in methods
         ]
         if len(plots) == 1:
-            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+            return plot_result(df, plots[0])
         group = output(
             str(node['id']),
             node_label(node),
@@ -298,9 +299,4 @@ class ClusteringPlotNode(BaseNode):
             count=len(plots),
             layout='vertical',
         )
-        return {
-            '_df': df,
-            'plot': group,
-            'outputs_by_port': {'plot': group},
-            'output': group,
-        }
+        return plot_result(df, group)

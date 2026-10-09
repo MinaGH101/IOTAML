@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import ensure_df, first_upstream_df, node_label, output, parse_number_list, selected_columns
+from app.nodes.io import ensure_df, first_upstream_df, node_label, output, parse_number_list, plot_result, selected_columns
 
 
 def _text_list(value: Any) -> list[str]:
@@ -22,7 +22,7 @@ class BarPlotNode(BaseNode):
     category = 'Visualizations'
     description = 'Uses selected dataframe columns as X labels and selected rows, identified by the first dataframe column, as bar series.'
     inputs = [port('data', 'DataFrame', 'dataframe')]
-    outputs = [port('plot', 'Bar Plot', 'plot')]
+    outputs = [port('plot', 'Bar Plot', 'plot'), port('table', 'Raw Data', 'dataframe')]
     settings_schema = [
         setting('x_columns', 'X-axis Columns', 'columns', [], help='Optional. Each selected numeric column becomes one X-axis label; leave blank to plot all numeric value columns.'),
         setting('selected_rows', 'Y-axis Rows', 'row_values', [], supports_dynamic=False, help='Optional. Rows are identified by values in the first dataframe column; leave blank to plot every row as a series.'),
@@ -98,4 +98,4 @@ class BarPlotNode(BaseNode):
             orientation=str(settings.get('orientation') or 'vertical'),
             guidelines=guidelines,
         )
-        return {'plot': result, 'outputs_by_port': {'plot': result}, 'output': result}
+        return plot_result(df, result)

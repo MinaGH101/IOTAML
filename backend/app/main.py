@@ -26,6 +26,7 @@ from app.domains.workflows.routes import router as workflows_router
 from app.domains.assistant.router import router as assistant_router
 from app.domains.admin.routes import router as admin_router
 from app.domains.review_tasks.routes import router as review_tasks_router, tasks_router
+from app.domains.notifications.routes import router as notifications_router
 from app.domains.cases.routes import router as cases_router
 from app.infrastructure.observability import render_prometheus
 from app.infrastructure.storage import get_storage_backend
@@ -101,6 +102,7 @@ app.mount('/media/profile-images', StaticFiles(directory=str(profile_dir)), name
 for router in (
     auth_router, nodes_router, projects_router, datasets_router, workflows_router,
     runs_router, artifacts_router, components_router, assistant_router, admin_router, review_tasks_router, tasks_router,
+    notifications_router,
     cases_router,
 ):
     app.include_router(router, prefix='/api')

@@ -1073,7 +1073,7 @@ animation-duration:1.35s
 }
 .analysis-board-canvas {
 inset:0 0 54px;
-background-color:var(--theme-board-bg);
+background-color:#fff;
 background-image:radial-gradient(circle,var(--theme-canvas-dot) 0.7px,var(--theme-transparent) 0.8px);
 background-position:0 0;
 background-size:10px 10px

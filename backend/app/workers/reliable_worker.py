@@ -33,11 +33,12 @@ from app.domains.runs.repository import run_repository
 from app.domains.workflows.models import Workflow
 from app.domains.datasets.service import materialize_dataset
 from app.domains.artifacts.service import cleanup_expired_artifacts, ingest_run_artifact_paths, materialize_artifact
-from app.domains.review_tasks.service import persist_task_intents
+from app.domains.review_tasks.service import persist_task_intents, persist_task_watches, process_task_maintenance
 from app.domains.review_tasks.models import ReviewTask
 from app.domains.auth.models import User
 from app.domains.projects.models import Project
 from app.domains.cases.service import sync_case_batch_from_run, sync_case_from_run
+from app.nodes.registry import canonical_node_id, get_node_runner
 from app.workflow.execution.run_state import merge_successful_run_state
 from app.workflow.caching.service import cleanup_node_cache, persist_run_cache_records, prepare_cache_manifest
 from app.infrastructure.queue.notifications import QUEUE_NAME
@@ -228,7 +229,16 @@ def _runtime_paths(run: Run) -> dict[str, Path]:
 
 def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
     dataset_path = None
-    external_inputs: dict[str, Any] = {"datasets": {}, "primary_dataset_id": run.dataset_id}
+    config = get_settings()
+    external_inputs: dict[str, Any] = {
+        "datasets": {},
+        "primary_dataset_id": run.dataset_id,
+        "models": {
+            "ocr": config.iota_ocr_model,
+            "extract": config.iota_extract_model,
+            "review": config.iota_review_model,
+        },
+    }
     dataset_ids: set[int] = set()
     if run.dataset_id:
         dataset_ids.add(int(run.dataset_id))
@@ -272,19 +282,17 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         if not isinstance(graph_node, dict):
             continue
         node_data = graph_node.get('data') or {}
-        node_type = str(node_data.get('registryId') or graph_node.get('type') or '')
+        node_type = canonical_node_id(str(node_data.get('registryId') or graph_node.get('type') or ''))
         review_node_ids.add(node_type)
         params = node_data.get('params') or {}
-        raw_documents = []
-        if node_type == 'RV-001':
-            primary = params.get('proposal_pdf')
-            raw_documents.extend((value, True) for value in primary) if isinstance(primary, list) else raw_documents.append((primary, True))
-            attachments = params.get('supporting_files')
-            if isinstance(attachments, list):
-                raw_documents.extend((value, False) for value in attachments)
-        elif node_type == 'RV-003':
-            selected = params.get('artifact_id')
-            raw_documents.extend((value, True) for value in selected) if isinstance(selected, list) else raw_documents.append((selected, True))
+        raw_documents: list[tuple[Any, bool]] = []
+        runner = get_node_runner(node_type)
+        for definition in runner.settings_schema if runner else []:
+            if definition.type not in {'artifact_pdf', 'artifact_files'}:
+                continue
+            raw_value = params.get(definition.name)
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            raw_documents.extend((value, True) for value in values)
         for raw_id, materialize in raw_documents:
             try:
                 artifact_id = int(raw_id)
@@ -305,7 +313,7 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
                 artifact_paths[str(artifact_id)] = str(materialize_artifact(db, artifact_id, cache_group='review-documents'))
             external_inputs.setdefault('artifacts', {})[str(artifact_id)] = artifact.checksum_sha256
 
-    ai_enabled = bool(review_node_ids & {'RV-003', 'RV-004', 'RV-005'})
+    ai_enabled = bool(review_node_ids & {'RV-003', 'RV-004', 'RV-005', 'RV-011'})
     if ai_enabled and any(x.startswith('UC-') or x == 'UT-001' for x in review_node_ids):
         raise ValueError('AI review workflows cannot contain custom code nodes in the same run.')
 
@@ -361,6 +369,7 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         }
 
     work_task_data: dict[str, Any] = {}
+    graph_edges = (run.workflow_graph or {}).get('edges') or []
     for graph_node in ((run.workflow_graph or {}).get('nodes') or []):
         if not isinstance(graph_node, dict):
             continue
@@ -368,24 +377,82 @@ def _snapshot_run(db, run: Run, paths: dict[str, Path]) -> None:
         if str(node_data.get('registryId') or graph_node.get('type') or '') != 'WK-002':
             continue
         raw_id = (node_data.get('params') or {}).get('task_id')
+        source_node_id = next((str(edge.get('source')) for edge in graph_edges
+                               if str(edge.get('target')) == str(graph_node.get('id'))
+                               and str(edge.get('targetHandle') or 'assignment') == 'assignment'), '')
         try:
             task_id = int(raw_id)
         except (TypeError, ValueError):
-            continue
-        sample = db.get(ReviewTask, task_id)
+            task_id = 0
+        sample = db.get(ReviewTask, task_id) if task_id else None
+        if sample is None and source_node_id:
+            candidate_query = (select(ReviewTask).join(Run, Run.id == ReviewTask.run_id)
+                               .where(ReviewTask.node_id == source_node_id,
+                                      Run.owner_username == run.owner_username)
+                               .order_by(ReviewTask.id.desc()).limit(1))
+            candidate_query = candidate_query.where(ReviewTask.project_id == run.project_id)
+            sample = db.scalar(candidate_query)
         source_run = db.get(Run, sample.run_id) if sample else None
         if not sample or not source_run or sample.project_id != run.project_id or source_run.owner_username != run.owner_username:
             continue
+        group_scope = (ReviewTask.assignment_group_id == sample.assignment_group_id
+                       if sample.assignment_group_id else ReviewTask.run_id == sample.run_id)
         rows = db.execute(select(ReviewTask, User.username).join(User, User.id == ReviewTask.assignee_user_id)
-                          .where(ReviewTask.run_id == sample.run_id, ReviewTask.node_id == sample.node_id,
+                          .where(group_scope, ReviewTask.node_id == sample.node_id,
                                  ReviewTask.subject_id == sample.subject_id)
                           .order_by(ReviewTask.id).limit(100)).all()
-        work_task_data[str(task_id)] = {
+        payload = {
+            'task_id': sample.id, 'assignment_group_id': sample.assignment_group_id,
             'task_kind': sample.task_kind, 'title': sample.form_json.get('title') or sample.form_id,
             'subject_id': sample.subject_id or sample.case_id, 'fields': sample.form_json.get('fields') or [],
             'responses': [{'task_id': task.id, 'assignee': username, 'status': task.status,
+                           'submitted_at': task.completed_at.isoformat() if task.completed_at else None,
                            'answers': task.response_json} for task, username in rows],
         }
+        if task_id:
+            work_task_data[str(task_id)] = payload
+        work_task_data[f'node:{sample.node_id}:{sample.subject_id}'] = payload
+        if source_node_id:
+            # A Form Assignment may emit one task per case.  The graph carries
+            # those subjects as a work_task_batch, so make one aggregate lookup
+            # available to its connected Get Submissions node.  A later run can
+            # assign the identical form to another reviewer; in that case the
+            # task rows live in separate runs but retain the same group id.
+            # Seed the current batch from its source run, then expand each group
+            # so all assignees' submissions are represented.
+            batch_seed_rows = db.execute(
+                select(ReviewTask, User.username).join(User, User.id == ReviewTask.assignee_user_id)
+                .where(ReviewTask.run_id == sample.run_id, ReviewTask.node_id == source_node_id)
+                .order_by(ReviewTask.id)
+                .limit(100)
+            ).all()
+            batch_group_ids = {task.assignment_group_id for task, _ in batch_seed_rows if task.assignment_group_id}
+            batch_rows = batch_seed_rows
+            if batch_group_ids:
+                batch_rows = db.execute(
+                    select(ReviewTask, User.username).join(User, User.id == ReviewTask.assignee_user_id)
+                    .where(ReviewTask.project_id == run.project_id,
+                           ReviewTask.node_id == source_node_id,
+                           ReviewTask.assignment_group_id.in_(batch_group_ids))
+                    .order_by(ReviewTask.id)
+                    .limit(100)
+                ).all()
+            if batch_rows:
+                batch_sample = batch_rows[0][0]
+                work_task_data[f'node:{source_node_id}:batch'] = {
+                    'task_id': batch_sample.id,
+                    'assignment_group_ids': sorted({task.assignment_group_id for task, _ in batch_rows if task.assignment_group_id}),
+                    'task_kind': batch_sample.task_kind,
+                    'title': batch_sample.form_json.get('title') or batch_sample.form_id,
+                    'subject_ids': [task.subject_id or task.case_id for task, _ in batch_rows],
+                    'fields': batch_sample.form_json.get('fields') or [],
+                    'responses': [
+                        {'task_id': task.id, 'assignee': username, 'subject_id': task.subject_id or task.case_id,
+                         'status': task.status, 'submitted_at': task.completed_at.isoformat() if task.completed_at else None,
+                         'answers': task.response_json}
+                        for task, username in batch_rows
+                    ],
+                }
 
     custom_ids = {
         str((node.get('data') or {}).get('registryId') or node.get('type') or '')
@@ -462,6 +529,7 @@ def _child_environment(paths: dict[str, Path]) -> dict[str, str]:
             'OPENAI_API_KEY': config.openai_api_key,
             'OPENAI_BASE_URL': config.openai_base_url,
             'IOTA_OCR_MODEL': config.iota_ocr_model,
+            'IOTA_EXTRACT_MODEL': config.iota_extract_model,
             'IOTA_REVIEW_MODEL': config.iota_review_model,
         })
     return env
@@ -637,10 +705,17 @@ def finalize_active(active: ActiveRun, *, forced_status: str | None = None, forc
                 status = 'failed'
                 error = str(task_exc)
                 run.logs = append_log(run.logs, 'error', error)
+        task_watches_created = 0
+        if status == 'succeeded' and result.get('task_watch_intents'):
+            task_watches_created = persist_task_watches(
+                db, run, result['task_watch_intents'],
+                existing_task_ids=task_assignments.existing_task_ids if task_assignments else None,
+            )
         run.metrics = {
             **(result.get('metrics') or {}),
             'cache': cache_stats,
             **({'task_assignments': task_assignments.to_dict()} if task_assignments else {}),
+            **({'task_watches_created': task_watches_created} if task_watches_created else {}),
         }
         successful_workflow = None
         if status == 'succeeded' and run.workflow_id is not None:
@@ -833,6 +908,7 @@ def run_worker() -> None:
     last_cleanup = 0.0
     last_health_publish = 0.0
     last_queue_poll = 0.0
+    last_task_monitor = 0.0
     queue_woken = True
     wakeup = WorkerWakeup()
 
@@ -850,6 +926,11 @@ def run_worker() -> None:
                 cleanup_node_cache(db)
                 db.commit()
             last_cleanup = now
+        if now - last_task_monitor >= settings.task_monitor_interval_seconds:
+            with SessionLocal() as db:
+                process_task_maintenance(db)
+                db.commit()
+            last_task_monitor = now
 
         for run_id, item in list(active.items()):
             if stopping:

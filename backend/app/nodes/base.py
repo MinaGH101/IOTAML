@@ -96,6 +96,14 @@ class BaseNode:
     validation_rules: str = ''
     cacheable: bool = True
     cache_version: str = '1'
+    # Durable cache entries are reserved for pure nodes whose recomputation has
+    # an external monetary cost (for example OCR or LLM inference). They are
+    # retained until explicitly refreshed/cleared rather than by the normal
+    # time/size-based cache eviction policy.
+    cache_persistent: bool = False
+    # Optional key in RuntimeNodeCache.external_inputs["models"]. Including the
+    # configured provider model in the key prevents reuse after a model change.
+    cache_model_key: str | None = None
 
     def definition(self) -> NodeDefinition:
         return NodeDefinition(
@@ -119,6 +127,19 @@ class BaseNode:
 
     def to_api(self) -> dict[str, Any]:
         return self.definition().to_api()
+
+    def cacheable_for(self, params: dict[str, Any]) -> bool:
+        """Return whether this node result is reusable for the resolved settings."""
+        return self.cacheable
+
+    def restore_cached_result(self, result: Any, context: Any) -> Any:
+        """Refresh volatile run-local presentation data after a cache hit.
+
+        Cached computational values must stay unchanged. Nodes that include a
+        current run identifier or another non-computational UI reference may
+        override this hook so reuse never exposes a stale run-local reference.
+        """
+        return result
 
     def validate_settings(self, settings: dict[str, Any]) -> None:
         """Validate required settings using the shared workflow error contract."""

@@ -1,13 +1,16 @@
 import * as am5 from '@amcharts/amcharts5';
 import * as am5xy from '@amcharts/amcharts5/xy';
 import type { Output } from '../../../../../workspace/_model/output';
-import { addAxisLabel, addCursor, addLegend, addValueRange, createChart, makeTooltip, resolveColor, styleAxisRenderer, type ChartPalette } from '../chartCore';
+import { addAxisLabel, addCursor, addValueRange, createChart, makeTooltip, resolveColor, styleAxisRenderer, type ChartPalette } from '../chartCore';
+import { getHorizontalBarLabelLayout } from './barPlotLayout';
 
 export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPalette, compact: boolean) {
   const categories = ((output.categories as unknown[] | undefined) || []).map(String);
   const rawSeries = ((output.series as Array<Record<string, unknown>> | undefined) || []);
   const horizontal = String(output.orientation || 'vertical') === 'horizontal';
   if (!categories.length || !rawSeries.length) return false;
+  const seriesLabels = rawSeries.map((series, index) => String(series.label || `Row ${index + 1}`));
+  const { categoryLabelWidth, groupLabelWidth, groupLabelGap } = getHorizontalBarLabelLayout(categories, seriesLabels, compact);
   const data = categories.map((category, categoryIndex) => {
     const row: Record<string, unknown> = { category };
     rawSeries.forEach((series, seriesIndex) => {
@@ -19,6 +22,7 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
   });
 
   const chart = createChart(root, compact);
+  if (horizontal) chart.set('paddingLeft', 8 + groupLabelWidth + groupLabelGap);
   const categoryRenderer = horizontal
     ? am5xy.AxisRendererY.new(root, { inversed: true, minGridDistance: 24 })
     : am5xy.AxisRendererX.new(root, { minGridDistance: 34 });
@@ -36,12 +40,11 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
     ? chart.xAxes.push(am5xy.ValueAxis.new(root, { renderer: valueRenderer as unknown as am5xy.AxisRendererX, extraMin: 0.04, extraMax: 0.08 }))
     : chart.yAxes.push(am5xy.ValueAxis.new(root, { renderer: valueRenderer as unknown as am5xy.AxisRendererY, extraMin: 0.04, extraMax: 0.08 }));
   categoryAxis.data.setAll(data);
-  addAxisLabel(root, categoryAxis, 'Selected columns', horizontal, palette);
   addAxisLabel(root, valueAxis, 'Value', !horizontal, palette);
 
   rawSeries.forEach((definition, index) => {
     const field = `series_${index}`;
-    const label = String(definition.label || `Row ${index + 1}`);
+    const label = seriesLabels[index];
     const color = resolveColor(definition.color, [palette.primary, palette.secondary, palette.success, palette.warning, palette.danger][index % 5], palette);
     const settings: any = horizontal ? {
       name: label,
@@ -49,6 +52,7 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
       yAxis: categoryAxis,
       categoryYField: 'category',
       valueXField: field,
+      maskBullets: false,
       tooltip: makeTooltip(root, palette, `${label}\n{categoryY}: {valueX}`),
     } : {
       name: label,
@@ -56,6 +60,7 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
       yAxis: valueAxis,
       categoryXField: 'category',
       valueYField: field,
+      maskBullets: false,
       tooltip: makeTooltip(root, palette, `${label}\n{categoryX}: {valueY}`),
     };
     const series = chart.series.push(am5xy.ColumnSeries.new(root, settings));
@@ -71,6 +76,30 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
       height: horizontal ? am5.percent(76) : undefined,
     });
     series.columns.template.states.create('hover', { fillOpacity: 1 });
+    series.bullets.push(() => am5.Bullet.new(root, horizontal ? {
+      locationX: 0,
+      sprite: am5.Label.new(root, {
+        text: label,
+        centerX: am5.p100,
+        centerY: am5.p50,
+        dx: -(categoryLabelWidth + groupLabelGap),
+        fill: am5.color(palette.text),
+        fontFamily: palette.font,
+        fontSize: compact ? 9 : 10,
+      }),
+    } : {
+      locationX: 0,
+      locationY: 0,
+      sprite: am5.Label.new(root, {
+        text: label,
+        centerX: am5.p100,
+        centerY: am5.p50,
+        dx: -6,
+        fill: am5.color(palette.text),
+        fontFamily: palette.font,
+        fontSize: compact ? 9 : 10,
+      }),
+    }));
     series.data.setAll(data);
   });
 
@@ -79,7 +108,5 @@ export function renderBarPlot(root: am5.Root, output: Output, palette: ChartPale
     .filter((guide) => Number.isFinite(guide.value));
   guidelines.forEach((guide, index) => addValueRange(root, valueAxis, guide.value, guide.label, [palette.warning, palette.danger, palette.secondary][index % 3], palette));
   addCursor(root, chart, compact, palette);
-  addLegend(root, chart, palette, compact);
   return chart;
 }
-

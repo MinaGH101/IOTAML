@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output
+from app.nodes.io import coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output, plot_result
 
 
 def _columns_setting(value: Any) -> list[str]:
@@ -22,7 +22,7 @@ class BoxPlotNode(BaseNode):
     category = 'Visualizations'
     description = 'Creates one or more box plot statistic panels for selected numeric columns.'
     inputs = [port('data', 'DataFrame', 'dataframe')]
-    outputs = [port('plot', 'Box Plot', 'plot')]
+    outputs = [port('plot', 'Box Plot', 'plot'), port('table', 'Raw Data', 'dataframe')]
     settings_schema = [
         setting('columns', 'Columns', 'columns', [], help='Select one or more numeric columns.'),
     ]
@@ -50,6 +50,6 @@ class BoxPlotNode(BaseNode):
         if not plots:
             raise ValueError('Selected columns have no numeric values for box plot.')
         if len(plots) == 1:
-            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+            return plot_result(df, plots[0])
         group = output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')
-        return {'_df': df, 'plot': group, 'outputs_by_port': {'plot': group}, 'output': group}
+        return plot_result(df, group)

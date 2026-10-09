@@ -63,9 +63,8 @@ export function AppTopNav({
       <div className="run-controls profile-controls iota-nav-actions">
         <TaskInboxLink />
         {onProjects && (
-          <button className="icon-button profile-button" type="button" onClick={onProjects} title="پنل پروژه‌ها">
+          <button className="icon-button profile-button profile-icon-only" type="button" onClick={onProjects} title="پنل پروژه‌ها" aria-label="پنل پروژه‌ها">
             <LayoutDashboard size={16} />
-            <span>پروژه‌ها</span>
           </button>
         )}
         {user.role === 'admin' && onAdmin && (
@@ -77,7 +76,7 @@ export function AppTopNav({
           <UserCircle size={16} />
         </button>
         <ThemeToggle />
-        <button className="icon-button iota-user-chip" type="button" onClick={onProfile} title={displayName}>
+        <button className="icon-button iota-user-chip profile-icon-only" type="button" onClick={onProfile} title={displayName}>
           <span>{displayName.slice(0, 1)}</span>
           <b>{displayName}</b>
         </button>

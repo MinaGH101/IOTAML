@@ -103,6 +103,7 @@ class ArtifactRepository:
             .filter(
                 Artifact.status == "available",
                 Artifact.deleted_at.is_(None),
+                Artifact.pinned.is_(False),
                 Artifact.expires_at.is_not(None),
                 Artifact.expires_at <= now,
             )

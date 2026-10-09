@@ -18,9 +18,9 @@ type EditableNodeData = Record<string, unknown> & {
     canEditNode?: boolean;
 };
 function shapeClass(category: string) {
-    if (category === 'Visualizations' || category === 'ML Regression Models' || category === 'ML Classification Models')
+    if (category === 'AI Tools' || category === 'Visualizations' || category === 'ML Regression Models' || category === 'ML Classification Models')
         return 'shape-ellipse';
-    if (category.includes('ML Model'))
+    if (category === 'Data Input' || category.includes('ML Model'))
         return 'shape-square';
     return 'shape-rectangle';
 }

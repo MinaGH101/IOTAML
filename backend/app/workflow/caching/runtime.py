@@ -9,7 +9,7 @@ from typing import Any
 import joblib
 
 from app.core.config import get_settings
-from app.workflow.caching.keys import full_cache_key, static_fingerprint
+from app.workflow.caching.keys import full_cache_key, referenced_artifact_ids, static_fingerprint
 
 
 def _sha256_file(path: Path) -> str:
@@ -33,6 +33,7 @@ class RuntimeNodeCache:
         self.enabled = bool(self.manifest.get("enabled"))
         self.entries: dict[str, dict[str, Any]] = dict(self.manifest.get("entries") or {})
         self.static: dict[str, dict[str, Any]] = dict(self.manifest.get("static") or {})
+        self.force_node_ids = {str(value) for value in self.manifest.get('force_node_ids') or []}
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.external_inputs = external_inputs
@@ -71,7 +72,12 @@ class RuntimeNodeCache:
             refs.append(ref)
         return refs
 
-    def _relevant_external_inputs(self, resolved_params: dict[str, Any], parent_refs: list[dict[str, Any]]) -> dict[str, Any]:
+    def _relevant_external_inputs(
+        self,
+        resolved_params: dict[str, Any],
+        parent_refs: list[dict[str, Any]],
+        descriptor: dict[str, Any],
+    ) -> dict[str, Any]:
         dataset_ids: set[str] = set()
 
         def collect(value: Any, key: str | None = None) -> None:
@@ -95,9 +101,23 @@ class RuntimeNodeCache:
             except (TypeError, ValueError):
                 pass
         datasets = self.external_inputs.get("datasets") or {}
-        return {
+        relevant = {
             "datasets": {dataset_id: datasets[dataset_id] for dataset_id in sorted(dataset_ids) if dataset_id in datasets},
         }
+        node_type = str(descriptor.get('node_type') or '')
+        artifact_ids = referenced_artifact_ids(node_type, resolved_params)
+        artifacts = self.external_inputs.get('artifacts') or {}
+        if artifact_ids:
+            relevant['artifacts'] = {
+                artifact_id: artifacts[artifact_id]
+                for artifact_id in sorted(artifact_ids)
+                if artifact_id in artifacts
+            }
+        model_key = descriptor.get('cache_model_key')
+        models = self.external_inputs.get('models') or {}
+        if model_key and model_key in models:
+            relevant['model'] = {model_key: models[model_key]}
+        return relevant
 
     def key_for(self, node: dict[str, Any], resolved_params: dict[str, Any], parent_refs: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
         descriptor = self._descriptor(node)
@@ -110,7 +130,9 @@ class RuntimeNodeCache:
                 "source_handle": item.get("source_handle"),
                 "target_handle": item.get("target_handle"),
             } for item in parent_refs],
-            external_inputs=self._relevant_external_inputs(resolved_params, parent_refs),
+            external_inputs=self._relevant_external_inputs(
+                resolved_params, parent_refs, descriptor
+            ),
             target_column=self.target_column,
             task_type=self.task_type,
         )
@@ -121,6 +143,8 @@ class RuntimeNodeCache:
         meta = {"cache_key": key, **descriptor}
         if not self.enabled or not descriptor.get("cacheable"):
             return None, meta
+        if str(node.get('id')) in self.force_node_ids:
+            return None, {**meta, 'cache_refresh': True}
         entry = self.entries.get(key)
         if not entry:
             return None, meta
@@ -143,6 +167,7 @@ class RuntimeNodeCache:
             "static_fingerprint": descriptor.get("static_fingerprint"),
             "cache_key": key,
             "cacheable": True,
+            "cache_persistent": bool(descriptor.get('cache_persistent')),
             "cache_hit": True,
             "cache_entry_id": entry.get("cache_entry_id"),
             "artifact_id": entry.get("artifact_id"),
@@ -189,6 +214,8 @@ class RuntimeNodeCache:
             "static_fingerprint": descriptor.get("static_fingerprint"),
             "cache_key": key,
             "cacheable": True,
+            "cache_persistent": bool(descriptor.get('cache_persistent')),
+            "cache_refresh": node_id in self.force_node_ids,
             "cache_hit": False,
             "path": str(target),
             "output_digest": digest,

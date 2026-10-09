@@ -20,7 +20,7 @@ export function ParamComplexField({ param, value, label, p, m }: {
 }) { if (param.type === 'artifact_files')
     return <div className="field">{label}<ArtifactFilesInput value={value} excludedIds={m.registryId === 'RV-001' ? (Array.isArray(m.params.proposal_pdf) ? m.params.proposal_pdf.map(Number) : [Number(m.params.proposal_pdf)]) : []} onChange={(ids) => m.update(param.name, ids)} />{param.help && <small>{param.help}</small>}</div>; if (param.type === 'assignee_users')
     return <div className="field">{label}<AssigneeUsersInput value={value} onChange={(users) => m.update(param.name, users)} />{param.help && <small>{param.help}</small>}</div>; if (param.type === 'artifact_pdf')
-    return <div className="field">{label}<PdfArtifactInput value={value} multiple={(m.registryId === 'RV-001' && param.name === 'proposal_pdf') || (m.registryId === 'RV-003' && param.name === 'artifact_id')} onChange={(id) => {
+    return <div className="field">{label}<PdfArtifactInput value={value} multiple={(m.registryId === 'RV-001' && param.name === 'proposal_pdf') || (m.registryId === 'RV-011' && param.name === 'pdf_files')} onChange={(id) => {
         if (m.registryId === 'RV-001' && param.name === 'proposal_pdf') {
             const selected = Array.isArray(id) ? id.map(Number) : [Number(id)];
             const attachments = Array.isArray(m.params.supporting_files) ? m.params.supporting_files.filter((item) => !selected.includes(Number(item))) : [];
@@ -55,5 +55,5 @@ export function ParamComplexField({ param, value, label, p, m }: {
     const cols = m.registryId === 'VZ-005'
         ? m.columns.calculationColumns.filter((c) => c !== barPlotRowLabel)
         : m.columns.calculationColumns.filter((c) => c !== target);
-    return <div className="field">{label}<PillPicker items={cols} selected={selected} onChange={(v) => m.update(param.name, v)} empty="ستونی برای انتخاب پیدا نشد."/></div>;
+    return <div className="field">{label}<PillPicker items={cols} selected={selected} maxSelected={param.name === 'group_by' ? 1 : undefined} onChange={(v) => m.update(param.name, v)} empty="ستونی برای انتخاب پیدا نشد."/></div>;
 } return null; }

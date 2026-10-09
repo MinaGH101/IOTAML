@@ -121,3 +121,8 @@ def test_normalization_dataframe_port_is_not_confused_with_report_preview() -> N
         None,
     )
     assert pp_result['output']['kind'] == 'pp_plot'
+    assert pp_result['table']['_df'].columns.tolist() == ['sample', 'x', 'untouched']
+    table_inputs = upstream_outputs('target', [{
+        'id': 'pp-table-to-target', 'source': 'pp', 'sourceHandle': 'table', 'target': 'target', 'targetHandle': 'data',
+    }], {'pp': pp_result})
+    assert first_upstream_df(table_inputs, 'data').equals(frame)

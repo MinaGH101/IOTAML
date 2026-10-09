@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 
 from app.nodes.base import BaseNode, port, setting
-from app.nodes.io import coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output, selected_columns
+from app.nodes.io import coerce_numeric_series, ensure_df, first_upstream_df, node_label, numeric_df, output, plot_result, selected_columns
 
 
 def _normal_cdf(values: np.ndarray) -> np.ndarray:
@@ -32,7 +32,7 @@ class PPPlotNode(BaseNode):
     category = 'Visualizations'
     description = 'Creates normal probability-probability plots for one or more numeric columns with an x=y reference line.'
     inputs = [port('data', 'DataFrame', 'dataframe')]
-    outputs = [port('plot', 'P-P Plot', 'plot')]
+    outputs = [port('plot', 'P-P Plot', 'plot'), port('table', 'Raw Data', 'dataframe')]
     settings_schema = [
         setting('columns', 'Columns', 'columns', [], True),
         setting('plotting_position', 'Plotting Position', 'select', 'hazen', options=['hazen', 'weibull', 'blom']),
@@ -76,6 +76,6 @@ class PPPlotNode(BaseNode):
         if not plots:
             raise ValueError('Selected columns need at least three varying numeric values for a P-P plot.')
         if len(plots) == 1:
-            return {'_df': df, 'plot': plots[0], 'outputs_by_port': {'plot': plots[0]}, 'output': plots[0]}
+            return plot_result(df, plots[0])
         group = output(str(node['id']), node_label(node), 'plot_group', plots=plots, count=len(plots), layout='vertical')
-        return {'_df': df, 'plot': group, 'outputs_by_port': {'plot': group}, 'output': group}
+        return plot_result(df, group)

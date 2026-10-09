@@ -12,6 +12,7 @@ from app.domains.projects.models import Project
 from app.domains.runs.models import Run
 from app.domains.workflows.models import Workflow, WorkflowVersion
 from app.workflow.validation.service import validate_workflow_graph
+from app.workflow.compatibility import upgrade_editable_graph
 
 
 def make_session() -> Session:
@@ -49,6 +50,51 @@ def test_autosave_is_noop_for_identical_draft_and_revises_changed_graph() -> Non
         )
         assert changed.revision == 2
         assert changed.graph == changed_graph
+
+
+def test_legacy_document_extract_graph_is_upgraded_to_explicit_ocr_stage() -> None:
+    graph = {
+        'nodes': [
+            {'id': 'intake', 'type': 'mlNode', 'position': {'x': 0, 'y': 0}, 'data': {
+                'registryId': 'RV-001',
+                'params': {'proposal_pdf': None, 'supporting_files': []},
+            }},
+            {'id': 'extract', 'type': 'mlNode', 'position': {'x': 400, 'y': 0}, 'data': {
+                'registryId': 'RV-003',
+                'params': {
+                    'artifact_id': [91, 92], 'max_pages': 46, 'ocr_mode': 'missing_text',
+                    'max_ocr_pages': 4, 'input_mode': 'static',
+                    'extraction_fields': [{'id': 'title', 'label': 'Title', 'type': 'text'}],
+                    'user_prompt': '',
+                },
+            }},
+        ],
+        'edges': [{
+            'id': 'intake-extract', 'source': 'intake', 'target': 'extract',
+            'sourceHandle': 'case', 'targetHandle': 'case',
+        }],
+        'meta': {},
+    }
+
+    upgraded = upgrade_editable_graph(graph)
+    assert graph['nodes'][1]['data']['params']['artifact_id'] == [91, 92]
+    assert upgrade_editable_graph(upgraded) == upgraded
+    assert [item['data']['registryId'] for item in upgraded['nodes']] == ['RV-001', 'RV-011', 'RV-003']
+    assert upgraded['nodes'][0]['data']['params']['supporting_files'] == [91, 92]
+    assert upgraded['nodes'][1]['data']['params'] == {
+        'pdf_files': [91, 92], 'max_pages': 46,
+    }
+    assert upgraded['nodes'][2]['data']['params'] == {
+        'input_mode': 'static', 'form_id': 'extraction_review',
+        'extraction_fields': [{'id': 'title', 'label': 'Title', 'type': 'text'}],
+        'max_document_chars': 120000, 'user_prompt': '',
+    }
+    assert [(item['source'], item['sourceHandle'], item['target'], item['targetHandle'])
+            for item in upgraded['edges']] == [
+        ('intake', 'case', 'extract-ocr', 'case'),
+        ('extract-ocr', 'ocr_text', 'extract', 'ocr_text'),
+    ]
+    assert validate_workflow_graph(upgraded, require_settings=False, require_connections=False).valid
 
 
 

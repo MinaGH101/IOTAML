@@ -435,7 +435,7 @@
 .workflow-shell-page .analysis-board-canvas {
   background:
     radial-gradient(circle, rgb(45 212 191 / 12%) 1px, transparent 1.5px),
-    #0b0d0f !important;
+    #fff !important;
   background-size: 26px 26px, auto !important;
 }
 
@@ -580,9 +580,8 @@
   border-color: rgb(34 62 82 / 16%) !important;
   background:
     radial-gradient(circle, rgb(8 127 115 / 10%) 1px, transparent 1.5px),
-    radial-gradient(circle at 50% 0%, rgb(8 127 115 / 9%) 0%, transparent 34%),
-    #f2f6f8 !important;
-  background-size: 26px 26px, auto, auto !important;
+    #fff !important;
+  background-size: 26px 26px, auto !important;
 }
 
 :root[data-theme="light"] .workflow-shell-page .node-palette .palette-node-card,

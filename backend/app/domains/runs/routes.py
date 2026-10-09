@@ -729,9 +729,9 @@ def retry_run(
         # newly created run.
         enforce_run_quotas(db, owner_username=run.owner_username, project_id=run.project_id)
 
-        # Mutate the existing run into its queued retry state and restart its
-        # attempt counter according to this endpoint's manual-retry behavior.
-        queue_retry(db, run, reset_attempts=True)
+        # Retain the durable attempt sequence; RunAttempt records are kept for
+        # auditability and use it as part of their unique identity.
+        queue_retry(db, run)
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
 

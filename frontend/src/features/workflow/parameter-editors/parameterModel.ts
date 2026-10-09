@@ -134,6 +134,8 @@ export function normalizeNumber(value: string, param: NodeParam) { if (value ===
 export function toggleItem(items: string[], item: string) { return items.includes(item) ? items.filter((value) => value !== item) : uniq([...items, item]); }
 
 export function shouldShowParam(registryId: string, paramName: string, params: Record<string, unknown>) {
+  if (['WK-003', 'WK-004', 'WK-005'].includes(registryId) && paramName === 'due_days') return (params.due_mode || 'relative') === 'relative';
+  if (['WK-003', 'WK-004', 'WK-005'].includes(registryId) && paramName === 'due_at') return params.due_mode === 'exact';
   if (registryId === 'WK-001' && paramName === 'response_fields') return params.task_kind === 'form';
   if ((registryId === 'RV-001' || registryId === 'RV-003') && paramName === 'form_id') return params.input_mode === 'dynamic';
   if (registryId === 'RV-002' && paramName === 'due_days') return params.input_mode !== 'static';

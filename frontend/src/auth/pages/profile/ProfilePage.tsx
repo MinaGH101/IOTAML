@@ -4,6 +4,9 @@ import { authApi } from '../../_service/authApi';
 import { AppTopNav } from '../../../shared/_components/AppTopNav';
 import type { UserProfile } from '../../../shared/_types';
 import { mediaSrc, messageFromError, type UiMessage } from '../../../shared/_utils/appShared';
+import { request } from '../../../shared/api/httpClient';
+
+type NotificationItem = { id: number; kind: string; title: string; message: string; path?: string | null; created_at: string; read_at?: string | null };
 
 export function ProfilePage({
   user,
@@ -25,10 +28,14 @@ export function ProfilePage({
   const [busy, setBusy] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [notificationItems, setNotificationItems] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
     let active = true;
-    void authApi.me().then((fresh) => { if (active) { setDraft(fresh); onSaved(fresh); } }).catch(() => undefined);
+    void Promise.all([
+      authApi.me().then((fresh) => { if (active) { setDraft(fresh); onSaved(fresh); } }),
+      request<NotificationItem[]>('/api/notifications?limit=50').then((items) => { if (active) setNotificationItems(items); }),
+    ]).catch(() => undefined);
     return () => { active = false; };
   }, []);
 
@@ -197,7 +204,7 @@ export function ProfilePage({
                     <span>{item.message}</span>
                   </div>
                 ))}
-                {notifications.map((item, index) => (
+                {(notificationItems.length ? [] : notifications).map((item, index) => (
                   <div className="notification-row" key={`n-${index}`}>
                     <b>{item.title}</b>
                     <span>{item.message}</span>
@@ -205,7 +212,15 @@ export function ProfilePage({
                     {item.path && <a href={item.path}>مشاهده وظیفه</a>}
                   </div>
                 ))}
-                {alarms.length === 0 && notifications.length === 0 && <p className="empty-state small">اعلانی وجود ندارد.</p>}
+                {notificationItems.map((item) => (
+                  <div className={`notification-row ${item.read_at ? '' : 'unread'}`} key={item.id}>
+                    <b>{item.title}</b>
+                    <span>{item.message}</span>
+                    <small>{new Date(item.created_at).toLocaleString('fa-IR')}</small>
+                    {item.path && <a href={item.path} onClick={() => void request(`/api/notifications/${item.id}/read`, { method: 'POST' })}>مشاهده</a>}
+                  </div>
+                ))}
+                {alarms.length === 0 && notifications.length === 0 && notificationItems.length === 0 && <p className="empty-state small">اعلانی وجود ندارد.</p>}
               </div>
             </section>
           </aside>

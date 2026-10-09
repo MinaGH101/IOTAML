@@ -329,3 +329,28 @@ def test_inspection_reports_exclude_id_from_calculations() -> None:
         {'id': 'stats-id-safety', 'data': {'label': 'Stats'}}, source, {'columns': [], 'metrics': ['count']}, None,
     )
     assert stats['report']['_df']['column'].tolist() == ['Au', 'Cu']
+
+
+def test_statistical_report_groups_metrics_by_selected_columns() -> None:
+    from app.nodes.inspection.statistical_report_node import StatisticalReportNode
+
+    frame = pd.DataFrame({
+        'sample_id': ['A-1', 'A-2', 'B-1', 'B-2'],
+        'batch': ['A', 'A', 'B', 'B'],
+        'Au': [1.0, 3.0, 10.0, None],
+    })
+    result = StatisticalReportNode().run(
+        {'id': 'grouped-stats', 'data': {'label': 'Grouped Stats'}},
+        {'data': dataframe_result(frame, id_column='sample_id')},
+        {'columns': ['Au'], 'group_by': ['batch'], 'metrics': ['count', 'missing', 'mean']},
+        None,
+    )
+
+    report = result['report']['_df']
+    assert report.columns.tolist() == ['column', 'statistic', 'A', 'B']
+    assert result['output']['columns'] == ['column', 'statistic', 'A', 'B']
+    assert report.to_dict(orient='records') == [
+        {'column': 'Au', 'statistic': 'count', 'A': 2, 'B': 1},
+        {'column': 'Au', 'statistic': 'missing', 'A': 0, 'B': 1},
+        {'column': 'Au', 'statistic': 'mean', 'A': 2.0, 'B': 10.0},
+    ]

@@ -70,9 +70,9 @@ def node(node_id: str, registry_id: str, label: str, x: int, y: int, params: dic
             'data': {'registryId': registry_id, 'label': label, 'params': params}}
 
 
-def edge(source: str, target: str) -> dict:
+def edge(source: str, target: str, source_handle: str = 'case', target_handle: str = 'case') -> dict:
     return {'id': f'{source}-{target}', 'source': source, 'target': target,
-            'sourceHandle': 'case', 'targetHandle': 'case'}
+            'sourceHandle': source_handle, 'targetHandle': target_handle}
 
 
 def workflow_graph() -> dict:
@@ -102,25 +102,27 @@ def workflow_graph() -> dict:
             'input_mode': 'static', 'proposal_pdf': None, 'supporting_files': [],
             'intake_fields': intake_fields, 'id_prefix': 'PROPOSAL',
         }),
-        node('extract-info', 'RV-003', 'Extract Proposal Information', 400, 120, {
-            'artifact_id': None, 'input_mode': 'static', 'max_pages': 60,
-            'ocr_mode': 'missing_text', 'max_ocr_pages': 6,
+        node('ocr-documents', 'RV-011', 'OCR Documents', 400, 120, {
+            'max_pages': 60,
+        }),
+        node('extract-info', 'RV-003', 'Extract Proposal Information', 720, 120, {
+            'input_mode': 'static', 'max_document_chars': 120000,
             'extraction_fields': extraction_fields,
             'user_prompt': 'Extract the official proposal title, proposer, and a concise executive summary. Use only evidence in the document.',
         }),
-        node('scoring-form', 'RV-002', 'Scoring Form', 720, 120, {
+        node('scoring-form', 'RV-002', 'Scoring Form', 1040, 120, {
             'input_mode': 'dynamic', 'form_id': 'expert_review',
             'title': 'فرم امتیازدهی تخصصی طرح', 'fields': score_fields, 'due_days': 7,
         }),
-        node('validate-case', 'RV-004', 'Validate Case', 1040, 120, {
+        node('validate-case', 'RV-004', 'Validate Case', 1360, 120, {
             'required_field_ids': 'project_title',
             'user_prompt': 'Identify material inconsistencies, unsupported claims, or missing implementation details. Do not make the final decision.',
         }),
-        node('ai-review', 'RV-005', 'AI Review', 1360, 120, {
+        node('ai-review', 'RV-005', 'AI Review', 1680, 120, {
             'form_id': 'expert_review', 'max_document_chars': 30000,
             'user_prompt': 'Score every rubric criterion from document evidence. Cite pages, explain weak evidence, and leave the final decision to human reviewers.',
         }),
-        node('assign-reviewers', 'RV-009', 'Assign Scoring Form', 1680, 120, {
+        node('assign-reviewers', 'RV-009', 'Assign Scoring Form', 2000, 120, {
             'form_id': 'expert_review', 'assignees': ','.join(item['username'] for item in REVIEWERS),
         }),
         node('get-responses', 'RV-010', 'Get Submitted Scores', 720, 520, {
@@ -130,8 +132,9 @@ def workflow_graph() -> dict:
             'form_id': 'expert_review', 'minimum_reviewers': len(REVIEWERS),
         }),
     ]
-    first_branch = ['case-intake', 'extract-info', 'scoring-form', 'validate-case', 'ai-review', 'assign-reviewers']
+    first_branch = ['case-intake', 'ocr-documents', 'extract-info', 'scoring-form', 'validate-case', 'ai-review', 'assign-reviewers']
     edges = [edge(left, right) for left, right in zip(first_branch, first_branch[1:])]
+    edges[1] = edge('ocr-documents', 'extract-info', 'ocr_text', 'ocr_text')
     edges.append(edge('get-responses', 'aggregate-scores'))
     return {'nodes': nodes, 'edges': edges, 'meta': {'analysisBoards': [], 'activeAnalysisBoardId': 'main'}}
 

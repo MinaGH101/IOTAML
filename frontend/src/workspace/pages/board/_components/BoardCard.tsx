@@ -31,6 +31,9 @@ type Props = {
 export const BoardCard = memo(function BoardCard({ item, output, stale, runId, editing, movable, resizable, active, dragging, resizing, zoom, onZoomChange, onRemoveItem, onFocus, onStartMove, onStartResize, onMoveKey, onResizeKey }: Props) {
     const title = item.sourceLabel?.trim() || item.outputTitle;
     const subtitle = item.sourceTypeLabel?.trim() || item.outputKind || (stale ? 'نیازمند اجرای دوباره' : runId ? `Run #${runId}` : 'خروجی');
+    const caseCount = output?.kind === 'review_batch'
+      ? (Array.isArray(output.cases) ? output.cases.length : Number.isFinite(Number(output.case_count)) ? Number(output.case_count) : null)
+      : null;
     const moveByKeyboard = (event: KeyboardEvent<HTMLElement>) => {
         if (!movable || event.target !== event.currentTarget || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault();
@@ -45,6 +48,7 @@ export const BoardCard = memo(function BoardCard({ item, output, stale, runId, e
       <div className={`analysis-board-card-head ${movable ? 'is-movable' : ''}`} role={movable ? 'group' : undefined} tabIndex={movable ? 0 : undefined} aria-label={movable ? `جابه‌جایی ${title} با کشیدن یا کلیدهای بالا و پایین` : undefined} onPointerDown={(event) => onStartMove(event, item.id)} onKeyDown={moveByKeyboard} title={movable ? 'برای جابه‌جایی بکشید؛ میان دو ردیف رها کنید تا یک ردیف جدید بسازید' : undefined}>
         {movable && <GripHorizontal className="analysis-board-drag-cue" size={16} aria-hidden="true"/>}
         <div className="analysis-board-card-title"><b title={title}>{title}</b><span title={subtitle}>{subtitle}</span></div>
+        {caseCount !== null && <span className="analysis-board-card-case-count">{caseCount.toLocaleString('fa-IR')} پرونده</span>}
         <div className="analysis-board-card-actions">
           <ZoomControls value={zoom} onChange={(value) => onZoomChange(item.id, value)} label={`بزرگ‌نمایی ${title}`} compact/>
           {editing && <button className="tiny-action icon-action" type="button" onClick={() => onRemoveItem(item.id)} title="حذف از داشبورد" aria-label="حذف از داشبورد"><X size={15}/></button>}

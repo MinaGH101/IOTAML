@@ -56,7 +56,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ''
     openai_base_url: str = 'https://api.openai.com/v1'
     openai_model: str = 'gpt-4o-mini'
-    iota_ocr_model: str = 'gpt-4o-mini'
+    iota_ocr_model: str = 'mistral-ocr-latest'
+    iota_extract_model: str = 'gpt-5-mini'
     iota_review_model: str = 'gpt-4o-mini'
     review_max_pdf_pages: int = Field(default=60, ge=1, le=200)
     review_max_text_chars: int = Field(default=120000, ge=1000, le=500000)
@@ -80,6 +81,7 @@ class Settings(BaseSettings):
     job_use_fork_fast_path: bool = True
     job_heartbeat_interval_seconds: int = Field(default=10, ge=1)
     job_worker_health_interval_seconds: float = Field(default=5.0, gt=0)
+    task_monitor_interval_seconds: int = Field(default=60, ge=10, le=3600)
     job_stale_after_seconds: int = Field(default=45, ge=10)
     job_default_timeout_seconds: int = Field(default=7200, ge=10)
     job_default_max_attempts: int = Field(default=3, ge=1, le=20)
@@ -94,6 +96,8 @@ class Settings(BaseSettings):
     job_stdout_max_bytes: int = Field(default=2_000_000, ge=1024)
     job_stderr_max_bytes: int = Field(default=2_000_000, ge=1024)
     job_result_max_bytes: int = Field(default=50_000_000, ge=1024)
+    iota_ocr_request_attempts: int = Field(default=4, ge=1, le=10)
+    iota_ocr_retry_base_seconds: float = Field(default=15.0, ge=1.0, le=120.0)
     max_active_runs_per_user: int = Field(default=4, ge=1)
     max_active_runs_per_project: int = Field(default=8, ge=1)
 

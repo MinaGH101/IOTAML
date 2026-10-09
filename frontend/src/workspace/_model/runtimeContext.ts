@@ -146,6 +146,17 @@ export function dataframeContextFromOutputs(outputs: Output[]) {
                 idColumn,
             };
         }
+        // Older and custom dataframe nodes may only return a table preview.
+        // A table connected through a dataframe port still provides a valid
+        // column schema for downstream parameter pickers.
+        const visibleColumns = columnsFromOutputs([output]);
+        if (output?.kind === 'table' && visibleColumns.length) {
+            return {
+                activeColumns: visibleColumns,
+                sourceColumns: visibleColumns,
+                idColumn: null,
+            };
+        }
     }
     return null;
 }

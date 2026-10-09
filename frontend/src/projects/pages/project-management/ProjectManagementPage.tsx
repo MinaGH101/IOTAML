@@ -20,7 +20,7 @@ export function ProjectManagementPage({ user, onOpenProject, onCreateProject, on
             {totalProjects.toLocaleString('fa-IR')} پروژه · {c.groups.owned.length.toLocaleString('fa-IR')} مالکیتی
           </p>
         </div>
-        <div className="review-page-links"><a href="/tasks">کارتابل وظایف</a>{['admin', 'manager'].includes(user.role) && <a href="/review-dashboard">داشبورد ارزیابی</a>}</div>
+        {/* <div className="review-page-links"><a href="/tasks">کارتابل وظایف</a></div> */}
       </header>
       <ProjectFiltersBar user={user} filters={c.filters} fetching={c.fetching} onChange={c.setFilters} onRefresh={c.refresh} onCreate={onCreateProject} />
       {c.groups.newAssigned.length > 0 && <ProjectSection className="new-assignment-section" icon={<Sparkles size={17} />} title="پروژه‌های تازه تخصیص‌یافته" subtitle={`${c.groups.newAssigned.length.toLocaleString('fa-IR')} پروژه جدید`} projects={c.groups.newAssigned} emptyText="" onOpen={c.open} />}

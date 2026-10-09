@@ -1,4 +1,4 @@
-"""Exercise PDF extraction, form assignment, submission and score resumption.
+"""Exercise PDF OCR, field extraction, form assignment, submission and score resumption.
 
 Usage: python3 scripts/review_smoke.py --pdf ../SOHA_prposal.pdf
 Reads the local .env admin credentials; never prints credentials or tokens.
@@ -49,9 +49,9 @@ def graph_node(instance_id: str, registry_id: str, params: dict) -> dict:
             'data': {'registryId': registry_id, 'label': registry_id, 'params': params}}
 
 
-def edge(source: str, target: str) -> dict:
+def edge(source: str, target: str, source_handle: str = 'case', target_handle: str = 'case') -> dict:
     return {'id': f'{source}-{target}', 'source': source, 'target': target,
-            'sourceHandle': 'case', 'targetHandle': 'case'}
+            'sourceHandle': source_handle, 'targetHandle': target_handle}
 
 
 def run_and_wait(base: str, token: str, graph: dict, name: str) -> dict:
@@ -103,11 +103,20 @@ def main() -> None:
     nodes = [
         graph_node('intake', 'RV-001', {'intake_fields': intake_fields,
                                        'proposal_pdf': artifact_id, 'supporting_files': []}),
-        graph_node('pdf', 'RV-003', {'artifact_id': None, 'max_pages': 46, 'ocr_mode': 'off', 'max_ocr_pages': 0, 'extraction_fields': [], 'user_prompt': ''}),
+        graph_node('ocr', 'RV-011', {'max_pages': 60}),
+        graph_node('extract', 'RV-003', {
+            'input_mode': 'static',
+            'extraction_fields': [
+                {'id': 'project_title', 'label': 'عنوان طرح', 'type': 'text', 'required': False},
+                {'id': 'proposer', 'label': 'مجری یا پیشنهاددهنده', 'type': 'text', 'required': False},
+            ],
+            'max_document_chars': 120000,
+            'user_prompt': 'عنوان رسمی طرح و نام مجری را عیناً از سند استخراج کن.',
+        }),
         graph_node('form', 'RV-002', {'form_id': 'expert_review', 'title': 'ارزیابی تخصصی طرح', 'fields': fields, 'assignee_role': 'admin', 'due_days': 7}),
         graph_node('assign', 'RV-009', {'form_id': 'expert_review', 'assignees': username}),
     ]
-    edges = [edge('intake', 'pdf'), edge('pdf', 'form')]
+    edges = [edge('intake', 'ocr'), edge('ocr', 'extract', 'ocr_text', 'ocr_text'), edge('extract', 'form')]
     if args.with_ai:
         nodes.append(graph_node('ai', 'RV-005', {'form_id': 'expert_review',
                                                 'user_prompt': 'Assess only document evidence. Explain missing evidence briefly.',

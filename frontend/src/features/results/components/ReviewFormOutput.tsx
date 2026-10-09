@@ -88,9 +88,9 @@ export function ReviewFormOutput({ output }: { output: Output }) {
   const editable = task?.status === 'open';
   const shown = task?.status === 'completed' ? task.response || {} : answers;
   return <div className="review-output review-form-output" dir="rtl">
-    <div className="review-output-head"><div><span className="review-output-eyebrow"><ClipboardList size={13} /> فرم پویا</span>
+    <header><div><span className="review-output-eyebrow"><ClipboardList size={13} /> فرم پویا</span>
       <strong>{String(output.form_title || formId)}</strong><small dir="ltr">{caseId}</small></div>
-      <span className="review-output-pill">{task?.status === 'completed' ? 'ثبت‌شده' : editable ? 'وظیفه شما' : 'پیش‌نمایش فرم'}</span></div>
+      <span className="review-output-pill">{task?.status === 'completed' ? 'ثبت‌شده' : editable ? 'وظیفه شما' : 'پیش‌نمایش فرم'}</span></header>
     <div className="review-form-output-fields">{fields.map((field) => <label className="field" key={field.id}><span>{field.label}{field.required ? ' *' : ''}</span>
       {field.type === 'long_text' ? <textarea rows={3} disabled={!editable} value={String(shown[field.id] ?? '')} onChange={(event) => update(field.id, event.target.value)} />
         : field.type === 'choice' ? <select disabled={!editable} value={String(shown[field.id] ?? '')} onChange={(event) => update(field.id, event.target.value)}><option value="">انتخاب کنید</option>{(field.choices || []).map((choice) => <option value={choice} key={choice}>{choice}</option>)}</select>

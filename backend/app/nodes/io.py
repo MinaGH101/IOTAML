@@ -72,6 +72,18 @@ def table_output(node_id: str, title: str, df: pd.DataFrame, max_rows: int = 100
     )
 
 
+def plot_result(df: pd.DataFrame, plot: dict[str, Any]) -> dict[str, Any]:
+    """Publish a plot and its source rows through separate workflow ports."""
+    table = dataframe_result(df)
+    return {
+        '_df': df,
+        'plot': plot,
+        'table': table,
+        'outputs_by_port': {'plot': plot, 'table': table},
+        'output': plot,
+    }
+
+
 def metrics_output(node_id: str, title: str, metrics: dict[str, Any]) -> dict[str, Any]:
     return output(node_id, title, 'metrics', metrics=metrics)
 

@@ -8,7 +8,8 @@ import pytest
 import app.nodes.review.nodes as review_nodes
 from app.nodes.review.nodes import (
     AIReviewNode, AssignReviewNode, CaseIntakeNode, CaseValidationNode, DecisionNode,
-    DEFAULT_INTAKE_FIELDS, LoadReviewResponsesNode, RecordReviewNode, ReviewFormNode, ScoreAggregationNode,
+    DEFAULT_INTAKE_FIELDS, DocumentExtractNode, DocumentOcrNode, LoadReviewResponsesNode,
+    RecordReviewNode, ReviewFormNode, ScoreAggregationNode,
     _requested_extraction_values,
 )
 from app.nodes.review.contract import validate_response
@@ -113,15 +114,22 @@ def test_ai_review_exposes_per_criterion_maxima_for_score_visualizations(monkeyp
 
     assert result['output']['ai_review']['maxima'] == {'innovation': 15, 'technical': 25, 'impact': 10}
     assert result['case']['ai_reviews'][0]['maxima'] == {'innovation': 15, 'technical': 25, 'impact': 10}
+    assert result['table']['_df'].to_dict(orient='records') == [{'innovation': 12, 'technical': 18, 'impact': 9}]
 
 
 def test_validation_missing_field_is_a_finding_not_a_run_failure():
-    case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': '{"case_id":"X"}'}, None)['case']
+    case = CaseIntakeNode().run(node('RV-001'), {}, {
+        'case_json': '{"case_id":"X", "field_labels":{"project_title":"عنوان طرح"}}',
+    }, None)['case']
     result = CaseValidationNode().run(node('RV-004'), connected('case', case), {
         'required_field_ids': 'project_title, budget', 'user_prompt': '',
     }, None)['case']
     assert result['validation']['valid'] is False
-    assert {item['field'] for item in result['validation']['errors']} == {'project_title', 'budget'}
+    findings = {item['field']: item for item in result['validation']['errors']}
+    assert set(findings) == {'project_title', 'budget'}
+    assert findings['project_title']['label'] == 'عنوان طرح'
+    assert findings['project_title']['message'] == 'فیلد «عنوان طرح» تکمیل نشده است.'
+    assert findings['budget']['label'] == 'budget'
 
 
 def test_review_ports_block_dataframe_connection():
@@ -233,6 +241,180 @@ def test_case_intake_batches_selected_pdfs_as_independent_cases():
     assert [case['documents'][0]['artifact_id'] for case in result['case']['cases']] == [11, 12]
 
 
+def test_ocr_node_reads_every_pdf_page_and_returns_structured_json(tmp_path, monkeypatch):
+    from pypdf import PdfWriter
+
+    pdf_path = tmp_path / 'proposal.pdf'
+    writer = PdfWriter()
+    writer.add_blank_page(width=595, height=842)
+    writer.add_blank_page(width=595, height=842)
+    with pdf_path.open('wb') as target:
+        writer.write(target)
+    case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': json.dumps({
+        'case_id': 'OCR-1',
+        'documents': [{'artifact_id': 11, 'filename': 'proposal.pdf', 'content_type': 'application/pdf'}],
+    })}, None)['case']
+    calls = []
+
+    def fake_ocr(path, *, pages):
+        calls.append((path, pages))
+        return {'model': 'mistral-ocr-latest', 'pages': [
+            {'index': 0, 'markdown': 'عنوان کامل طرح'},
+            {'index': 1, 'markdown': 'متن صفحه دوم'},
+        ]}
+
+    monkeypatch.setattr(review_nodes, 'ocr_pdf', fake_ocr)
+    result = DocumentOcrNode().run(node('RV-011'), connected('case', case), {'max_pages': 60},
+                                   SimpleNamespace(artifact_paths={'11': str(pdf_path)}))
+
+    assert calls == [(pdf_path, [0, 1])]
+    assert result['ocr_text']['kind'] == 'ocr_text'
+    assert result['ocr_text']['page_count'] == 2
+    assert result['ocr_text']['documents'][0]['page_text'] == [
+        {'page': 1, 'text': 'عنوان کامل طرح', 'source': 'ocr'},
+        {'page': 2, 'text': 'متن صفحه دوم', 'source': 'ocr'},
+    ]
+    assert result['outputs'][0]['kind'] == 'json'
+
+
+def test_ocr_node_selected_pdfs_fan_out_to_independent_json_items(tmp_path, monkeypatch):
+    from pypdf import PdfWriter
+
+    paths = {}
+    for artifact_id, filename in ((11, 'proposal-one.pdf'), (12, 'proposal-two.pdf')):
+        path = tmp_path / filename
+        writer = PdfWriter()
+        writer.add_blank_page(width=595, height=842)
+        with path.open('wb') as target:
+            writer.write(target)
+        paths[str(artifact_id)] = str(path)
+    case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': '{"case_id":"OCR-BATCH"}'}, None)['case']
+
+    monkeypatch.setattr(review_nodes, 'ocr_pdf', lambda path, *, pages: {
+        'model': 'mistral-ocr-latest',
+        'pages': [{'index': 0, 'markdown': f'text from {path.name}'}],
+    })
+    context = SimpleNamespace(
+        artifact_paths=paths,
+        artifact_metadata={
+            '11': {'filename': 'proposal-one.pdf', 'content_type': 'application/pdf', 'checksum_sha256': 'a' * 64},
+            '12': {'filename': 'proposal-two.pdf', 'content_type': 'application/pdf', 'checksum_sha256': 'b' * 64},
+        },
+    )
+    result = DocumentOcrNode().run(node('RV-011'), connected('case', case), {
+        'pdf_files': [11, 12], 'max_pages': 60,
+    }, context)
+
+    assert result['ocr_text']['kind'] == 'ocr_batch'
+    assert len(result['ocr_text']['items']) == 2
+    assert [item['case']['case_id'] for item in result['ocr_text']['items']] == ['proposal-one', 'proposal-two']
+    assert [item['documents'][0]['artifact_id'] for item in result['ocr_text']['items']] == [11, 12]
+    assert [item['documents'][0]['page_text'][0]['text'] for item in result['ocr_text']['items']] == [
+        'text from proposal-one.pdf', 'text from proposal-two.pdf',
+    ]
+    assert len(result['outputs']) == 2
+
+
+def test_extract_node_only_accepts_ocr_json_and_uses_extract_model(monkeypatch):
+    case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': json.dumps({
+        'case_id': 'OCR-2',
+        'documents': [{'artifact_id': 22, 'filename': 'proposal.pdf', 'content_type': 'application/pdf'}],
+    })}, None)['case']
+    payload = {
+        'schema_version': 1,
+        'kind': 'ocr_text',
+        'case': case,
+        'documents': [{
+            'artifact_id': 22,
+            'filename': 'proposal.pdf',
+            'content_type': 'application/pdf',
+            'page_text': [{'page': 1, 'text': 'عنوان کامل طرح', 'source': 'ocr'}],
+        }],
+    }
+    calls = []
+
+    def fake_extract(**kwargs):
+        calls.append(kwargs)
+        return {'fields': {'project_title': 'عنوان کامل طرح'},
+                'evidence': {'project_title': {'artifact_id': 22, 'page': 1, 'quote': 'عنوان کامل طرح'}}}
+
+    monkeypatch.setattr(review_nodes, 'ask_json', fake_extract)
+    result = DocumentExtractNode().run(node('RV-003'), connected('ocr_text', payload), {
+        'input_mode': 'static',
+        'extraction_fields': [{'id': 'project_title', 'label': 'عنوان طرح', 'type': 'text', 'required': True}],
+        'max_document_chars': 120000,
+        'user_prompt': '',
+    }, None)
+
+    assert calls[0]['model'] == review_nodes.get_settings().iota_extract_model
+    assert result['case']['fields']['project_title'] == 'عنوان کامل طرح'
+    assert result['case']['documents'][0]['page_text'][0]['source'] == 'ocr'
+    assert result['output']['extraction_model'] == review_nodes.get_settings().iota_extract_model
+    with pytest.raises(NodeContractError) as exc:
+        DocumentExtractNode().run(node('RV-003'), connected('ocr_text', case), {
+            'input_mode': 'static', 'extraction_fields': [], 'max_document_chars': 120000,
+        }, None)
+    assert exc.value.problem.code == 'REVIEW_OCR_TEXT_REQUIRED'
+
+
+def test_extract_node_processes_every_ocr_batch_item_independently(monkeypatch):
+    def payload(case_id, artifact_id, filename, text):
+        case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': json.dumps({
+            'case_id': case_id,
+            'documents': [{'artifact_id': artifact_id, 'filename': filename, 'content_type': 'application/pdf'}],
+        })}, None)['case']
+        return {'schema_version': 1, 'kind': 'ocr_text', 'case': case, 'documents': [{
+            'artifact_id': artifact_id, 'filename': filename, 'content_type': 'application/pdf',
+            'page_text': [{'page': 1, 'text': text, 'source': 'ocr'}],
+        }]}
+
+    calls = []
+    def fake_extract(**kwargs):
+        calls.append(kwargs['user'])
+        return {'fields': {'project_title': kwargs['user'].split('OCR document:\n', 1)[1].split('] ', 1)[1]}}
+
+    monkeypatch.setattr(review_nodes, 'ask_json', fake_extract)
+    batch = {'schema_version': 1, 'kind': 'ocr_batch', 'items': [
+        payload('proposal-one', 11, 'proposal-one.pdf', 'first title'),
+        payload('proposal-two', 12, 'proposal-two.pdf', 'second title'),
+    ]}
+    result = DocumentExtractNode().run(node('RV-003'), connected('ocr_text', batch), {
+        'input_mode': 'static',
+        'extraction_fields': [{'id': 'project_title', 'label': 'Title', 'type': 'text', 'required': True}],
+        'max_document_chars': 120000, 'user_prompt': '',
+    }, None)
+
+    assert len(calls) == 2
+    assert result['case']['kind'] == 'case_batch'
+    assert [case['fields']['project_title'] for case in result['case']['cases']] == ['first title', 'second title']
+    assert result['output']['kind'] == 'review_batch'
+    assert [item['case_id'] for item in result['output']['cases']] == ['proposal-one', 'proposal-two']
+
+
+def test_cached_dynamic_extraction_refreshes_run_local_form_references():
+    cached = {
+        'case': {'schema_version': 1},
+        'output': {'kind': 'review_batch', 'cases': [
+            {'case_id': 'one', 'run_id': 10},
+            {'case_id': 'two', 'run_id': 10},
+        ]},
+    }
+    restored = DocumentExtractNode().restore_cached_result(cached, SimpleNamespace(execution_id=22))
+    assert [item['run_id'] for item in restored['output']['cases']] == [22, 22]
+    assert [item['run_id'] for item in cached['output']['cases']] == [10, 10]
+
+
+def test_ocr_to_extract_ports_are_compatible():
+    graph = {'nodes': [node('RV-001'), node('RV-011'), node('RV-003')], 'edges': [
+        {'id': 'case-to-ocr', 'source': 'RV-001', 'sourceHandle': 'case',
+         'target': 'RV-011', 'targetHandle': 'case'},
+        {'id': 'ocr-to-extract', 'source': 'RV-011', 'sourceHandle': 'ocr_text',
+         'target': 'RV-003', 'targetHandle': 'ocr_text'},
+    ]}
+    result = validate_workflow_graph(graph, require_settings=False)
+    assert not [item for item in result.errors if item.type == 'incompatible_ports']
+
+
 def test_static_form_writes_typed_values_and_requires_completed_fields():
     case = CaseIntakeNode().run(node('RV-001'), {}, {'case_json': '{"case_id":"SNR-2"}'}, None)['case']
     field = {'id': 'approved_budget', 'label': 'Approved budget', 'type': 'number',
@@ -243,6 +425,11 @@ def test_static_form_writes_typed_values_and_requires_completed_fields():
     assert result['output']['kind'] == 'review_stage'
     assert result['case']['fields']['approved_budget'] == 42
     assert result['output']['field_labels']['approved_budget'] == 'Approved budget'
+    assert result['output']['form_fields'] == [{
+        'id': 'approved_budget', 'label': 'Approved budget', 'type': 'number',
+        'required': True, 'min': 0.0, 'max': 100.0,
+    }]
+    assert result['output']['form_values'] == {'approved_budget': 42}
     with pytest.raises(NodeContractError) as exc:
         AssignReviewNode().run(node('RV-009'), connected('case', result['case']),
                                {'assignees': 'reviewer'}, None)

@@ -18,6 +18,7 @@ from app.workflow.contracts.errors import normalize_node_exception
 from app.workflow.validation.service import validate_workflow_graph
 from app.workflow.compatibility import is_legacy_graph, normalize_graph
 from app.workflow.planning import build_execution_plan
+from app.workflow.execution.scheduler import affected_downstream_nodes
 
 ProgressCallback = Callable[..., None]
 
@@ -64,7 +65,9 @@ def apply_node(
             suggested_fix='Replace the node or install the matching backend implementation.',
         )
     node_runner.validate_settings(resolved)
-    if rid.startswith('RV-') and rid != 'RV-001':
+    # OCR emits its own typed JSON batch; it cannot use the generic case-batch
+    # adapter because that adapter deliberately projects only case outputs.
+    if rid.startswith('RV-') and rid not in {'RV-001', 'RV-011'}:
         from app.nodes.review.contract import case_batch_result, cases_from_batch
         case_inputs = list(((inputs.get('_by_port') or {}).get('case') or []))
         batch_cases = cases_from_batch(case_inputs[0]) if len(case_inputs) == 1 else None
@@ -340,9 +343,14 @@ def execute_workflow(
     node_outputs: dict[str, Any] = {}
     errors: list[dict[str, Any]] = []
     cache_hits = 0
+    deferred_nodes: set[str] = set()
 
     for position, node_id in enumerate(order):
         node = by_id[node_id]
+        if node_id in deferred_nodes:
+            if progress_callback:
+                progress_callback(node_id, 'skipped', 'Waiting for a human task submission.')
+            continue
         if cancel_check and cancel_check():
             if progress_callback:
                 progress_callback(node_id, 'cancelled', 'Cancellation requested.')
@@ -361,7 +369,8 @@ def execute_workflow(
             if runtime_cache:
                 cached_result, cache_meta = runtime_cache.lookup(node, params, parent_refs)
             if cached_result is not None:
-                result = cached_result
+                runner = get_node_runner(registry_id(node))
+                result = runner.restore_cached_result(cached_result, ctx) if runner else cached_result
                 cache_hits += 1
                 if progress_callback:
                     progress_callback(node_id, 'cached', None, cache_meta)
@@ -380,6 +389,8 @@ def execute_workflow(
                     progress_callback(node_id, 'succeeded', None, cache_record or cache_meta)
             node_outputs[node_id] = result
             ctx.node_outputs[node_id] = result
+            if isinstance(result, dict) and result.get('_defer_downstream') is True:
+                deferred_nodes.update(affected_downstream_nodes(node_id, edges))
             label = (node.get('data') or {}).get('label')
             if label:
                 ctx.node_outputs[str(label)] = result
@@ -415,6 +426,10 @@ def execute_workflow(
                                for intent in (value.get('_work_task_intents') or []) if isinstance(intent, dict))
     review_task_intents.extend(intent for value in node_outputs.values() if isinstance(value, dict)
                                for intent in (value.get('_review_task_intents') or []) if isinstance(intent, dict))
+    task_watch_intents = [value['_task_watch_intent'] for value in node_outputs.values()
+                          if isinstance(value, dict) and isinstance(value.get('_task_watch_intent'), dict)]
+    task_watch_intents.extend(intent for value in node_outputs.values() if isinstance(value, dict)
+                              for intent in (value.get('_task_watch_intents') or []) if isinstance(intent, dict))
     metrics = {
         'nodes_total': len(nodes),
         'nodes_executed': len(node_outputs),
@@ -428,6 +443,7 @@ def execute_workflow(
         'artifacts': safe_json(artifacts),
         'error': errors[0]['message'] if errors else None,
         'review_task_intents': safe_json(review_task_intents),
+        'task_watch_intents': safe_json(task_watch_intents),
     }
 
 

@@ -45,6 +45,22 @@ test('runtime columns propagate through the connected branch, including derived 
     assert.deepEqual(resolver.inputContext('next').sourceColumns, ['derived']);
 });
 
+test('a connected table preview supplies columns when dataframe metadata is unavailable', () => {
+    const graphNodes = [
+        { id: 'preview', data: { registryId: 'UT-001', params: {}, outputs: [{ id: 'dataframe', type: 'dataframe' }] } },
+        { id: 'next', data: { registryId: 'IN-007', params: {}, outputs: [{ id: 'report', type: 'dataframe' }] } },
+    ];
+    const graphEdges = [{ id: 'preview-next', source: 'preview', sourceHandle: 'dataframe', target: 'next', targetHandle: 'data' }];
+    const outputs = [{ node_id: 'preview', source_handle: 'dataframe', kind: 'table', columns: ['batch', 'Au'], rows: [{ batch: 'A', Au: 1 }] }];
+    const resolver = createColumnContextResolver(graphNodes as never[], graphEdges as never[], [] as never[], null, {}, outputs);
+
+    assert.deepEqual(resolver.inputContext('next'), {
+        activeColumns: ['batch', 'Au'],
+        sourceColumns: ['batch', 'Au'],
+        idColumn: null,
+    });
+});
+
 test('multiple parents contribute only their connected ports, and unrelated nodes contribute nothing', () => {
     const graphNodes = [...nodes, { id: 'second', data: { outputs: [{ id: 'data', type: 'dataframe' }, { id: 'report', type: 'json' }] } }];
     const graphEdges = [...edges, { id: 'e3', source: 'second', sourceHandle: 'data', target: 'next', targetHandle: 'right' }];

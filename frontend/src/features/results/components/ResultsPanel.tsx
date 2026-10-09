@@ -23,10 +23,14 @@ const statusLabel: Record<string, string> = { queued: 'در صف', running: 'د�
 
 type Props = { run: Run | null; selectedNodeId: string | null; collapsed: boolean; onToggle: () => void; onAddToBoard?: (output: Output, index: number) => void; onInteractiveTableChange?: (nodeId: string, state: InteractiveTableState) => void };
 
-function unchangedAssignments(run: Run | null): number {
+function unchangedAssignments(run: Run | null): { unchanged: number; created: number } {
   const taskAssignments = run?.metrics?.task_assignments;
-  if (!taskAssignments || typeof taskAssignments !== 'object') return 0;
-  return Number((taskAssignments as Record<string, unknown>).unchanged || 0);
+  if (!taskAssignments || typeof taskAssignments !== 'object') return { unchanged: 0, created: 0 };
+  const counts = taskAssignments as Record<string, unknown>;
+  return {
+    unchanged: Number(counts.unchanged || 0) + Number(counts.duplicate_intents || 0),
+    created: Number(counts.created || 0),
+  };
 }
 
 export const ResultsPanel = memo(function ResultsPanel({ run, selectedNodeId, collapsed, onToggle, onAddToBoard, onInteractiveTableChange }: Props) {
@@ -59,11 +63,11 @@ export const ResultsPanel = memo(function ResultsPanel({ run, selectedNodeId, co
     node_id: selectedNodeId || '', title: outputs[0]?.title || caseOutputs[0]?.title || 'نتایج پرونده‌ها',
     kind: 'review_batch', stage: caseOutputs[0]?.stage, case_count: caseOutputs.length, cases: caseOutputs,
   } as Output] : outputs, [caseOutputs, outputs, selectedNodeId]);
-  const skippedAssignments = unchangedAssignments(run);
+  const assignmentCounts = unchangedAssignments(run);
   if (collapsed) return <section className="results-panel results-panel-collapsed workflow-shell-panel"><button className="results-mini-toggle" type="button" onClick={onToggle} title="باز کردن خروجی نود" aria-label="باز کردن خروجی نود"><PanelRightOpen size={15}/></button></section>;
   return <section className="results-panel workflow-shell-panel"><div className="panel-title results-title"><span>خروجی نود انتخاب‌شده</span><button className="tiny-action icon-action" type="button" onClick={onToggle} title="کوچک کردن خروجی نود" aria-label="کوچک کردن خروجی نود"><PanelRightClose size={13}/></button></div><div className="results-scroll">
     {!selectedNodeId && <div className="empty-state">برای دیدن خروجی فقط همان نود، روی یک نود کلیک کنید.</div>}
     {selectedNodeId && !run && <div className="empty-state">جریان را اجرا کنید تا خروجی این نود نمایش داده شود.</div>}
-    {run && <><div className={`status ${run.status}`}>{statusLabel[run.status] ?? run.status}</div><div className="run-progress-summary"><span>{Math.round(Number(run.progress?.percent || 0))}%</span><progress max="100" value={Number(run.progress?.percent || 0)}/><small>{run.progress?.nodes_finished || 0}/{run.progress?.nodes_total || 0} نود · تلاش {run.attempts}/{run.max_attempts}</small></div>{skippedAssignments > 0 && <div className="empty-state" role="status">این تسک قبلا ارسال شده است.</div>}{run.error && <div className="error-box">{userFriendlyErrorMessage(run.error, run.status === 'timed_out' ? 'زمان اجرای جریان تمام شد. حجم داده یا تنظیمات نودها را سبک‌تر کنید و دوباره اجرا کنید.' : 'اجرای جریان کامل نشد. اتصال‌ها، داده ورودی و تنظیمات نودها را بررسی کنید.')}</div>}{workflowProblems.map((problem, index) => <WorkflowErrorCard problem={problem} key={`${String(problem.code || 'error')}-${index}`}/>)}{run.logs && run.logs.length > 0 && <details className="run-log-details"><summary>گزارش فنی اجرا</summary><pre>{run.logs.slice(-50).map((entry) => `${entry.timestamp} [${entry.level}] ${entry.message}`).join('\n')}</pre></details>}{!selectedNodeId && comparison.length > 0 && <div className="output-card workflow-shell-card"><div className="output-head"><b>مقایسه شاخه‌ها</b><button title="دانلود" aria-label="دانلود" onClick={() => downloadText('comparison.csv', rowsToCsv(comparison), 'text/csv;charset=utf-8')}><Download size={13}/></button></div><OutputTable rows={comparison}/></div>}{selectedNodeId && shownOutputs.length === 0 && run.status === 'succeeded' && <div className="empty-state">برای این نود خروجی قابل نمایش پیدا نشد. نود را به مسیر اجرا وصل کنید و دوباره Run بزنید.</div>}<OutputCards outputs={shownOutputs} onAddToBoard={onAddToBoard} onInteractiveTableChange={onInteractiveTableChange}/></>}
+    {run && <><div className={`status ${run.status}`}>{statusLabel[run.status] ?? run.status}</div><div className="run-progress-summary"><span>{Math.round(Number(run.progress?.percent || 0))}%</span><progress max="100" value={Number(run.progress?.percent || 0)}/><small>{run.progress?.nodes_finished || 0}/{run.progress?.nodes_total || 0} نود · تلاش {run.attempts}/{run.max_attempts}</small></div>{assignmentCounts.unchanged > 0 && <div className="empty-state" role="status">{assignmentCounts.unchanged} وظیفه بدون تغییر بود و دوباره ارسال نشد.{assignmentCounts.created > 0 ? ` ${assignmentCounts.created} وظیفه جدید ایجاد شد.` : ''}</div>}{run.error && <div className="error-box">{userFriendlyErrorMessage(run.error, run.status === 'timed_out' ? 'زمان اجرای جریان تمام شد. حجم داده یا تنظیمات نودها را سبک‌تر کنید و دوباره اجرا کنید.' : 'اجرای جریان کامل نشد. اتصال‌ها، داده ورودی و تنظیمات نودها را بررسی کنید.')}</div>}{workflowProblems.map((problem, index) => <WorkflowErrorCard problem={problem} key={`${String(problem.code || 'error')}-${index}`}/>)}{run.logs && run.logs.length > 0 && <details className="run-log-details"><summary>گزارش فنی اجرا</summary><pre>{run.logs.slice(-50).map((entry) => `${entry.timestamp} [${entry.level}] ${entry.message}`).join('\n')}</pre></details>}{!selectedNodeId && comparison.length > 0 && <div className="output-card workflow-shell-card"><div className="output-head"><b>مقایسه شاخه‌ها</b><button title="دانلود" aria-label="دانلود" onClick={() => downloadText('comparison.csv', rowsToCsv(comparison), 'text/csv;charset=utf-8')}><Download size={13}/></button></div><OutputTable rows={comparison}/></div>}{selectedNodeId && shownOutputs.length === 0 && run.status === 'succeeded' && <div className="empty-state">برای این نود خروجی قابل نمایش پیدا نشد. نود را به مسیر اجرا وصل کنید و دوباره Run بزنید.</div>}<OutputCards outputs={shownOutputs} onAddToBoard={onAddToBoard} onInteractiveTableChange={onInteractiveTableChange}/></>}
   </div></section>;
 });

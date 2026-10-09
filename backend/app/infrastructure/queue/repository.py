@@ -82,8 +82,15 @@ def claim_next_run(db: Session, worker_id: str) -> Run | None:
     if run is None:
         return None
 
+    # Manual retries used to reset ``run.attempts`` even though the attempt
+    # audit rows are retained.  Keep the denormalized counter at least as high
+    # as the durable history so the unique (run_id, attempt_number) constraint
+    # cannot crash the worker when it claims a retried run.
+    previous_attempt = db.execute(
+        select(func.max(RunAttempt.attempt_number)).where(RunAttempt.run_id == run.id)
+    ).scalar_one_or_none() or 0
     run.status = 'running'
-    run.attempts = int(run.attempts or 0) + 1
+    run.attempts = max(int(run.attempts or 0), int(previous_attempt)) + 1
     run.locked_by = worker_id
     run.locked_at = now
     run.heartbeat_at = now

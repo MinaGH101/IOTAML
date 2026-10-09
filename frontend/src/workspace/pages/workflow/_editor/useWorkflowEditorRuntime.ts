@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { Output } from '../../../../features/results/components/ResultsPanel';
 import { createAutosaveSignature, createAutosaveSnapshot } from '../../../_model/workflowPersistence';
-import { normalizeEdgeHandles, normalizeFlowNodes, workflowOutputSignature, type FlowGraph } from '../../../_model/graph';
+import { normalizeEdgeHandles, workflowOutputSignature, type FlowGraph } from '../../../_model/graph';
 import { useWorkflowLayout } from '../../../_hooks/useWorkflowLayout';
 import { useBoardDialogs } from '../_features/boards/_hooks/useBoardDialogs';
 import { useCustomNodes } from '../_hooks/useCustomNodes';
@@ -14,18 +14,9 @@ import type { WorkflowEditorBase } from './useWorkflowEditorBase';
 import type { WorkflowEditorDocument } from './useWorkflowEditorDocument';
 export function useWorkflowEditorRuntime({ initialWorkflowId }: WorkflowPageProps, base: WorkflowEditorBase, data: WorkflowEditorDocument, outputs: Output[]) {
     const { graph, runs, shell } = base;
-    const outputRun = runs.nodeStateRun || runs.displayRun;
-    const persistedOutputSignature = useMemo(() => {
-        if (!outputRun) return '';
-        const saved = outputRun.workflow_graph as unknown as FlowGraph;
-        if (!Array.isArray(saved?.nodes) || !Array.isArray(saved?.edges)) return '';
-        const nodes = normalizeFlowNodes(saved.nodes, base.catalog.nodes, base.catalog.aliases);
-        return workflowOutputSignature(nodes, normalizeEdgeHandles(nodes, saved.edges), outputRun.dataset_id,
-            outputRun.target_column || 'target', outputRun.task_type || 'auto');
-    }, [outputRun, base.catalog.nodes, base.catalog.aliases]);
     const customNodes = useCustomNodes({ refreshRegistry: data.refreshRegistry, setMessage: base.setMessage });
     const columns = useNodeColumnContext({ nodes: graph.documentNodes, edges: graph.edges, nodesById: graph.nodesById, datasets: base.datasets.datasets,
-        datasetId: base.datasets.datasetId, aliases: base.catalog.aliases, selectedNodeId: graph.selectedId, modalNodeId: graph.modalNodeId, outputs: persistedOutputSignature === data.document.currentOutputSignature ? outputs : [] });
+        datasetId: base.datasets.datasetId, aliases: base.catalog.aliases, selectedNodeId: graph.selectedId, modalNodeId: graph.modalNodeId, outputs });
     const boardDialogs = useBoardDialogs({ activeBoard: data.boards.activeBoard, readOnly: base.readOnly, renameBoard: data.boards.renameBoard, removeBoard: data.boards.removeBoard });
     const canvas = useWorkflowCanvasActions({ nodes: graph.nodes, setNodes: graph.setNodes, edges: graph.edges, setEdges: graph.setEdges, registry: base.catalog.nodes,
         catalog: base.catalog, datasets: base.datasets.datasets, datasetId: base.datasets.datasetId, readOnly: base.readOnly, canManageLocks: base.canManageLocks, currentRun: runs.displayRun, resultsWidth: base.resultsWidth, paletteCollapsed: shell.paletteCollapsed,

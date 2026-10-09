@@ -60,6 +60,76 @@ def test_cache_key_changes_for_parameters_or_upstream_content(tmp_path: Path) ->
     assert key_a != key_c
 
 
+def test_paid_review_nodes_are_durable_and_pure_dynamic_forms_stay_safe() -> None:
+    def review_node(node_id: str, mode: str) -> dict:
+        return {
+            "id": f"{node_id.lower()}-1",
+            "type": "mlNode",
+            "data": {"registryId": node_id, "params": {"input_mode": mode}},
+        }
+
+    assert static_fingerprint(review_node("RV-001", "static"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-011", "static"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-003", "static"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-003", "dynamic"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-004", "static"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-005", "static"))[1]["cacheable"] is True
+    assert static_fingerprint(review_node("RV-001", "dynamic"))[1]["cacheable"] is False
+    assert static_fingerprint(review_node("RV-002", "dynamic"))[1]["cacheable"] is False
+    for node_id in ("RV-011", "RV-003", "RV-004", "RV-005"):
+        assert static_fingerprint(review_node(node_id, "static"))[1]["cache_persistent"] is True
+
+
+def test_review_model_names_are_part_of_relevant_cache_keys(tmp_path: Path) -> None:
+    node = {
+        "id": "ocr-1",
+        "type": "mlNode",
+        "data": {"registryId": "RV-011", "params": {"max_pages": 60}},
+    }
+    first = RuntimeNodeCache(
+        {"enabled": True, "entries": {}, "static": {}},
+        tmp_path / "first",
+        external_inputs={"models": {"ocr": "mistral-ocr-latest"}},
+        target_column=None,
+        task_type="auto",
+    )
+    second = RuntimeNodeCache(
+        {"enabled": True, "entries": {}, "static": {}},
+        tmp_path / "second",
+        external_inputs={"models": {"ocr": "different-ocr-model"}},
+        target_column=None,
+        task_type="auto",
+    )
+    assert first.key_for(node, node["data"]["params"], [])[0] != second.key_for(
+        node, node["data"]["params"], []
+    )[0]
+
+
+def test_declared_artifact_checksums_are_part_of_relevant_cache_keys(tmp_path: Path) -> None:
+    node = {
+        "id": "ocr-1",
+        "type": "mlNode",
+        "data": {"registryId": "RV-011", "params": {"pdf_files": [11], "max_pages": 60}},
+    }
+    first = RuntimeNodeCache(
+        {"enabled": True, "entries": {}, "static": {}},
+        tmp_path / "first-artifact",
+        external_inputs={"models": {"ocr": "ocr-model"}, "artifacts": {"11": "first-checksum"}},
+        target_column=None,
+        task_type="auto",
+    )
+    second = RuntimeNodeCache(
+        {"enabled": True, "entries": {}, "static": {}},
+        tmp_path / "second-artifact",
+        external_inputs={"models": {"ocr": "ocr-model"}, "artifacts": {"11": "changed-checksum"}},
+        target_column=None,
+        task_type="auto",
+    )
+    assert first.key_for(node, node["data"]["params"], [])[0] != second.key_for(
+        node, node["data"]["params"], []
+    )[0]
+
+
 def test_runtime_cache_round_trip_uses_verified_manifest(tmp_path: Path) -> None:
     node = _node()
     result = {"rows": [{"x": 1}, {"x": 2}], "metadata": {"count": 2}}
@@ -109,13 +179,67 @@ def test_runtime_cache_round_trip_uses_verified_manifest(tmp_path: Path) -> None
     assert rejected is None
 
 
+def test_selected_node_refreshes_only_itself_while_upstream_cache_still_hits(tmp_path: Path) -> None:
+    upstream = _node()
+    selected = {
+        "id": "selected",
+        "type": "mlNode",
+        "data": {"registryId": "UT-002", "params": {}},
+    }
+    writer = RuntimeNodeCache(
+        {"enabled": True, "entries": {}, "static": {}},
+        tmp_path / "force-writer",
+        external_inputs={}, target_column=None, task_type="auto",
+    )
+    upstream_record = writer.store(upstream, {"value": 1}, upstream["data"]["params"], [], {})
+    parent_refs = writer.parent_refs("selected", [{"source": upstream["id"], "target": "selected"}])
+    selected_record = writer.store(selected, {"value": 2}, {}, parent_refs, {})
+    assert upstream_record is not None and selected_record is not None
+
+    def entry(record):
+        path = Path(record["path"])
+        return {
+            "cache_entry_id": 1,
+            "artifact_id": 1,
+            "path": str(path),
+            "checksum_sha256": _sha256_file(path),
+            "output_digest": record["output_digest"],
+            "source_run_id": 1,
+            "size_bytes": path.stat().st_size,
+        }
+
+    manifest = {
+        "enabled": True,
+        "force_node_ids": ["selected"],
+        "entries": {
+            upstream_record["cache_key"]: entry(upstream_record),
+            selected_record["cache_key"]: entry(selected_record),
+        },
+        "static": {},
+    }
+    reader = RuntimeNodeCache(
+        manifest, tmp_path / "force-reader",
+        external_inputs={}, target_column=None, task_type="auto",
+    )
+    upstream_value, upstream_meta = reader.lookup(upstream, upstream["data"]["params"], [])
+    assert upstream_value == {"value": 1}
+    assert upstream_meta["status"] == "cached"
+    refreshed_parents = reader.parent_refs("selected", [{"source": upstream["id"], "target": "selected"}])
+    selected_value, selected_meta = reader.lookup(selected, {}, refreshed_parents)
+    assert selected_value is None
+    assert selected_meta["cache_refresh"] is True
+    refresh_record = reader.store(selected, {"value": 3}, {}, refreshed_parents, {})
+    assert refresh_record is not None
+    assert refresh_record["cache_refresh"] is True
+
+
 def test_persisted_cache_records_create_artifacts_lineage_and_reusable_manifest(tmp_path: Path) -> None:
     import joblib
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from app.core.database import Base
-    from app.domains.artifacts.models import ArtifactLineage, NodeCacheEntry, NodeExecution
+    from app.domains.artifacts.models import Artifact, ArtifactLineage, NodeCacheEntry, NodeExecution
     from app.infrastructure.storage.service import get_storage_backend
     from app.domains.projects.models import Project
     from app.domains.runs.models import Run
@@ -197,6 +321,7 @@ def test_persisted_cache_records_create_artifacts_lineage_and_reusable_manifest(
                 "static_fingerprint": source_static,
                 "cache_key": source_key,
                 "cacheable": True,
+                "cache_persistent": True,
                 "cache_hit": False,
                 "path": str(source_path),
                 "output_digest": source_digest,
@@ -225,9 +350,38 @@ def test_persisted_cache_records_create_artifacts_lineage_and_reusable_manifest(
         assert db.query(NodeCacheEntry).count() == 2
         assert db.query(NodeExecution).count() == 2
         assert db.query(ArtifactLineage).count() == 1
+        durable_entry = db.query(NodeCacheEntry).filter(NodeCacheEntry.cache_key == source_key).one()
+        durable_artifact = db.get(Artifact, durable_entry.artifact_id)
+        assert durable_entry.pinned is True
+        assert durable_entry.expires_at is None
+        assert durable_artifact is not None and durable_artifact.pinned is True
+        assert durable_artifact.expires_at is None
 
+        run.selected_node_id = source["id"]
         manifest = prepare_cache_manifest(db, run, tmp_path / "manifest")
         assert manifest["enabled"] is True
+        assert manifest["force_node_ids"] == [source["id"]]
         assert source_key in manifest["entries"]
         assert target_key in manifest["entries"]
         assert Path(manifest["entries"][source_key]["path"]).is_file()
+
+        refreshed_path = tmp_path / "source-refreshed.joblib"
+        joblib.dump({"value": 9}, refreshed_path)
+        refreshed_digest = _sha256_file(refreshed_path)
+        old_artifact_id = durable_entry.artifact_id
+        refresh_record = {
+            **records[0],
+            "path": str(refreshed_path),
+            "output_digest": refreshed_digest,
+            "size_bytes": refreshed_path.stat().st_size,
+            "cache_refresh": True,
+        }
+        refresh_stats = persist_run_cache_records(db, run, [refresh_record])
+        db.commit()
+        db.refresh(durable_entry)
+        assert refresh_stats["writes"] == 1
+        assert durable_entry.artifact_id != old_artifact_id
+        assert durable_entry.output_digest == refreshed_digest
+        assert db.get(Artifact, old_artifact_id) is not None
+        replacement = db.get(Artifact, durable_entry.artifact_id)
+        assert replacement is not None and replacement.pinned is True

@@ -5,7 +5,6 @@ export type AppRoute =
   | { name: 'profile' }
   | { name: 'admin' }
   | { name: 'review-tasks' }
-  | { name: 'review-dashboard' }
   | { name: 'project'; projectId: number }
   | { name: 'workflow'; projectId: number; workflowId: number | null }
   | { name: 'not-found' };
@@ -24,7 +23,6 @@ export function parseAppRoute(pathname: string, search = ''): AppRoute {
   if (path === '/profile') return { name: 'profile' };
   if (path === '/admin') return { name: 'admin' };
   if (path === '/review-tasks' || path === '/tasks') return { name: 'review-tasks' };
-  if (path === '/review-dashboard') return { name: 'review-dashboard' };
   const projectMatch = path.match(/^\/projects\/(\d+)$/);
   if (projectMatch) {
     const projectId = positiveInteger(projectMatch[1]);
@@ -47,7 +45,6 @@ export function appRoutePath(route: Exclude<AppRoute, { name: 'not-found' }>) {
     case 'profile': return '/profile';
     case 'admin': return '/admin';
     case 'review-tasks': return '/tasks';
-    case 'review-dashboard': return '/review-dashboard';
     case 'project': return `/projects/${route.projectId}`;
     case 'workflow': return `/projects/${route.projectId}/workspace${route.workflowId ? `?workflow=${route.workflowId}` : ''}`;
   }

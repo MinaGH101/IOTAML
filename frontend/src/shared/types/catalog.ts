@@ -14,7 +14,8 @@ export type NodeCategory =
   | 'User Nodes'
   | 'Components'
   | 'Review Workflows'
-  | 'Human Tasks';
+  | 'Human Tasks'
+  | 'AI Tools';
 
 export type PortType =
   | 'dataframe'
@@ -47,7 +48,7 @@ export type PortDefinition = {
 export type NodeParam = {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'artifact_pdf' | 'artifact_files' | 'case_intake_fields' | 'form_fields' | 'assignee_users' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'input_dataframe' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors' | 'interactive_table_state';
+  type: 'text' | 'textarea' | 'code' | 'file' | 'data_file' | 'artifact_pdf' | 'artifact_files' | 'case_intake_fields' | 'form_fields' | 'assignee_users' | 'number' | 'integer' | 'float' | 'color' | 'boolean' | 'select' | 'multiselect' | 'column' | 'columns' | 'dataset' | 'input_dataframe' | 'replacement_blocks' | 'imputation_blocks' | 'normalization_blocks' | 'scatter_blocks' | 'row_values' | 'series_colors' | 'interactive_table_state' | 'datetime';
   default: unknown;
   required?: boolean;
   options: unknown[];

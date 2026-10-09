@@ -29,13 +29,14 @@ def _sha256_file(path: Path) -> str:
 
 def prepare_cache_manifest(db: Session, run: Run, cache_dir: Path) -> dict[str, Any]:
     settings = get_settings()
+    force_node_ids = [str(run.selected_node_id)] if run.selected_node_id else []
     if (
         not settings.node_cache_enabled
         or run.bypass_cache
         or run.project_id is None
         or run.workflow_id is None
     ):
-        return {"enabled": False, "entries": {}, "static": {}}
+        return {"enabled": False, "entries": {}, "static": {}, "force_node_ids": force_node_ids}
 
     nodes = (run.workflow_graph or {}).get("nodes") or []
     static: dict[str, dict[str, Any]] = {}
@@ -48,7 +49,7 @@ def prepare_cache_manifest(db: Session, run: Run, cache_dir: Path) -> dict[str, 
             fingerprints.add(fingerprint)
 
     if not fingerprints:
-        return {"enabled": True, "entries": {}, "static": static}
+        return {"enabled": True, "entries": {}, "static": static, "force_node_ids": force_node_ids}
 
     query = (
         db.query(NodeCacheEntry)
@@ -66,7 +67,10 @@ def prepare_cache_manifest(db: Session, run: Run, cache_dir: Path) -> dict[str, 
     cache_dir.mkdir(parents=True, exist_ok=True)
     for entry in candidates:
         count = per_fingerprint.get(entry.static_fingerprint, 0)
-        if count >= settings.node_cache_candidates_per_fingerprint:
+        # Durable paid-model entries are never hidden by the ordinary rolling
+        # candidate window. This preserves reuse when a workflow returns to an
+        # older document after processing many newer ones.
+        if count >= settings.node_cache_candidates_per_fingerprint and not entry.pinned:
             continue
         artifact = db.get(Artifact, entry.artifact_id)
         if not artifact or artifact.status != "available" or artifact.deleted_at is not None:
@@ -97,7 +101,7 @@ def prepare_cache_manifest(db: Session, run: Run, cache_dir: Path) -> dict[str, 
         }
         per_fingerprint[entry.static_fingerprint] = count + 1
     db.flush()
-    return {"enabled": True, "entries": entries, "static": static}
+    return {"enabled": True, "entries": entries, "static": static, "force_node_ids": force_node_ids}
 
 
 def _upsert_execution(db: Session, *, run: Run, record: dict[str, Any], artifact_id: int | None, cache_entry_id: int | None) -> NodeExecution:
@@ -152,6 +156,8 @@ def persist_run_cache_records(db: Session, run: Run, records: list[dict[str, Any
         if not node_id:
             continue
         cache_hit = bool(record.get("cache_hit"))
+        cache_persistent = bool(record.get('cache_persistent'))
+        cache_refresh = bool(record.get('cache_refresh'))
         cache_entry: NodeCacheEntry | None = None
         artifact_id: int | None = None
 
@@ -162,6 +168,13 @@ def persist_run_cache_records(db: Session, run: Run, records: list[dict[str, Any
                 cache_entry.hit_count += 1
                 cache_entry.last_accessed_at = utcnow()
                 artifact_id = cache_entry.artifact_id
+                if cache_persistent:
+                    cache_entry.pinned = True
+                    cache_entry.expires_at = None
+                    artifact = db.get(Artifact, artifact_id)
+                    if artifact:
+                        artifact.pinned = True
+                        artifact.expires_at = None
                 hits += 1
         elif settings.node_cache_enabled and record.get("cacheable") and record.get("path"):
             source_path = Path(str(record["path"]))
@@ -172,13 +185,21 @@ def persist_run_cache_records(db: Session, run: Run, records: list[dict[str, Any
                         NodeCacheEntry.owner_username == run.owner_username,
                         NodeCacheEntry.project_id == run.project_id,
                         NodeCacheEntry.cache_key == str(record.get("cache_key")),
-                        NodeCacheEntry.status == "available",
                     )
                     .first()
                 )
-                if cache_entry:
+                # Never downgrade an existing durable key during a refresh.
+                cache_persistent = cache_persistent or bool(cache_entry and cache_entry.pinned)
+                if cache_entry and cache_entry.status == 'available' and not cache_refresh:
                     artifact_id = cache_entry.artifact_id
                     cache_entry.last_accessed_at = utcnow()
+                    if cache_persistent:
+                        cache_entry.pinned = True
+                        cache_entry.expires_at = None
+                        artifact = db.get(Artifact, artifact_id)
+                        if artifact:
+                            artifact.pinned = True
+                            artifact.expires_at = None
                 else:
                     artifact = create_artifact_from_path(
                         db,
@@ -189,7 +210,7 @@ def persist_run_cache_records(db: Session, run: Run, records: list[dict[str, Any
                         workflow_id=run.workflow_id,
                         run_id=run.id,
                         node_id=node_id,
-                        expires_in_days=settings.node_cache_retention_days,
+                        expires_in_days=None if cache_persistent else settings.node_cache_retention_days,
                         logical_name=f"{record.get('node_type', 'node')}-{record.get('cache_key')}.joblib",
                         content_type_override="application/x-iota-node-cache",
                         cache_key=str(record.get("cache_key")),
@@ -201,43 +222,61 @@ def persist_run_cache_records(db: Session, run: Run, records: list[dict[str, Any
                             "output_digest": record.get("output_digest"),
                             "source_run_id": run.id,
                         },
+                        pinned=cache_persistent,
                     )
-                    cache_entry = NodeCacheEntry(
-                        owner_username=run.owner_username,
-                        project_id=run.project_id,
-                        workflow_id=run.workflow_id,
-                        source_run_id=run.id,
-                        node_id=node_id,
-                        node_type=str(record.get("node_type") or "unknown"),
-                        node_version=str(record.get("node_version") or "1"),
-                        static_fingerprint=str(record.get("static_fingerprint") or ""),
-                        cache_key=str(record.get("cache_key") or ""),
-                        output_digest=str(record.get("output_digest") or artifact.checksum_sha256),
-                        artifact_id=artifact.id,
-                        size_bytes=artifact.size_bytes,
-                        status="available",
-                        metadata_json={"workflow_revision": run.workflow_revision},
-                        expires_at=utcnow() + timedelta(days=settings.node_cache_retention_days),
-                        last_accessed_at=utcnow(),
-                    )
-                    try:
-                        with db.begin_nested():
-                            db.add(cache_entry)
-                            db.flush()
-                    except IntegrityError:
-                        existing = (
-                            db.query(NodeCacheEntry)
-                            .filter(
-                                NodeCacheEntry.owner_username == run.owner_username,
-                                NodeCacheEntry.project_id == run.project_id,
-                                NodeCacheEntry.cache_key == str(record.get("cache_key")),
-                            )
-                            .first()
+                    if cache_entry:
+                        cache_entry.workflow_id = run.workflow_id
+                        cache_entry.source_run_id = run.id
+                        cache_entry.node_id = node_id
+                        cache_entry.node_type = str(record.get('node_type') or 'unknown')
+                        cache_entry.node_version = str(record.get('node_version') or '1')
+                        cache_entry.static_fingerprint = str(record.get('static_fingerprint') or '')
+                        cache_entry.output_digest = str(record.get('output_digest') or artifact.checksum_sha256)
+                        cache_entry.artifact_id = artifact.id
+                        cache_entry.size_bytes = artifact.size_bytes
+                        cache_entry.status = 'available'
+                        cache_entry.pinned = cache_entry.pinned or cache_persistent
+                        cache_entry.metadata_json = {'workflow_revision': run.workflow_revision}
+                        cache_entry.expires_at = None if cache_entry.pinned else utcnow() + timedelta(days=settings.node_cache_retention_days)
+                        cache_entry.last_accessed_at = utcnow()
+                    else:
+                        cache_entry = NodeCacheEntry(
+                            owner_username=run.owner_username,
+                            project_id=run.project_id,
+                            workflow_id=run.workflow_id,
+                            source_run_id=run.id,
+                            node_id=node_id,
+                            node_type=str(record.get("node_type") or "unknown"),
+                            node_version=str(record.get("node_version") or "1"),
+                            static_fingerprint=str(record.get("static_fingerprint") or ""),
+                            cache_key=str(record.get("cache_key") or ""),
+                            output_digest=str(record.get("output_digest") or artifact.checksum_sha256),
+                            artifact_id=artifact.id,
+                            size_bytes=artifact.size_bytes,
+                            status="available",
+                            pinned=cache_persistent,
+                            metadata_json={"workflow_revision": run.workflow_revision},
+                            expires_at=None if cache_persistent else utcnow() + timedelta(days=settings.node_cache_retention_days),
+                            last_accessed_at=utcnow(),
                         )
-                        if existing is None:
-                            raise
-                        delete_artifact(db, artifact.id, run.owner_username, force=True)
-                        cache_entry = existing
+                        try:
+                            with db.begin_nested():
+                                db.add(cache_entry)
+                                db.flush()
+                        except IntegrityError:
+                            existing = (
+                                db.query(NodeCacheEntry)
+                                .filter(
+                                    NodeCacheEntry.owner_username == run.owner_username,
+                                    NodeCacheEntry.project_id == run.project_id,
+                                    NodeCacheEntry.cache_key == str(record.get("cache_key")),
+                                )
+                                .first()
+                            )
+                            if existing is None:
+                                raise
+                            delete_artifact(db, artifact.id, run.owner_username, force=True)
+                            cache_entry = existing
                     artifact_id = cache_entry.artifact_id
                     writes += 1
                     bytes_written += int(record.get("size_bytes") or source_path.stat().st_size)

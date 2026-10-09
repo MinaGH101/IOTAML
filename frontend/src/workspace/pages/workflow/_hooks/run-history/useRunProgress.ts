@@ -19,9 +19,15 @@ export function useRunProgress(currentRun: Run | null, setCurrentRun: Dispatch<S
             setWorkflowLastRunId(done.id);
             setNodeStateRun((p) => mergePersistentNodeState(p, done));
             const taskAssignments = done.metrics?.task_assignments;
-            if (taskAssignments && typeof taskAssignments === 'object'
-                && Number((taskAssignments as Record<string, unknown>).unchanged || 0) > 0)
-                setMessage('این تسک قبلا ارسال شده است.');
+            if (taskAssignments && typeof taskAssignments === 'object') {
+                const counts = taskAssignments as Record<string, unknown>;
+                const unchanged = Number(counts.unchanged || 0) + Number(counts.duplicate_intents || 0);
+                const created = Number(counts.created || 0);
+                if (unchanged > 0) {
+                    const createdMessage = created > 0 ? ` ${created} وظیفه جدید ایجاد شد.` : '';
+                    setMessage(`${unchanged} وظیفه بدون تغییر بود و دوباره ارسال نشد.${createdMessage}`);
+                }
+            }
         }
         else {
             // A failed run is still authoritative for canvas status: otherwise

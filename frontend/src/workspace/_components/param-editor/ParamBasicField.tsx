@@ -24,6 +24,11 @@ export function ParamBasicField({ param, value, label, p, m }: {
     const cols = isId ? m.columns.idColumns : m.columns.calculationColumns;
     const effective = isId && !String(value || '').trim() ? p.inheritedIdColumn : value;
     return <div className="field">{label}<CustomSelect value={String(effective || '')} options={[{ value: '', label: 'انتخاب ستون' }, ...cols.map((c) => ({ value: c, label: c }))]} onChange={(v) => m.update(param.name, v || null)} ariaLabel={param.label}/></div>;
+} if (param.type === 'datetime') {
+    const parsed = value ? new Date(String(value)) : null;
+    const localValue = parsed && !Number.isNaN(parsed.getTime())
+        ? new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '';
+    return <label className="field">{label}<input type="datetime-local" value={localValue} onChange={(e) => m.update(param.name, e.target.value ? new Date(e.target.value).toISOString() : '')}/>{param.help && <small>{param.help}</small>}</label>;
 } if (param.type === 'color')
     return <label className="field color-field">{label}<input type="color" value={String(value || readThemeColor('--theme-plot-default'))} onChange={(e) => m.update(param.name, e.target.value)}/></label>; if (['number', 'integer', 'float'].includes(param.type))
     return <label className="field">{label}<input type="number" step={param.type === 'integer' ? 1 : 'any'} value={value === null ? '' : String(value)} onChange={(e) => m.update(param.name, normalizeNumber(e.target.value, param))}/></label>; if (param.type === 'textarea' || param.type === 'code')
